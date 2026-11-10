@@ -24,6 +24,7 @@ import com.datev.dbui.config.Profile;
 import com.datev.dbui.config.Settings;
 
 import picocli.CommandLine.Command;
+import picocli.CommandLine.ITypeConverter;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
@@ -44,6 +45,17 @@ class BatchCommand implements Callable<Integer> {
 
 	@Option(names = { "-f", "--file" }, description = "File with Statements to run ('-' reads stdin)")
 	List<String> files = new ArrayList<>();
+
+	@Option(names = "--format", defaultValue = "table", converter = FormatConverter.class,
+			description = "Output Format: table, markdown, csv, tsv or json (default: ${DEFAULT-VALUE})")
+	Format format;
+
+	static class FormatConverter implements ITypeConverter<Format> {
+		@Override
+		public Format convert(String value) {
+			return Format.parse(value);
+		}
+	}
 
 	@Override
 	public Integer call() {
@@ -73,7 +85,7 @@ class BatchCommand implements Callable<Integer> {
 						if (!first) {
 							out.print('\n');
 						}
-						out.print(new TableFormatter().format(read(resultSet)));
+						out.print(format.formatter(FormatOptions.defaults()).format(read(resultSet)));
 						out.flush();
 						first = false;
 					}
@@ -121,14 +133,18 @@ class BatchCommand implements Callable<Integer> {
 		ResultSetMetaData metaData = resultSet.getMetaData();
 		int count = metaData.getColumnCount();
 		List<String> columns = new ArrayList<>();
+		boolean[] jsonColumns = new boolean[count + 1];
 		for (int i = 1; i <= count; i++) {
 			columns.add(metaData.getColumnLabel(i));
+			String type = metaData.getColumnTypeName(i);
+			jsonColumns[i] = "json".equals(type) || "jsonb".equals(type);
 		}
 		List<List<Object>> rows = new ArrayList<>();
 		while (resultSet.next()) {
 			List<Object> row = new ArrayList<>();
 			for (int i = 1; i <= count; i++) {
-				row.add(resultSet.getObject(i));
+				Object value = resultSet.getObject(i);
+				row.add(value != null && jsonColumns[i] ? new JsonValue(value.toString()) : value);
 			}
 			rows.add(row);
 		}
