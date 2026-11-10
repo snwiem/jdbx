@@ -46,6 +46,7 @@ public final class SchemaProvider {
 
 	private final Connection connection;
 	private List<String> schemas;
+	private String cachedCurrentSchema;
 	private final Map<String, List<TableInfo>> tables = new HashMap<>();
 	private final Map<String, Optional<TableDescription>> descriptions = new HashMap<>();
 
@@ -56,12 +57,21 @@ public final class SchemaProvider {
 	/** Drops all cached metadata. */
 	public void refresh() {
 		schemas = null;
+		cachedCurrentSchema = null;
 		tables.clear();
 		descriptions.clear();
 	}
 
 	public String currentSchema() throws SQLException {
 		return connection.getSchema();
+	}
+
+	/** Like {@link #currentSchema()} but asks the database once until {@link #refresh()}. Completion uses it. */
+	public String currentSchemaCached() throws SQLException {
+		if (cachedCurrentSchema == null) {
+			cachedCurrentSchema = connection.getSchema();
+		}
+		return cachedCurrentSchema;
 	}
 
 	public List<String> schemas(boolean includeSystem) throws SQLException {

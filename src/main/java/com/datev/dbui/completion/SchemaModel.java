@@ -8,6 +8,14 @@ public interface SchemaModel {
 	record Table(String name, boolean view) {
 	}
 
+	/** The schema cannot be read, for example because the connection failed. */
+	final class Unavailable extends RuntimeException {
+
+		public Unavailable(Throwable cause) {
+			super(cause.getMessage(), cause);
+		}
+	}
+
 	/** Schema names without system schemas. */
 	List<String> schemas();
 
