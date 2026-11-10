@@ -55,7 +55,7 @@ final class DialogRenderer {
 					int used = CharWidth.of(row.text()) + 1;
 					put(cx + used, y, cw - used, styles.horizontal().repeat(Math.max(0, cw - used)), styles.border());
 				}
-				case HINT -> put(cx + 2, y, cw - 2, row.text(), styles.hint());
+				case HINT -> put(cx, y, cw, row.text(), styles.hint());
 				case FIELD -> fieldRow(cx, y, cw, row.field(), form, model, states, globalReadOnly);
 				case BLANK -> { }
 			}

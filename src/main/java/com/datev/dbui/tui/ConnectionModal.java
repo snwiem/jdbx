@@ -39,6 +39,11 @@ final class ConnectionModal {
 		}
 	}
 
+	/** The Session reopens the same dialog after a validation error: keep focus and cursor. */
+	boolean reopenedBy(SessionInteraction next) {
+		return interaction instanceof SessionInteraction.Dialog current && next instanceof SessionInteraction.Dialog other && current.model() == other.model();
+	}
+
 	boolean handle(Event event) {
 		if (event instanceof KeyEvent key) {
 			if (key.isRelease()) return true;

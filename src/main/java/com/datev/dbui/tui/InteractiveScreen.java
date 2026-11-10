@@ -120,6 +120,7 @@ public final class InteractiveScreen {
 	public void interaction(com.datev.dbui.session.SessionInteraction interaction) {
 		if (this.interaction == interaction) return;
 		this.interaction = interaction;
+		if (modal != null && modal.reopenedBy(interaction)) return;
 		if (interaction != null) closeCompletion();
 		modal = interaction == null ? null : new ConnectionModal(interaction, saveDialog, answerPassword, cancelDialog);
 	}

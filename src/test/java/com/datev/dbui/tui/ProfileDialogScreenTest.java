@@ -413,4 +413,19 @@ class ProfileDialogScreenTest {
 		screen.handle(KeyEvent.ofChar('y'));
 		assertThat(passwords).containsExactly("y");
 	}
+
+	@Test
+	void focusSurvivesTheSessionReopeningTheSameDialogAfterAValidationError() {
+		var screen = screen(false);
+		var model = model("dev", "localhost", null);
+		screen.interaction(new SessionInteraction.Dialog(model, true, "dev"));
+		tab(screen, 3);
+		type(screen, "99999");
+		screen.interaction(new SessionInteraction.Dialog(model, true, "dev"));
+		screen.update(List.of(MessageBlock.error("Port must be a whole number from 1 to 65535.")));
+		var drawn = draw(screen, 100, 30);
+		assertThat(drawn.text()).contains("> Port", "99999", "! Port must be");
+		screen.interaction(new SessionInteraction.Dialog(model("other", "h", null), true, "other"));
+		assertThat(draw(screen, 100, 30).text()).contains("> Name");
+	}
 }
