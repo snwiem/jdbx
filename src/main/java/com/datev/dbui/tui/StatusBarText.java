@@ -9,8 +9,13 @@ final class StatusBarText {
 
 	private StatusBarText() { }
 
+	/** The mode segment at the start of the Status bar: {@code read-only}, {@code read-write} or {@code not connected}. */
+	static String mode(ExecutionStatus status) {
+		return !status.connected() ? "not connected" : status.readOnly() ? "read-only" : "read-write";
+	}
+
 	static String of(ExecutionStatus status) {
-		String text = "Row limit: " + status.rowLimit();
+		String text = mode(status) + " · Row limit: " + status.rowLimit();
 		if (status.running()) {
 			text += " · running… " + status.elapsed().toSeconds() + " s";
 		}

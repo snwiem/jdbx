@@ -117,4 +117,81 @@ class ReadOnlyIT {
 		}
 		assertThat(count()).isEqualTo(1);
 	}
+
+	@Test
+	void readonlyWithoutArgumentShowsTheCurrentState() throws Exception {
+		try (Session session = session(true)) {
+			assertThat(last(session, "/readonly").text()).isEqualTo("read-only");
+		}
+		try (Session session = session(false)) {
+			assertThat(last(session, "/readonly").text()).isEqualTo("read-write");
+		}
+	}
+
+	@Test
+	void readonlyOnAndOffOverrideTheStartValueForTheSession() throws Exception {
+		try (Session session = session(false)) {
+			assertThat(last(session, "/readonly on").kind()).isEqualTo(MessageBlock.Kind.INFO);
+			assertThat(session.settings().readOnly()).isTrue();
+			assertThat(session.status().readOnly()).isTrue();
+			assertThat(last(session, "insert into ro_target values (2)").kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(last(session, "/readonly off").kind()).isEqualTo(MessageBlock.Kind.INFO);
+			assertThat(session.status().readOnly()).isFalse();
+			assertThat(last(session, "insert into ro_target values (3)").kind()).isEqualTo(MessageBlock.Kind.INFO);
+		}
+		assertThat(count()).isEqualTo(2);
+	}
+
+	@Test
+	void readonlyWithAWrongArgumentShowsUsageAndChangesNothing() throws Exception {
+		try (Session session = session(false)) {
+			var band = last(session, "/readonly maybe");
+			assertThat(band.kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(band.text()).contains("Usage: /readonly [on|off]");
+			assertThat(session.settings().readOnly()).isFalse();
+		}
+	}
+
+	@Test
+	void aRejectedChangeLeavesTheModeUnchangedAndShowsAnErrorBand() throws Exception {
+		var real = parameters(false).open();
+		Connection refusing = (Connection) java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
+			new Class<?>[] { Connection.class }, (proxy, method, args) -> {
+				if (method.getName().equals("setReadOnly") && args[0].equals(true)) {
+					throw new java.sql.SQLException("cannot change read-only now", "25001");
+				}
+				try {
+					return method.invoke(real, args);
+				}
+				catch (java.lang.reflect.InvocationTargetException e) {
+					throw e.getCause();
+				}
+			});
+		var context = new SessionContext(stateDir, Settings.defaults(), parameters(false), null, name -> (Profile) null);
+		try (Session session = new Session(refusing, SessionDirectory.create(stateDir), context)) {
+			var band = last(session, "/readonly on");
+			assertThat(band.kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(band.text()).contains("cannot change read-only now");
+			assertThat(session.settings().readOnly()).isFalse();
+			assertThat(session.status().readOnly()).isFalse();
+			assertThat(SessionMetadata.read(session.directory().metadataFile()).readOnly()).isFalse();
+			assertThat(last(session, "insert into ro_target values (2)").kind()).isEqualTo(MessageBlock.Kind.INFO);
+		}
+	}
+
+	@Test
+	void resumeRestoresTheReadOnlyModeOfTheEarlierSession() throws Exception {
+		String earlier;
+		try (Session first = session(false)) {
+			last(first, "/readonly on");
+			earlier = first.directory().id();
+		}
+		try (Session second = session(false)) {
+			assertThat(last(second, "/resume " + earlier).kind()).isEqualTo(MessageBlock.Kind.INFO);
+			assertThat(second.settings().readOnly()).isTrue();
+			assertThat(last(second, "/readonly").text()).isEqualTo("read-only");
+			assertThat(last(second, "insert into ro_target values (2)").kind()).isEqualTo(MessageBlock.Kind.ERROR);
+		}
+		assertThat(count()).isEqualTo(1);
+	}
 }

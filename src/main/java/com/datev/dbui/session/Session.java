@@ -125,7 +125,7 @@ public final class Session implements AutoCloseable {
 
 	public synchronized ExecutionStatus status() {
 		return new ExecutionStatus(controls.rowLimit(), running,
-			running ? Duration.ofNanos(System.nanoTime() - startedAt) : Duration.ZERO, lastResult);
+			running ? Duration.ofNanos(System.nanoTime() - startedAt) : Duration.ZERO, lastResult, settings().readOnly(), true);
 	}
 
 	/** Accepts the next input after the previous submission completes; type-ahead is not supported. */
@@ -149,6 +149,22 @@ public final class Session implements AutoCloseable {
 		if (input.strip().equals("/quit")) {
 			ended = true;
 			return CompletableFuture.completedFuture(new Update(messageBlocks(), true));
+		}
+		// SLASH-COMMAND HOOK (issue 0011): /readonly. Port to the Slash command registry of issue 0012.
+		var readOnlyCommand = ReadOnlyCommand.parse(input);
+		switch (readOnlyCommand) {
+			case SHOW -> {
+				messageBlocks.add(MessageBlock.info(ReadOnlyCommand.describe(settings().readOnly())));
+				return CompletableFuture.completedFuture(new Update(messageBlocks(), false));
+			}
+			case USAGE -> {
+				messageBlocks.add(MessageBlock.error(ReadOnlyCommand.USAGE));
+				return CompletableFuture.completedFuture(new Update(messageBlocks(), false));
+			}
+			case ON, OFF -> {
+				return run(() -> changeReadOnly(readOnlyCommand == ReadOnlyCommand.Kind.ON));
+			}
+			case NOT_MINE -> { }
 		}
 		var controlMessage = controls.handle(input);
 		if (controlMessage != null) {
@@ -243,6 +259,49 @@ public final class Session implements AutoCloseable {
 			add(MessageBlock.error(e.getMessage()));
 		}
 		return new Update(messageBlocks(), false);
+	}
+
+	/** Changes the mode atomically: the Settings change only after the server confirms it. */
+	private Update changeReadOnly(boolean readOnly) {
+		boolean previous = settings().readOnly();
+		try {
+			connection.setReadOnly(readOnly);
+			verifyReadOnly(readOnly);
+		}
+		catch (SQLException e) {
+			try {
+				connection.setReadOnly(previous);
+			}
+			catch (SQLException ignored) {
+				// The error below is the one that matters.
+			}
+			add(MessageBlock.error("Cannot switch to " + ReadOnlyCommand.describe(readOnly) + ": " + SqlErrorText.of(e)
+				+ ". The Session stays " + ReadOnlyCommand.describe(previous) + "."));
+			return new Update(messageBlocks(), false);
+		}
+		var current = settings();
+		updateSettings(current.withExecution(current.rowLimit(), current.timeout(), readOnly));
+		add(MessageBlock.info(ReadOnlyCommand.describe(readOnly)));
+		return new Update(messageBlocks(), false);
+	}
+
+	/** Asks the server in the same way as a Statement runs, so that a driver flag without effect is caught. */
+	private void verifyReadOnly(boolean expected) throws SQLException {
+		boolean guarded = connection.isReadOnly();
+		if (guarded) {
+			connection.setAutoCommit(false);
+		}
+		try (var statement = connection.createStatement(); var rows = statement.executeQuery("show transaction_read_only")) {
+			rows.next();
+			if (rows.getString(1).equals("on") != expected) {
+				throw new SQLException("the server did not apply it", "25000");
+			}
+		}
+		finally {
+			if (guarded) {
+				endReadOnlyTransaction();
+			}
+		}
 	}
 
 	private synchronized void finished() {
