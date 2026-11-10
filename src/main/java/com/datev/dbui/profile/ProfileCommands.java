@@ -27,6 +27,10 @@ public final class ProfileCommands {
 
 	public String warning() { return store.warning(); }
 	public List<String> names() { return store.names(); }
+	/** Names for argument completion: a name with whitespace is offered in double quotes. */
+	public List<String> completionNames() {
+		return store.names().stream().map(name -> name.chars().anyMatch(Character::isWhitespace) ? "\"" + name + "\"" : name).toList();
+	}
 	public Action execute(String input) {
 		String[] parts = input.strip().split("\\s+", 2);
 		String argument = parts.length == 1 ? "" : parts[1];
@@ -37,16 +41,7 @@ public final class ProfileCommands {
 			if (store.names().isEmpty()) return new Edit(new ProfileDialogModel(new Profile(null, null, null, null, null, null, null, null, null, Map.of()), null), true, null);
 			return new Info(list());
 		}
-		String name = argument;
-		if (argument.matches("\\d+")) {
-			List<String> names = listing == null ? store.names() : listing;
-			try {
-				int number = Integer.parseInt(argument);
-				if (number < 1 || number > names.size()) throw new NumberFormatException();
-				name = names.get(number - 1);
-			}
-			catch (NumberFormatException e) { throw new ConfigException("No Profile number " + argument + ". Type /connect to list Profiles."); }
-		}
+		String name = resolveName(argument);
 		return new Connect(load(name));
 	}
 	public Profile load(String name) { return resolve(loader.profileForEditing(name)); }
@@ -71,13 +66,46 @@ public final class ProfileCommands {
 		});
 	}
 
-	Action edit(String name) {
+	/**
+	 * Selects a stored Profile from the text after the command. A name in double quotes is always a name ("Test 3"). An
+	 * unquoted text is a name when such a Profile exists (so unquoted names with spaces work); otherwise a whole number
+	 * is a position in the last shown list (or the current list when none was shown).
+	 */
+	String resolveName(String argument) {
+		String text = argument.strip();
+		List<String> names = store.names();
+		if (text.startsWith("\"")) {
+			if (text.length() < 2 || !text.endsWith("\"")) {
+				throw new ConfigException("Missing closing quote in the Profile name. Write it like \"Test 3\".");
+			}
+			String quoted = text.substring(1, text.length() - 1);
+			if (!names.contains(quoted)) throw unknown(quoted);
+			return quoted;
+		}
+		if (names.contains(text)) return text;
+		if (text.matches("\\d+")) {
+			List<String> numbered = listing == null ? names : listing;
+			try {
+				int number = Integer.parseInt(text);
+				if (number < 1 || number > numbered.size()) throw new NumberFormatException();
+				return numbered.get(number - 1);
+			}
+			catch (NumberFormatException e) { throw new ConfigException("No Profile number " + text + ". Type /profile list to see the numbers."); }
+		}
+		throw unknown(text);
+	}
+	private ConfigException unknown(String name) {
+		return new ConfigException("Unknown Profile '" + name + "'. Known Profiles: " + (store.names().isEmpty() ? "(none)" : String.join(", ", store.names()))
+			+ ". Use a number from /profile list, or a name in quotes if it has spaces.");
+	}
+
+	Action edit(String argument) {
+		String name = argument == null ? null : resolveName(argument);
 		Profile initial = name == null ? new Profile(null, null, null, null, null, null, null, null, null, Map.of()) : loader.profileForEditing(name);
 		return new Edit(name == null ? new ProfileDialogModel(initial, null) : ProfileDialogModel.edit(initial), false, name);
 	}
-	Action remove(String name) {
-		if (!store.names().contains(name)) throw new ConfigException("Unknown Profile '" + name + "'.");
-		return new Remove(name);
+	Action remove(String argument) {
+		return new Remove(resolveName(argument));
 	}
 	public void removeConfirmed(String name) { store.remove(name); }
 	public void save(ProfileDialogModel model, String editingName) {

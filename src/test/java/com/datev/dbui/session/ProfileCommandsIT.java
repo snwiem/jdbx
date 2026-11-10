@@ -139,6 +139,30 @@ class ProfileCommandsIT {
 	}
 
 	@Test
+	void profilesWithSpacesCanBeSelectedByQuotedNameUnquotedNameAndListNumber() throws Exception {
+		var store = new ProfileStore(directory);
+		for (String name : new String[] { "Test", "Test 3", "Test2" }) store.save(profile(name, false));
+		try (Session session = session(parameters().open())) {
+			submit(session, "/profile edit \"Test 3\"");
+			assertThat(((SessionInteraction.Dialog) session.interaction()).editingName()).isEqualTo("Test 3");
+			session.cancelInteraction();
+			submit(session, "/profile edit Test 3");
+			assertThat(((SessionInteraction.Dialog) session.interaction()).editingName()).isEqualTo("Test 3");
+			session.cancelInteraction();
+			submit(session, "/profile list");
+			int number = store.names().indexOf("Test 3") + 1;
+			submit(session, "/profile edit " + number);
+			assertThat(((SessionInteraction.Dialog) session.interaction()).editingName()).isEqualTo("Test 3");
+			session.cancelInteraction();
+			submit(session, "/profile remove \"Test 3\"");
+			assertThat(session.interaction()).isInstanceOf(SessionInteraction.Confirmation.class);
+			submit(session, "n");
+			submit(session, "/connect \"Test 3\"");
+			assertThat(session.messageBlocks().getLast().text()).contains("Connected");
+		}
+	}
+
+	@Test
 	void profileDialogsSaveEditsAndRemovalRequiresConfirmation() throws Exception {
 		try (Session session = session(parameters().open())) {
 			submit(session, "/profile add");

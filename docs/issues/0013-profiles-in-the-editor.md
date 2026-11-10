@@ -88,3 +88,5 @@ Before integration, three read-only cross-family review passes used Claude Opus 
 3. Type `/for`, request Ctrl-Space Completion and try Alt-/. Request `/format ` Completion. Enter must accept without sending. Run `/help` and inspect all commands and editor/modal keys.
 4. Set Format, Orientation and Read-only. Kill that backend with `pg_terminate_backend`. The first Statement must fail without replay; the next must reconnect once. Confirm settings, label and SQL schema Completion.
 5. Use `/resume` for an earlier Session. Check the masked prompt when needed, restored settings, history and a new Session id. Judge colors, flicker, resizing and Herdr key forwarding yourself.
+
+Fix (found in manual testing): `/connect`, `/profile edit` and `/profile remove` accept a quoted name (`"Test 3"`), an unquoted name with spaces, or the number from `/profile list`. An exact name wins over a number. A quoted number is always a name. Tracked in `docs/issues/0023-profile-names-with-spaces.md`.
