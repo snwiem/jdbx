@@ -11,13 +11,13 @@ import com.datev.dbui.config.Profile;
 import com.datev.dbui.config.Settings;
 
 /**
- * Decides how Resume gets a connection without asking for a password. The password is never stored in the
+ * Decides how Resume gets a connection, including a request for a masked password prompt. The password is never stored in the
  * Session directory, so it must come from the current connection or from a Profile.
  */
 public final class ResumeConnection {
 
 	/** The outcome of {@link #plan}. */
-	public sealed interface Plan permits Keep, Reconnect, Unavailable { }
+	public sealed interface Plan permits Keep, Reconnect, Prompt { }
 
 	/** The chosen Session uses the connection that is open now. */
 	public record Keep() implements Plan { }
@@ -25,8 +25,8 @@ public final class ResumeConnection {
 	/** Open this connection instead of the current one. */
 	public record Reconnect(ConnectionParameters parameters) implements Plan { }
 
-	/** No password is available without a prompt; the message tells the user what is missing. */
-	public record Unavailable(String message) implements Plan { }
+	/** These non-secret parameters need a password from the masked prompt. */
+	public record Prompt(String message, ConnectionParameters parameters) implements Plan { }
 
 	private ResumeConnection() { }
 
@@ -47,6 +47,13 @@ public final class ResumeConnection {
 					profileProblem = "Profile '" + stored.profile() + "' does not exist any more.";
 				}
 				else {
+					if (profile.password() == null && (profile.url() == null || !profile.url().matches(".*[?&]password=.*"))) {
+						var options = new ConnectionOptions(); options.password = "";
+						var resolved = ConnectionParameters.resolve(options, profile, settings);
+						var properties = new LinkedHashMap<>(resolved.properties()); properties.remove("password");
+						return new Prompt("Session " + sessionId + ": password for " + stored.label(),
+							new ConnectionParameters(resolved.url(), properties, storedReadOnly));
+					}
 					var resolved = ConnectionParameters.resolve(new ConnectionOptions(), profile, settings);
 					return new Reconnect(new ConnectionParameters(resolved.url(), resolved.properties(), storedReadOnly));
 				}
@@ -60,10 +67,11 @@ public final class ResumeConnection {
 		if (sameLogin && current.properties().get("password") != null) {
 			return new Reconnect(new ConnectionParameters(stored.url(), new LinkedHashMap<>(current.properties()), storedReadOnly));
 		}
-		return new Unavailable("Cannot resume Session " + sessionId + ": the password for " + stored.label()
-			+ " is missing. dbui never stores passwords, and the password dialog (issue 0013) is not built yet. "
-			+ (profileProblem == null ? "" : profileProblem + " ")
-			+ "Start dbui with that connection, or use a Profile that reads the password from ${ENV}.");
+		var properties = new LinkedHashMap<String, String>();
+		properties.put("ApplicationName", ConnectionParameters.APPLICATION_NAME);
+		if (stored.user() != null) properties.put("user", stored.user());
+		return new Prompt("Session " + sessionId + ": password for " + stored.label()
+			+ (profileProblem == null ? "" : ". " + profileProblem), new ConnectionParameters(stored.url(), properties, storedReadOnly));
 	}
 
 	private static boolean sameTarget(ConnectionInfo stored, ConnectionInfo current) {

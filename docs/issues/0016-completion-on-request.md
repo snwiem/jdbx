@@ -33,4 +33,4 @@
 
 ## Known limits
 
-- **Known limits:** the popup does not filter while the user types (a key closes it; request again). Cursor positions count UTF-16 characters. Candidates for `INSERT INTO t (` column lists and for subquery aliases are not offered.
+- The popup does not filter while the user types (a key closes it; request again). Cursor positions count UTF-16 characters. Candidates for `INSERT INTO t (` column lists and for subquery aliases are not offered.

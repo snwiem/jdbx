@@ -15,6 +15,9 @@ import java.util.List;
  */
 public final class HistoryStore {
 
+	private static final java.util.regex.Pattern INLINE_CREDENTIALS = java.util.regex.Pattern.compile(
+		"(?i)(?:^|[\\s?&;])(?:--?(?:(?:pg)?pass(?:word|wd)?|pwd|secret|token)(?:=|\\s|$)|(?:(?:pg)?pass(?:word|wd)?|pwd|secret|token)(?:\\s*=|\\s+))|jdbc:|://");
+
 	private final Path file;
 	private final boolean enabled;
 	private final List<String> entries = new ArrayList<>();
@@ -82,7 +85,14 @@ public final class HistoryStore {
 
 	private static boolean isLocalOnly(String input) {
 		String name = input.strip().split("\\s+", 2)[0];
-		return name.equals("/quit") || name.equals("/resume");
+		return name.equals("/quit") || name.equals("/resume") || containsProfileCredentials(input);
+	}
+
+	/** Profile credentials belong in masked interactions, never in raw input or a diagnostic quoting that input. */
+	static boolean containsProfileCredentials(String input) {
+		String[] parts = input.stripLeading().split("\\s+", 2);
+		return parts.length == 2 && (parts[0].equals("/connect") || parts[0].equals("/profile"))
+			&& INLINE_CREDENTIALS.matcher(parts[1]).find();
 	}
 
 	static String escape(String entry) {

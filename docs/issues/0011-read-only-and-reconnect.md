@@ -19,5 +19,8 @@
 
 - `/readonly [on|off]` uses the per-Session Slash command registry, including help, validation, Completion candidates and background execution. There is no separate dispatch hook.
 - SQL and schema work reconnect on the Statement thread. `/resume` can run without first reconnecting the old target, so an unavailable target does not prevent recovery to another Session.
-- The Status bar retains Format and Orientation alongside mode, Row limit, timer and Result summary. Later Completion integration adds the loading note and narrow-terminal layout.
+- The Status bar retains Format and Orientation alongside mode, Row limit, timer and Result summary. Completion integration adds a loading note without hiding mode; a one-line Status bar puts mode first.
+- `/connect` keeps current Read-only unless the selected Profile explicitly sets it. Reconnect keeps the mode, while Resume restores the stored mode. Newly opened connections and reused Resume connections verify the effective server mode. A server-forced Read-only connection rejects a requested read-write mode instead of displaying a false status.
+- A disconnected `/readonly on|off` attempts one reconnect with the requested mode. Settings change only when the server confirms the replacement. This permits `/readonly on` after failover to a Read-only server; rejected changes keep the earlier mode.
+- Startup, `/connect`, reconnect and Resume use one checked opener and one replacement path. Timeout and Row limit remain Statement-scoped. Connection replacement also rebuilds the Completion cache and updates metadata and label.
 - The original Read-only and reconnect assertions remain unchanged. The merged registry path first failed five Read-only Integration tests with unknown-command errors; registration made them pass. The added help/candidate check is regression coverage and passed immediately.

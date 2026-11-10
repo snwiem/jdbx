@@ -101,6 +101,13 @@ public final class SlashCommandRegistry {
 			Completion Up / Down      Select a candidate
 			Completion Tab / Enter    Accept a candidate without sending input
 			Completion Esc            Close Completion
+			Dialog Tab / Shift-Tab    Move between fields and Save (not Orientation)
+			Dialog Enter              Next field or Save; never send editor input
+			Dialog Ctrl-S             Save the Profile
+			Dialog Ctrl-G / Ctrl-Enter Connect without saving (connection dialogs only)
+			Dialog Esc / Ctrl-C       Cancel the dialog or masked prompt
+			Password Enter            Connect with the masked password; never store it in history
+			Confirmation y / other    Confirm Profile removal / cancel it
 			Page Up / Page Down       Scroll the Transcript
 			Mouse wheel               Scroll the Transcript
 			Left / Right              Move the cursor; Ctrl-Left / Ctrl-Right move by word
