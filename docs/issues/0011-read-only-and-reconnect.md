@@ -4,13 +4,20 @@
 
 **Blocked by:** 0006 Settings and Profiles (read), 0010 Execution controls
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md`
 
-- [ ] Integration tests: a write fails in read-only mode and works in read-write mode
-- [ ] Profile value overrides the global default, and `/readonly` overrides both for the Session
-- [ ] Integration test: after the connection is closed, the next Statement triggers one reconnect and a clear info band, or a clear error if the reconnect fails
-- [ ] A failed Statement is never run twice
-- [ ] Status bar shows the mode
-- [ ] Read-only is enforced by the server, not only flagged: with autocommit on, `Connection.setReadOnly(true)` alone does not stop writes in the PostgreSQL driver (finding of issue 0006). Use the driver's read-only mode setting or equivalent, and prove it with a test that a write fails
+- [x] Integration tests: a write fails in read-only mode and works in read-write mode
+- [x] Profile value overrides the global default, and `/readonly` overrides both for the Session
+- [x] Integration test: after the connection is closed, the next Statement triggers one reconnect and a clear info band, or a clear error if the reconnect fails
+- [x] A failed Statement is never run twice
+- [x] Status bar shows the mode
+- [x] Read-only is enforced by the server, not only flagged: with autocommit on, `Connection.setReadOnly(true)` alone does not stop writes in the PostgreSQL driver (finding of issue 0006). Use the driver's read-only mode setting or equivalent, and prove it with a test that a write fails
+
+## Integration with issue 0012
+
+- `/readonly [on|off]` uses the per-Session Slash command registry, including help, validation, Completion candidates and background execution. There is no separate dispatch hook.
+- SQL and schema work reconnect on the Statement thread. `/resume` can run without first reconnecting the old target, so an unavailable target does not prevent recovery to another Session.
+- The Status bar retains Format and Orientation alongside mode, Row limit, timer and Result summary. Later Completion integration adds the loading note and narrow-terminal layout.
+- The original Read-only and reconnect assertions remain unchanged. The merged registry path first failed five Read-only Integration tests with unknown-command errors; registration made them pass. The added help/candidate check is regression coverage and passed immediately.

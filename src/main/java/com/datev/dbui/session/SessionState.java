@@ -84,6 +84,11 @@ final class SessionState {
 		writeMetadata();
 	}
 
+	/** The parameters of the connection in use, including the password. They change when {@code /resume} reconnects. */
+	com.datev.dbui.config.ConnectionParameters parameters() {
+		return parameters;
+	}
+
 	String connectionLabel() {
 		return info.label();
 	}

@@ -33,6 +33,7 @@ public final class InteractiveScreen {
 	private final MessageBlockRenderer renderer;
 	private final Style rule;
 	private final Style statusStyle;
+	private final Style warningStyle;
 	private final Transcript transcript;
 	private final ScrollbarState scrollbar = new ScrollbarState();
 	private int transcriptHeight;
@@ -77,11 +78,12 @@ public final class InteractiveScreen {
 		this.cancel = cancel;
 		this.cycleOrientation = cycleOrientation;
 		this.settings = settings;
-		this.status = new ExecutionStatus(settings.rowLimit(), false, java.time.Duration.ZERO, null);
+		this.status = new ExecutionStatus(settings.rowLimit(), false, java.time.Duration.ZERO, null, settings.readOnly(), true);
 		this.renderer = new MessageBlockRenderer(color, FormatOptions.from(settings));
 		this.transcript = new Transcript(renderer);
 		this.rule = color ? Style.EMPTY.fg(Color.indexed(244)) : Style.EMPTY;
 		this.statusStyle = color ? Style.EMPTY.fg(Color.indexed(252)).bg(Color.indexed(236)) : Style.EMPTY.reversed();
+		this.warningStyle = color ? Style.EMPTY.fg(Color.indexed(214)).bg(Color.indexed(236)).bold() : null;
 		this.connection = connection;
 		this.send = send;
 		this.keys = keys;
@@ -271,6 +273,10 @@ public final class InteractiveScreen {
 			int y = height - statusHeight + row;
 			buffer.fill(new Rect(0, y, width, 1), new Cell(" ", statusStyle));
 			buffer.setString(0, y, CharWidth.substringByWidth(status[row], width), statusStyle);
+			if (row == 1 && warningStyle != null && !(this.status.readOnly() && this.status.connected())) {
+				// read-write and not connected stand out; with NO_COLOR only the text differs
+				buffer.setString(1, y, CharWidth.substringByWidth(StatusBarText.mode(this.status), width - 1), warningStyle);
+			}
 		}
 	}
 }

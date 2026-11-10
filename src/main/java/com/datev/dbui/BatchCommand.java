@@ -152,7 +152,8 @@ class BatchCommand implements Callable<Integer> {
 			FormatOptions options = formatOptions(settings);
 			boolean first = true;
 			for (String statement : statements) {
-				boolean streaming = StreamingRead.isQuery(statement);
+				// Read-only: every Statement gets its own explicit READ ONLY transaction (see ReadOnlyIT).
+				boolean streaming = connection.isReadOnly() || StreamingRead.isQuery(statement);
 				try {
 					if (streaming) {
 						StreamingRead.begin(connection, settings.timeout());

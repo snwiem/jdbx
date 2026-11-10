@@ -107,6 +107,22 @@ class BatchEntryPointIT {
 	}
 
 	@Test
+	void readOnlyOptionMakesTheServerRejectWritesEvenAfterTheUserTriesToLiftIt() {
+		run(connection("-c", "drop table if exists batch_ro_target; create table batch_ro_target (id int)"));
+
+		for (String sql : new String[] { "insert into batch_ro_target values (1)", "drop table batch_ro_target",
+			"truncate batch_ro_target", "set default_transaction_read_only = off; insert into batch_ro_target values (1)",
+			"begin read write; insert into batch_ro_target values (1); commit",
+			"with moved as (insert into batch_ro_target values (1) returning id) select id from moved" }) {
+			Outcome outcome = run(connection("--read-only", "-c", sql));
+			assertThat(outcome.exitCode()).as(sql).isEqualTo(1);
+			assertThat(outcome.stderr()).as(sql).contains("read-only");
+		}
+		assertThat(run(connection("--read-only", "-c", "select count(*) from batch_ro_target")).stdout()).contains("0");
+		assertThat(run(connection("--read-only=false", "-c", "insert into batch_ro_target values (1)")).exitCode()).isZero();
+	}
+
+	@Test
 	void reportsSqlErrorOnStderr() {
 		Outcome outcome = run(connection("-c", "select * from no_such_table"));
 
