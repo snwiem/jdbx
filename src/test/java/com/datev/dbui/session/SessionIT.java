@@ -3,10 +3,16 @@ package com.datev.dbui.session;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -18,8 +24,77 @@ class SessionIT {
 	@Container
 	static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17");
 
+	@TempDir
+	Path stateDir;
+
+	private Connection connection() throws Exception {
+		return DriverManager.getConnection(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+	}
+
 	private Session session() throws Exception {
-		return new Session(DriverManager.getConnection(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
+		return new Session(connection(), SessionDirectory.create(stateDir));
+	}
+
+	@Test
+	void sqlErrorShowsServerMessageSqlStateAndPositionAndKeepsTheSessionUsable() throws Exception {
+		try (Session session = session()) {
+			var failed = session.submit("select nme from (select 1 as name) t").get(5, TimeUnit.SECONDS);
+			assertThat(failed.messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(failed.messageBlocks().getLast().text())
+				.isEqualTo("ERROR: column \"nme\" does not exist (42703), position 8")
+				.doesNotContain("Exception", "\tat ");
+			assertThat(session.submit("select 1 as ok").get(5, TimeUnit.SECONDS).messageBlocks().getLast().kind())
+				.isEqualTo(MessageBlock.Kind.RESULT);
+		}
+	}
+
+	@Test
+	void statementsWithoutAResultShowAnInfoBlockWithCommandTagAndCount() throws Exception {
+		try (Session session = session()) {
+			var created = session.submit("create temporary table info_t (i int)").get(5, TimeUnit.SECONDS);
+			assertThat(created.messageBlocks()).extracting(MessageBlock::kind)
+				.containsExactly(MessageBlock.Kind.INPUT, MessageBlock.Kind.INFO);
+			assertThat(created.messageBlocks().getLast().text()).isEqualTo("CREATE TABLE");
+			var inserted = session.submit("insert into info_t values (1),(2),(3)").get(5, TimeUnit.SECONDS);
+			assertThat(inserted.messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.INFO);
+			assertThat(inserted.messageBlocks().getLast().text()).isEqualTo("INSERT 0 3");
+		}
+	}
+
+	@Test
+	void twoSessionsWriteToTwoDifferentLogFilesInTheirOwnDirectories() throws Exception {
+		try (Session first = session(); Session second = session()) {
+			assertThat(first.logFile()).isNotEqualTo(second.logFile());
+			assertThat(first.logFile().getParent()).isNotEqualTo(second.logFile().getParent());
+			assertThat(first.logFile().getParent().getParent()).isEqualTo(stateDir.resolve("sessions"));
+		}
+	}
+
+	@Test
+	void unexpectedErrorShowsAShortMessageWithTheLogPathAndWritesTheStackTraceToTheLog() throws Exception {
+		Connection real = connection();
+		Connection broken = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] { Connection.class },
+			(proxy, method, args) -> {
+				if (method.getName().equals("createStatement")) {
+					throw new IllegalStateException("internal failure");
+				}
+				try {
+					return method.invoke(real, args);
+				}
+				catch (InvocationTargetException e) {
+					throw e.getCause();
+				}
+			});
+		try (Session session = new Session(broken, SessionDirectory.create(stateDir))) {
+			var update = session.submit("select 1").get(5, TimeUnit.SECONDS);
+			var block = update.messageBlocks().getLast();
+			assertThat(block.kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(block.text()).contains("internal failure").contains(session.logFile().toString())
+				.doesNotContain("\tat ").doesNotContain("IllegalStateException");
+			assertThat(Files.readString(session.logFile())).contains("java.lang.IllegalStateException: internal failure")
+				.contains("\tat ");
+			assertThat(session.submit("select 1").get(5, TimeUnit.SECONDS).ended()).isFalse();
+		}
 	}
 
 	@Test

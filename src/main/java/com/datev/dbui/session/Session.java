@@ -1,8 +1,15 @@
 package com.datev.dbui.session;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -21,14 +28,21 @@ public final class Session implements AutoCloseable {
 	}
 
 	private final Connection connection;
+	private final SessionDirectory directory;
 	private final ExecutorService executor = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dbui-statement").factory());
 	private final List<MessageBlock> messageBlocks = new ArrayList<>();
 	private boolean ended;
 	private boolean running;
 
-	public Session(Connection connection) throws SQLException {
+	public Session(Connection connection, SessionDirectory directory) throws SQLException {
 		this.connection = connection;
+		this.directory = directory;
 		connection.setAutoCommit(true);
+	}
+
+	/** The Session log file. Only this Session writes to it. */
+	public Path logFile() {
+		return directory.logFile();
 	}
 
 	public synchronized List<MessageBlock> messageBlocks() {
@@ -78,11 +92,31 @@ public final class Session implements AutoCloseable {
 					add(MessageBlock.result(read(rows)));
 				}
 			}
+			else {
+				add(MessageBlock.info(CommandTag.of(input, statement.getLargeUpdateCount())));
+			}
 			return new Update(messageBlocks(), false);
 		}
 		catch (SQLException e) {
-			add(MessageBlock.error(e.getMessage()));
+			add(MessageBlock.error(SqlErrorText.of(e)));
 			return new Update(messageBlocks(), false);
+		}
+		catch (RuntimeException | Error e) {
+			// Not a SQL error: the stack trace goes to the Session log, never to the terminal.
+			add(MessageBlock.error("Unexpected error: " + e.getMessage() + ". Details: " + logFile()));
+			writeLog(e);
+			return new Update(messageBlocks(), false);
+		}
+	}
+
+	private void writeLog(Throwable error) {
+		var trace = new StringWriter();
+		error.printStackTrace(new PrintWriter(trace));
+		try {
+			Files.writeString(logFile(), Instant.now() + " Unexpected error\n" + trace, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+		}
+		catch (IOException ignored) {
+			// The log is best effort; the red band already tells the user.
 		}
 	}
 

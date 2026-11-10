@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.datev.dbui.session.Session;
+import com.datev.dbui.session.SessionDirectory;
 
 import dev.tamboui.terminal.KeyboardProtocol;
 import dev.tamboui.tui.TuiConfig;
@@ -29,7 +30,9 @@ public final class InteractiveMode {
 
 	public static int run(Connection connection, String label) throws Exception {
 		AtomicReference<Throwable> failure = new AtomicReference<>();
-		try (var logging = new TerminalLogging(); var session = new Session(connection)) {
+		var directory = SessionDirectory.create(SessionDirectory.defaultStateBase());
+		try (var terminalLogging = new TerminalLogging(); var sessionLogging = new SessionLogging(directory.logFile());
+			var session = new Session(connection, directory)) {
 			// TuiRunner owns and closes its backend, including when initialization fails.
 			var config = TuiConfig.builder().backend(new InteractiveBackend()).alternateScreen(true).mouseCapture(true)
 				.bracketedPaste(true).hideCursor(true).keyboardProtocol(KeyboardProtocol.AUTO)

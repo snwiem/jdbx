@@ -24,6 +24,13 @@ class CommandTagTest {
 	}
 
 	@Test
+	void ddlSkipsModifiersLikeTemporaryAndUnique() {
+		assertThat(CommandTag.of("create temporary table t(i int)", 0)).isEqualTo("CREATE TABLE");
+		assertThat(CommandTag.of("create or replace view v as select 1", 0)).isEqualTo("CREATE VIEW");
+		assertThat(CommandTag.of("create unique index i on t(i)", 0)).isEqualTo("CREATE INDEX");
+	}
+
+	@Test
 	void otherStatementsShowTheFirstKeyword() {
 		assertThat(CommandTag.of("truncate t", 0)).isEqualTo("TRUNCATE");
 		assertThat(CommandTag.of("/* c */ -- x\nset search_path = a;", 0)).isEqualTo("SET");
