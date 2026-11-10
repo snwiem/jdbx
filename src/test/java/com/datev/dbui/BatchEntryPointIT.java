@@ -22,17 +22,24 @@ class BatchEntryPointIT {
 	}
 
 	private static Outcome run(String... args) {
+		return runWithStdin("", args);
+	}
+
+	private static Outcome runWithStdin(String stdin, String... args) {
+		java.io.InputStream originalIn = System.in;
 		PrintStream originalOut = System.out;
 		PrintStream originalErr = System.err;
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		ByteArrayOutputStream err = new ByteArrayOutputStream();
 		try {
+			System.setIn(new java.io.ByteArrayInputStream(stdin.getBytes(StandardCharsets.UTF_8)));
 			System.setOut(new PrintStream(out, true, StandardCharsets.UTF_8));
 			System.setErr(new PrintStream(err, true, StandardCharsets.UTF_8));
 			int exitCode = DbuiApplication.run(args);
 			return new Outcome(exitCode, out.toString(StandardCharsets.UTF_8), err.toString(StandardCharsets.UTF_8));
 		}
 		finally {
+			System.setIn(originalIn);
 			System.setOut(originalOut);
 			System.setErr(originalErr);
 		}
@@ -115,5 +122,67 @@ class BatchEntryPointIT {
 		assertThat(missing.exitCode()).isNotZero();
 		assertThat(missing.stdout()).isEmpty();
 		assertThat(missing.stderr()).contains("password").contains("never prompts");
+	}
+
+	private static final String ONE = "id\n--\n1\n";
+
+	private static final String TWO = "id\n--\n2\n";
+
+	@Test
+	void runsRepeatedCommandsInOrderSeparatedByBlankLine() {
+		Outcome outcome = run(connection("-c", "select 1 as id", "-c", "select 2 as id"));
+
+		assertThat(outcome.stdout()).isEqualTo(ONE + "\n" + TWO);
+		assertThat(outcome.exitCode()).isZero();
+	}
+
+	@Test
+	void runsSeveralStatementsOfOneCommand() {
+		Outcome outcome = run(connection("-c", "select 1 as id; select 'a;b' as id;"));
+
+		assertThat(outcome.stdout()).isEqualTo(ONE + "\nid\n---\na;b\n");
+	}
+
+	@Test
+	void readsStatementsFromFile(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+		java.nio.file.Path file = dir.resolve("in.sql");
+		java.nio.file.Files.writeString(file, "select 1 as id;\nselect 2 as id;\n");
+
+		Outcome outcome = run(connection("-f", file.toString()));
+
+		assertThat(outcome.stdout()).isEqualTo(ONE + "\n" + TWO);
+		assertThat(outcome.exitCode()).isZero();
+	}
+
+	@Test
+	void readsStdinWhenNoOtherInputIsGiven() {
+		Outcome outcome = runWithStdin("select 1 as id; select 2 as id", connection());
+
+		assertThat(outcome.stdout()).isEqualTo(ONE + "\n" + TWO);
+		assertThat(outcome.exitCode()).isZero();
+	}
+
+	@Test
+	void dashFileReadsStdin() {
+		Outcome outcome = runWithStdin("select 1 as id", connection("-f", "-"));
+
+		assertThat(outcome.stdout()).isEqualTo(ONE);
+	}
+
+	@Test
+	void firstErrorStopsTheRun() {
+		Outcome outcome = run(connection("-c", "select 1 as id; select * from no_such_table; select 2 as id"));
+
+		assertThat(outcome.stdout()).isEqualTo(ONE);
+		assertThat(outcome.stderr()).contains("no_such_table");
+		assertThat(outcome.exitCode()).isNotZero();
+	}
+
+	@Test
+	void errorInFirstCommandSkipsLaterCommands() {
+		Outcome outcome = run(connection("-c", "select * from no_such_table", "-c", "select 2 as id"));
+
+		assertThat(outcome.stdout()).isEmpty();
+		assertThat(outcome.exitCode()).isNotZero();
 	}
 }
