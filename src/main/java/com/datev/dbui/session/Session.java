@@ -35,7 +35,8 @@ public final class Session implements AutoCloseable {
 	}
 
 	private Connection connection;
-	private final SessionState state;
+	private SessionState state;
+	private Path pendingStateBase;
 	private final SessionDirectory plainDirectory;
 	private volatile Settings plainSettings;
 	private Consumer<SessionDirectory> directoryListener = directory -> { };
@@ -53,6 +54,11 @@ public final class Session implements AutoCloseable {
 	private Statement activeStatement;
 	private long startedAt;
 	private ExecutionStatus.ResultSummary lastResult;
+
+	/** Interactive startup before the connection values are complete. */
+	public Session(SessionDirectory directory, Settings settings) throws SQLException {
+		this(null, directory, null, settings);
+	}
 
 	public Session(Connection connection, SessionDirectory directory) throws SQLException {
 		this(connection, directory, (SessionContext) null);
@@ -75,9 +81,11 @@ public final class Session implements AutoCloseable {
 		this.plainDirectory = directory;
 		this.plainSettings = settings;
 		this.controls = new ExecutionControls(this::settings, this::updateSettings);
-		this.schemaCommands = new SchemaCommands(new SchemaProvider(connection));
-		connection.setAutoCommit(true);
-		connection.setReadOnly(settings.readOnly());
+		if (connection != null) {
+			this.schemaCommands = new SchemaCommands(new SchemaProvider(connection));
+			connection.setAutoCommit(true);
+			connection.setReadOnly(settings.readOnly());
+		}
 		if (directory.disabledReason() != null) {
 			messageBlocks.add(MessageBlock.info("history and Session log are disabled: " + directory.disabledReason()));
 		}
@@ -91,6 +99,12 @@ public final class Session implements AutoCloseable {
 	}
 
 	public SessionInteraction interaction() { return interaction; }
+
+	public void openConnectionDialog(com.datev.dbui.config.ProfileDialogModel model, Path stateBase) {
+		pendingStateBase = stateBase;
+		interaction = new SessionInteraction.Dialog(model, true, model.value(com.datev.dbui.config.ProfileDialogModel.Field.NAME).isBlank()
+			? null : model.value(com.datev.dbui.config.ProfileDialogModel.Field.NAME));
+	}
 
 	/** Cancels a dialog or prompt without submitting input or storing credentials in history. */
 	public synchronized void cancelInteraction() { interaction = null; passwordContinuation = null; }
@@ -242,6 +256,10 @@ public final class Session implements AutoCloseable {
 			messageBlocks.add(MessageBlock.error("Unknown Slash command: " + input.strip()));
 			return CompletableFuture.completedFuture(new Update(messageBlocks(), false));
 		}
+		if (connection == null) {
+			add(MessageBlock.error("Not connected. Use /connect or /profile add."));
+			return CompletableFuture.completedFuture(new Update(messageBlocks(), false));
+		}
 		return run(() -> execute(input));
 	}
 
@@ -354,10 +372,14 @@ public final class Session implements AutoCloseable {
 		Connection old = connection;
 		connection = next;
 		if (state != null) state.connected(parameters, profileName);
+		else if (pendingStateBase != null) {
+			state = new SessionState(directory(), new SessionContext(pendingStateBase,
+				settings().withExecution(settings().rowLimit(), settings().timeout(), parameters.readOnly()), parameters, profileName, profiles::load));
+		}
 		else updateSettings(settings().withExecution(settings().rowLimit(), settings().timeout(), parameters.readOnly()));
 		schemaCommands = new SchemaCommands(new SchemaProvider(next));
 		lastResult = null;
-		try { old.close(); } catch (SQLException ignored) { }
+		if (old != null) { try { old.close(); } catch (SQLException ignored) { } }
 		add(MessageBlock.info("Connected to " + ConnectionInfo.of(parameters, profileName).label() + "."));
 	}
 
@@ -451,6 +473,6 @@ public final class Session implements AutoCloseable {
 		cancel();
 		executor.close();
 		cancellations.close();
-		connection.close();
+		if (connection != null) connection.close();
 	}
 }

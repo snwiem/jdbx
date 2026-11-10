@@ -6,6 +6,23 @@ import org.junit.jupiter.api.Test;
 
 class ProfileDialogModelTest {
 	@Test
+	void startupPrefillsOptionsOverProfileValuesButDoesNotSaveTheOptionPassword() {
+		var raw = new Profile("dev", "jdbc:postgresql://saved/db", null, null, null, "saved-user", "${ENV_PASSWORD}", true, "app", Map.of("sslmode", "require"));
+		var resolved = new Profile("dev", raw.url(), null, null, null, raw.user(), "env-secret", true, "app", raw.properties());
+		var options = new ConnectionOptions();
+		options.host = "tunnel";
+		options.database = "other";
+		options.password = "option-secret";
+		var dialog = ProfileDialogModel.prefill(options, resolved, raw, Settings.defaults());
+		assertThat(dialog.value(ProfileDialogModel.Field.HOST)).isEqualTo("tunnel");
+		assertThat(dialog.value(ProfileDialogModel.Field.URL)).isEmpty();
+		assertThat(dialog.connectionProfile().password()).isEqualTo("option-secret");
+		assertThat(dialog.savedProfile().password()).isEqualTo("${ENV_PASSWORD}");
+		assertThat(dialog.connectionProfile().user()).isEqualTo("saved-user");
+		assertThat(dialog.connectionProfile().readOnly()).isTrue();
+	}
+
+	@Test
 	void validatesFieldsAndMapsAHostProfileWithoutChangingPasswordWhitespace() {
 		var dialog = new ProfileDialogModel(new Profile(null, null, null, null, null, null, null, null, null, Map.of()), null);
 		assertThatThrownBy(() -> dialog.validate(true)).isInstanceOf(ConfigException.class).hasMessageContaining("Name");
@@ -37,6 +54,8 @@ class ProfileDialogModelTest {
 		var dialog = new ProfileDialogModel(given, null);
 		dialog.set(ProfileDialogModel.Field.NAME, "dev");
 		assertThat(dialog.value(ProfileDialogModel.Field.PASSWORD)).isEmpty();
+		assertThat(dialog.value(ProfileDialogModel.Field.URL)).doesNotContain("url-secret");
+		assertThat(dialog.connectionProfile().url()).contains("password=url-secret");
 		assertThat(dialog.connectionProfile().password()).isEqualTo("cli-secret");
 		assertThat(dialog.savedProfile().password()).isNull();
 		assertThat(dialog.savedProfile().url()).isEqualTo("jdbc:postgresql://localhost/db?sslmode=require");

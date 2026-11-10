@@ -35,7 +35,10 @@ public final class ProfileCommands {
 		return parts[0].equals("/connect") ? new ConnectCommand(this).execute(argument) : new ProfileCommand(this).execute(argument);
 	}
 	Action connect(String argument) {
-		if (argument.isEmpty()) return new Info(list());
+		if (argument.isEmpty()) {
+			if (store.names().isEmpty()) return new Edit(new ProfileDialogModel(new Profile(null, null, null, null, null, null, null, null, null, Map.of()), null), true, null);
+			return new Info(list());
+		}
 		String name = argument;
 		if (argument.matches("\\d+")) {
 			List<String> names = listing == null ? store.names() : listing;
@@ -46,8 +49,10 @@ public final class ProfileCommands {
 			}
 			catch (NumberFormatException e) { throw new ConfigException("No Profile number " + argument + ". Type /connect to list Profiles."); }
 		}
-		return new Connect(resolve(store.profile(name)));
+		return new Connect(load(name));
 	}
+	public Profile load(String name) { return resolve(store.profile(name)); }
+
 	/** Resolve dialog references, but request a prompt when only the password reference is unavailable. */
 	public Profile resolve(Profile raw) {
 		String password;

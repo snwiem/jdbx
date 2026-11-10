@@ -33,6 +33,25 @@ class ProfileCommandsIT {
 	}
 
 	@Test
+	void disconnectedStartupConnectsFromTheDialogAndPromptsWithoutSavingPromptCredentials() throws Exception {
+		var stateBase = directory.resolve("startup-state");
+		try (Session session = new Session(SessionDirectory.create(stateBase), Settings.defaults())) {
+			session.configureProfiles(directory, Map.of());
+			var options = new ConnectionOptions(); options.url = POSTGRES.getJdbcUrl(); options.user = POSTGRES.getUsername();
+			var model = ProfileDialogModel.prefill(options, null, null, Settings.defaults());
+			session.openConnectionDialog(model, stateBase);
+			model.set(ProfileDialogModel.Field.NAME, "startup");
+			session.saveDialog(true).get(10, TimeUnit.SECONDS);
+			assertThat(session.interaction()).isInstanceOf(SessionInteraction.Password.class);
+			assertThat(new ProfileStore(directory).profile("startup").password()).isNull();
+			session.answerPassword(POSTGRES.getPassword()).get(10, TimeUnit.SECONDS);
+			assertThat(session.connectionLabel()).startsWith(POSTGRES.getUsername() + "@");
+			assertThat(submit(session, "select 123").messageBlocks().getLast().result().rows()).containsExactly(List.of(123));
+			assertThat(session.history()).containsExactly("select 123");
+		}
+	}
+
+	@Test
 	void missingProfilePasswordUsesThePromptApiWithoutEchoOrPersistence() throws Exception {
 		var given = profile("prompt", false);
 		new ProfileStore(directory).save(new Profile(given.name(), given.url(), null, null, null, given.user(), "${MISSING_SECRET}", false, null, Map.of()));

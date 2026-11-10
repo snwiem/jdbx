@@ -283,6 +283,21 @@ class SessionResumeIT {
 	}
 
 	@Test
+	void resumePromptKeepsTheProfilesSchemaAndDriverProperties() throws Exception {
+		String earlier;
+		try (Session first = session(Settings.defaults().withExecution(2, null, true), "pg", parameters(), name -> null)) { earlier = first.directory().id(); }
+		var elsewhere = new ConnectionParameters("jdbc:postgresql://elsewhere.example:5432/other", Map.of("user", "carol", "password", "x"), false);
+		var profile = new Profile("pg", POSTGRES.getJdbcUrl(), null, null, null, POSTGRES.getUsername(), null, null, "pg_catalog", Map.of("readOnlyMode", "always"));
+		try (Session current = session(Settings.defaults(), null, elsewhere, name -> profile)) {
+			submit(current, "/resume " + earlier);
+			assertThat(current.interaction()).isInstanceOf(SessionInteraction.Password.class);
+			current.answerPassword(POSTGRES.getPassword()).get(10, TimeUnit.SECONDS);
+			assertThat(submit(current, "show search_path").messageBlocks().getLast().result().rows()).containsExactly(List.of("pg_catalog"));
+			assertThat(submit(current, "show default_transaction_read_only").messageBlocks().getLast().result().rows()).containsExactly(List.of("on"));
+		}
+	}
+
+	@Test
 	void aProfileWithAResolvablePasswordReconnectsOnResume() throws Exception {
 		String earlier;
 		try (Session first = session(Settings.defaults(), "pg", parameters(), name -> null)) {

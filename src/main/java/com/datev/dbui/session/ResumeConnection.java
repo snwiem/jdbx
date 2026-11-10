@@ -47,6 +47,13 @@ public final class ResumeConnection {
 					profileProblem = "Profile '" + stored.profile() + "' does not exist any more.";
 				}
 				else {
+					if (profile.password() == null && (profile.url() == null || !profile.url().matches(".*[?&]password=.*"))) {
+						var options = new ConnectionOptions(); options.password = "";
+						var resolved = ConnectionParameters.resolve(options, profile, settings);
+						var properties = new LinkedHashMap<>(resolved.properties()); properties.remove("password");
+						return new Prompt("Session " + sessionId + ": password for " + stored.label(),
+							new ConnectionParameters(resolved.url(), properties, storedReadOnly));
+					}
 					var resolved = ConnectionParameters.resolve(new ConnectionOptions(), profile, settings);
 					return new Reconnect(new ConnectionParameters(resolved.url(), resolved.properties(), storedReadOnly));
 				}

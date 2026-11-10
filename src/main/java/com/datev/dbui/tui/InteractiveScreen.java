@@ -37,6 +37,11 @@ public final class InteractiveScreen {
 	private final ScrollbarState scrollbar = new ScrollbarState();
 	private int transcriptHeight;
 	private boolean busy;
+	private com.datev.dbui.session.SessionInteraction interaction;
+	private ConnectionModal modal;
+	private Consumer<Boolean> saveDialog = ignored -> { };
+	private Consumer<String> answerPassword = ignored -> { };
+	private Runnable cancelDialog = () -> { };
 	private ExecutionStatus status;
 	private String connection;
 	private final Consumer<String> send;
@@ -78,8 +83,19 @@ public final class InteractiveScreen {
 		this.keys = keys;
 	}
 
+	public void onInteraction(Consumer<Boolean> save, Consumer<String> password, Runnable cancel) {
+		saveDialog = save; answerPassword = password; cancelDialog = cancel;
+	}
+
+	public void interaction(com.datev.dbui.session.SessionInteraction interaction) {
+		if (this.interaction == interaction) return;
+		this.interaction = interaction;
+		modal = interaction == null ? null : new ConnectionModal(interaction, saveDialog, answerPassword, cancelDialog);
+	}
+
 	public void update(List<MessageBlock> blocks) {
 		transcript.replace(blocks);
+		if (modal != null) modal.error(!blocks.isEmpty() && blocks.getLast().kind() == MessageBlock.Kind.ERROR ? blocks.getLast().text() : null);
 	}
 
 	/** The history of the Session, oldest first. Up, Down and Ctrl-R use it. */
@@ -102,6 +118,7 @@ public final class InteractiveScreen {
 	}
 
 	public boolean handle(Event event) {
+		if (modal != null) return busy || modal.handle(event);
 		if (event instanceof TickEvent && busy) {
 			return true;
 		}
@@ -254,5 +271,6 @@ public final class InteractiveScreen {
 			buffer.fill(new Rect(0, y, width, 1), new Cell(" ", statusStyle));
 			buffer.setString(0, y, CharWidth.substringByWidth(status[row], width), statusStyle);
 		}
+		if (modal != null) modal.render(frame, statusStyle);
 	}
 }

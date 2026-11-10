@@ -21,13 +21,16 @@ public final class ProfileDialogModel {
 	private final String transientPassword;
 	private final String savedPassword;
 	private boolean passwordEdited;
+	private boolean urlEdited;
+	private final String transientUrl;
 
 	/** savedPassword is the original literal password from profiles.yaml, never a resolved environment value. */
 	public ProfileDialogModel(Profile initial, String savedPassword) {
 		this.transientPassword = initial.password();
 		this.savedPassword = savedPassword;
+		this.transientUrl = initial.url();
 		fields.put(Field.NAME, text(initial.name()));
-		fields.put(Field.URL, text(initial.url()));
+		fields.put(Field.URL, initial.url() == null ? "" : ConnectionInfo.of(new ConnectionParameters(initial.url(), Map.of(), false), null).url());
 		fields.put(Field.HOST, text(initial.host()));
 		fields.put(Field.PORT, initial.port() == null ? "" : initial.port().toString());
 		fields.put(Field.DATABASE, text(initial.database()));
@@ -39,10 +42,25 @@ public final class ProfileDialogModel {
 			.map(e -> e.getKey() + "=" + e.getValue()).collect(Collectors.joining(";")));
 	}
 
+	public static ProfileDialogModel prefill(ConnectionOptions options, Profile resolved, Profile raw, Settings settings) {
+		Profile fallback = resolved == null ? new Profile(null, null, null, null, null, null, null, null, null, Map.of()) : resolved;
+		boolean hostOptions = options.host != null || options.port != null || options.database != null;
+		String url = options.url != null ? options.url : hostOptions ? null : fallback.url();
+		Profile initial = new Profile(fallback.name(), url, url == null ? first(options.host, fallback.host()) : null,
+			url == null ? first(options.port, fallback.port()) : null, url == null ? first(options.database, fallback.database()) : null,
+			first(options.user, fallback.user()), first(options.password, fallback.password()),
+			options.readOnly != null ? options.readOnly : fallback.readOnly() == null ? settings.readOnly() : fallback.readOnly(),
+			first(options.schema, fallback.schema()), fallback.properties());
+		return new ProfileDialogModel(initial, raw == null ? null : raw.password());
+	}
+
+	private static <T> T first(T option, T fallback) { return option == null ? fallback : option; }
+
 	public String value(Field field) { return fields.get(field); }
 	public void set(Field field, String value) {
 		fields.put(field, value);
 		if (field == Field.PASSWORD) passwordEdited = true;
+		if (field == Field.URL) urlEdited = true;
 	}
 
 	public void validate(boolean saving) {
@@ -71,7 +89,7 @@ public final class ProfileDialogModel {
 	}
 
 	public Profile connectionProfile() {
-		return profile(passwordEdited || savedPassword != null ? password() : transientPassword, false);
+		return profile(passwordEdited ? password() : transientPassword, false);
 	}
 
 	public Profile savedProfile() {
@@ -81,7 +99,7 @@ public final class ProfileDialogModel {
 	private String password() { return value(Field.PASSWORD).isEmpty() ? null : value(Field.PASSWORD); }
 
 	private Profile profile(String password, boolean saving) {
-		String url = blank(value(Field.URL));
+		String url = !saving && !urlEdited ? transientUrl : blank(value(Field.URL));
 		if (saving && url != null) url = ConnectionInfo.of(new ConnectionParameters(url, Map.of(), false), null).url();
 		Map<String, String> properties = new LinkedHashMap<>();
 		for (String line : value(Field.PROPERTIES).split("[;\n]")) {
