@@ -246,4 +246,45 @@ class BatchEntryPointIT {
 
 		assertThat(outcome.stdout()).contains("--format");
 	}
+
+	@Test
+	void writesVerticalTable() {
+		Outcome outcome = run(connection("--orientation", "vertical", "-c", "select 1 as id, 'alice' as name, null as nothing"));
+
+		assertThat(outcome.stdout()).isEqualTo("id      | 1\nname    | alice\nnothing | NULL\n");
+		assertThat(outcome.exitCode()).isZero();
+	}
+
+	@Test
+	void writesVerticalCsvCaseInsensitive() {
+		Outcome outcome = run(connection("--format", "csv", "--orientation", "VERTICAL", "-c", "select 1 as id, 'alice' as name"));
+
+		assertThat(outcome.stdout()).isEqualTo("id,1\nname,alice\n");
+	}
+
+	@Test
+	void usesOrientationFromSettingsAndOptionWins(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+		java.nio.file.Files.writeString(dir.resolve("config.yaml"), "orientation: vertical\n");
+
+		Outcome fromSettings = run(connection("--config-dir", dir.toString(), "--format", "csv", "-c", "select 1 as id"));
+		Outcome overridden = run(connection("--config-dir", dir.toString(), "--format", "csv", "--orientation", "horizontal",
+				"-c", "select 1 as id"));
+
+		assertThat(fromSettings.stdout()).isEqualTo("id,1\n");
+		assertThat(overridden.stdout()).isEqualTo("id\n1\n");
+	}
+
+	@Test
+	void rejectsUnknownOrientation() {
+		Outcome outcome = run(connection("--orientation", "diagonal", "-c", "select 1"));
+
+		assertThat(outcome.exitCode()).isNotZero();
+		assertThat(outcome.stdout()).isEmpty();
+		assertThat(outcome.stderr()).contains("diagonal").contains("horizontal, vertical");
+	}
+
+	@Test
+	void helpListsOrientationOption() {
+		assertThat(run("--help").stdout()).contains("--orientation");
+	}
 }

@@ -4,11 +4,11 @@
 
 **Blocked by:** 0004 Formats
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md`
 
-- [ ] Unit tests for vertical layout in all four Formats, including empty Results and one-row Results
-- [ ] `json` output is identical for both Orientations
-- [ ] Default is horizontal, and the default can be set in the settings
-- [ ] `--orientation` appears in `--help`
+- [x] Unit tests for vertical layout in all four Formats, including empty Results and one-row Results
+- [x] `json` output is identical for both Orientations
+- [x] Default is horizontal, and the default can be set in the settings
+- [x] `--orientation` appears in `--help`
