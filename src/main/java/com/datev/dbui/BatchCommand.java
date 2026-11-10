@@ -55,6 +55,17 @@ class BatchCommand implements Callable<Integer> {
 			description = "Output Format: table, markdown, csv, tsv or json (default: ${DEFAULT-VALUE})")
 	Format format;
 
+	@Option(names = "--orientation", converter = OrientationConverter.class,
+			description = "Layout: horizontal or vertical (default: from settings, else horizontal)")
+	Orientation orientation;
+
+	static class OrientationConverter implements ITypeConverter<Orientation> {
+		@Override
+		public Orientation convert(String value) {
+			return Orientation.parse(value);
+		}
+	}
+
 	static class FormatConverter implements ITypeConverter<Format> {
 		@Override
 		public Format convert(String value) {
@@ -98,6 +109,10 @@ class BatchCommand implements Callable<Integer> {
 		}
 	}
 
+	private Orientation orientation(Settings settings) {
+		return orientation != null ? orientation : Orientation.parse(settings.orientation());
+	}
+
 	private static String label(ConnectionParameters parameters) {
 		String target = parameters.url().replaceFirst("^jdbc:postgresql://", "").replaceFirst("\\?.*$", "");
 		String user = parameters.properties().get("user");
@@ -123,7 +138,7 @@ class BatchCommand implements Callable<Integer> {
 						if (!first) {
 							out.print('\n');
 						}
-						out.print(format.formatter(FormatOptions.defaults()).format(read(resultSet)));
+						out.print(format.formatter(FormatOptions.defaults(), orientation(settings)).format(read(resultSet)));
 						out.flush();
 						first = false;
 					}

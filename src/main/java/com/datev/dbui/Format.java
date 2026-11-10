@@ -13,11 +13,16 @@ public enum Format {
 	}
 
 	public ResultFormatter formatter(FormatOptions options) {
+		return formatter(options, Orientation.HORIZONTAL);
+	}
+
+	/** {@code json} ignores the Orientation. */
+	public ResultFormatter formatter(FormatOptions options, Orientation orientation) {
 		return switch (this) {
-			case TABLE -> new TableFormatter(options);
-			case MARKDOWN -> new MarkdownFormatter(options);
-			case CSV -> new CsvFormatter(options);
-			case TSV -> new TsvFormatter(options);
+			case TABLE -> new TableFormatter(options, orientation);
+			case MARKDOWN -> new MarkdownFormatter(options, orientation);
+			case CSV -> new CsvFormatter(options, orientation);
+			case TSV -> new TsvFormatter(options, orientation);
 			case JSON -> new JsonFormatter(options);
 		};
 	}
