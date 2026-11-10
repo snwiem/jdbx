@@ -406,6 +406,17 @@ class SessionIT {
 	}
 
 	@Test
+	void helpListsAllRegisteredSlashCommandsWithoutSendingAnythingToTheDatabase() throws Exception {
+		try (Session session = session()) {
+			var help = session.submit("/help").get(5, TimeUnit.SECONDS).messageBlocks().getLast();
+			assertThat(help.kind()).isEqualTo(MessageBlock.Kind.INFO);
+			for (String name : java.util.List.of("quit", "limit", "timeout", "schema", "tables", "describe", "refresh", "resume", "help")) {
+				assertThat(help.text()).contains("/" + name);
+			}
+		}
+	}
+
+	@Test
 	void unknownSlashCommandIsNotSentToTheDatabase() throws Exception {
 		try (Session session = session()) {
 			var update = session.submit("/not-a-command").get(5, TimeUnit.SECONDS);

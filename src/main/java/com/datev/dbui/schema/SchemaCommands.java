@@ -26,11 +26,16 @@ public final class SchemaCommands {
 	/** Blocks for one command; call only when {@link #handles} is true. May query the database. */
 	public List<MessageBlock> run(String input) throws SQLException {
 		var line = SchemaCommandLine.parse(input).orElseThrow();
+		return run(line.command(), line.argument());
+	}
+
+	/** Executes arguments already parsed by the Session's Slash command registry. */
+	public List<MessageBlock> run(String command, String argument) throws SQLException {
 		try {
-			return switch (line.command()) {
-				case "schema" -> schemas(line.argument());
-				case "tables" -> tables(line.argument());
-				case "describe" -> describe(line.argument());
+			return switch (command) {
+				case "schema" -> schemas(argument);
+				case "tables" -> tables(argument);
+				case "describe" -> describe(argument);
 				default -> refresh();
 			};
 		}

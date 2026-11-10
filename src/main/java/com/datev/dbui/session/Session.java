@@ -44,6 +44,7 @@ public final class Session implements AutoCloseable {
 	private final List<MessageBlock> messageBlocks = new ArrayList<>();
 	private final ExecutionControls controls;
 	private SchemaCommands schemaCommands;
+	private final SlashCommandRegistry slashCommands;
 	private boolean ended;
 	private boolean running;
 	private volatile boolean cancelRequested;
@@ -73,6 +74,7 @@ public final class Session implements AutoCloseable {
 		this.plainSettings = settings;
 		this.controls = new ExecutionControls(this::settings, this::updateSettings);
 		this.schemaCommands = new SchemaCommands(new SchemaProvider(connection));
+		this.slashCommands = new SlashCommandRegistry(commands());
 		connection.setAutoCommit(true);
 		connection.setReadOnly(settings.readOnly());
 		if (directory.disabledReason() != null) {
@@ -143,25 +145,14 @@ public final class Session implements AutoCloseable {
 		if (state != null) {
 			state.submitted(input);
 		}
-		if (state != null && isResume(input)) {
-			return run(() -> resume(input.strip().substring("/resume".length()).strip()));
-		}
-		if (input.strip().equals("/quit")) {
-			ended = true;
-			return CompletableFuture.completedFuture(new Update(messageBlocks(), true));
-		}
-		var controlMessage = controls.handle(input);
-		if (controlMessage != null) {
-			messageBlocks.add(controlMessage);
-			return CompletableFuture.completedFuture(new Update(messageBlocks(), false));
-		}
-		if (SchemaCommands.handles(input)) {
-			return run(() -> runSchemaCommand(input));
-		}
 		String stripped = input.stripLeading();
 		if (stripped.startsWith("/") && !stripped.startsWith("/*")) {
-			messageBlocks.add(MessageBlock.error("Unknown Slash command: " + input.strip()));
-			return CompletableFuture.completedFuture(new Update(messageBlocks(), false));
+			var invocation = slashCommands.parse(input);
+			Supplier<Update> work = () -> {
+				invocation.execute().forEach(this::add);
+				return new Update(messageBlocks(), ended);
+			};
+			return invocation.background() ? run(work) : CompletableFuture.completedFuture(work.get());
 		}
 		return run(() -> execute(input));
 	}
@@ -210,9 +201,44 @@ public final class Session implements AutoCloseable {
 		return running && activeStatement == statement;
 	}
 
-	private static boolean isResume(String input) {
-		String text = input.strip();
-		return text.equals("/resume") || text.startsWith("/resume ");
+	/** Registry shared by dispatch, /help and on-request argument Completion. */
+	public SlashCommandRegistry slashCommands() {
+		return slashCommands;
+	}
+
+	private List<SlashCommand> commands() {
+		var commands = new ArrayList<SlashCommand>();
+		commands.add(new SlashCommand("quit", "End the Session.", null, false, argument -> {
+			ended = true;
+			return List.of();
+		}));
+		commands.add(new SlashCommand("limit", "Change the Row limit (1 to 2147483647).",
+			SlashCommand.argument("N", "1", List.of()), false, argument -> List.of(controls.limit(argument))));
+		commands.add(new SlashCommand("timeout", "Change the Statement timeout (seconds: 1 to 2147483647), or turn it off.",
+			SlashCommand.argument("<seconds|off>", "1", List.of("off")), false, argument -> List.of(controls.timeout(argument))));
+		commands.add(schemaCommand("schema", "List schemas; all includes system schemas.", "[all]", "0..1", List.of("all")));
+		commands.add(schemaCommand("tables", "List tables in the current or named schema.", "[schema]", "0..1", List.of()));
+		commands.add(schemaCommand("describe", "Describe a table, its columns and keys.", "<table>", "1", List.of()));
+		commands.add(schemaCommand("refresh", "Clear the schema cache.", null, "0", List.of()));
+		commands.add(new SlashCommand("resume", "List earlier Sessions, or fork one by number or id.",
+			SlashCommand.argument("[number|id]", "0..1", List.of()), true, argument -> {
+				if (state == null) {
+					return List.of(MessageBlock.error("/resume is not available without a Session context."));
+				}
+				resume(argument);
+				return List.of();
+			}));
+		commands.add(new SlashCommand("help", "List Slash commands and key bindings.", null, false,
+			argument -> List.of(MessageBlock.info(slashCommands.help()))));
+		return commands;
+	}
+
+	private SlashCommand schemaCommand(String name, String help, String label, String arity, List<String> candidates) {
+		return new SlashCommand(name, help, label == null ? null : SlashCommand.argument(label, arity, candidates), true,
+			argument -> {
+				runSchemaCommand(name, argument);
+				return List.of();
+			});
 	}
 
 	private Update resume(String argument) {
@@ -258,9 +284,9 @@ public final class Session implements AutoCloseable {
 		lastResult = new ExecutionStatus.ResultSummary(rows, Duration.ofNanos(System.nanoTime() - statementStartedAt), truncated);
 	}
 
-	private Update runSchemaCommand(String input) {
+	private Update runSchemaCommand(String name, String argument) {
 		try {
-			schemaCommands.run(input).forEach(this::add);
+			schemaCommands.run(name, argument).forEach(this::add);
 		}
 		catch (SQLException e) {
 			add(MessageBlock.error(SqlErrorText.of(e)));
