@@ -5,6 +5,29 @@ import java.util.List;
 /** The schema data Completion reads. Implementations answer from a cache; they must not run per key press queries. */
 public interface SchemaModel {
 
+	/** No schema known: only keywords complete. */
+	SchemaModel EMPTY = new SchemaModel() {
+		@Override
+		public List<String> schemas() {
+			return List.of();
+		}
+
+		@Override
+		public String defaultSchema() {
+			return null;
+		}
+
+		@Override
+		public List<Table> tables(String schema) {
+			return List.of();
+		}
+
+		@Override
+		public List<String> columns(String schema, String table) {
+			return List.of();
+		}
+	};
+
 	record Table(String name, boolean view) {
 	}
 

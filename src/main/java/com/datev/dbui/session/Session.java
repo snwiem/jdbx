@@ -22,8 +22,11 @@ import java.util.function.Supplier;
 import com.datev.dbui.JdbcResultReader;
 import com.datev.dbui.StatementSplitter;
 import com.datev.dbui.config.Settings;
+import com.datev.dbui.completion.Completion;
+import com.datev.dbui.completion.CompletionEngine;
 import com.datev.dbui.schema.SchemaCommands;
 import com.datev.dbui.schema.SchemaProvider;
+import com.datev.dbui.schema.SchemaProviderModel;
 
 /** Owns one JDBC connection. Statement execution never runs on the input thread. */
 public final class Session implements AutoCloseable {
@@ -44,6 +47,8 @@ public final class Session implements AutoCloseable {
 	private final List<MessageBlock> messageBlocks = new ArrayList<>();
 	private final ExecutionControls controls;
 	private SchemaCommands schemaCommands;
+	private SchemaProvider schemaProvider;
+	private final CompletionEngine completionEngine = CompletionEngine.standard();
 	private boolean ended;
 	private boolean running;
 	private volatile boolean cancelRequested;
@@ -72,7 +77,8 @@ public final class Session implements AutoCloseable {
 		this.plainDirectory = directory;
 		this.plainSettings = settings;
 		this.controls = new ExecutionControls(this::settings, this::updateSettings);
-		this.schemaCommands = new SchemaCommands(new SchemaProvider(connection));
+		this.schemaProvider = new SchemaProvider(connection);
+		this.schemaCommands = new SchemaCommands(schemaProvider);
 		connection.setAutoCommit(true);
 		connection.setReadOnly(settings.readOnly());
 		if (directory.disabledReason() != null) {
@@ -180,6 +186,15 @@ public final class Session implements AutoCloseable {
 		}, executor);
 	}
 
+	/**
+	 * Completion for the editor text with the cursor at {@code cursor}. It runs on the Statement thread, so it never
+	 * overlaps a running Statement or schema command, and it reads the schema cache. The first request loads the
+	 * cache (a few metadata queries) and takes longer; the future completes when the candidates are ready.
+	 */
+	public CompletableFuture<Completion> complete(String text, int cursor) {
+		return CompletableFuture.supplyAsync(() -> completionEngine.complete(text, cursor, new SchemaProviderModel(schemaProvider)), executor);
+	}
+
 	/** Requests JDBC cancellation without blocking the input thread. The Session remains open. */
 	public synchronized CompletableFuture<Void> cancel() {
 		if (!running) {
@@ -235,7 +250,8 @@ public final class Session implements AutoCloseable {
 				}
 				lastResult = null;
 			}
-			schemaCommands = new SchemaCommands(new SchemaProvider(connection)); // the schema cache belongs to the connection
+			schemaProvider = new SchemaProvider(connection); // the schema cache belongs to the connection
+			schemaCommands = new SchemaCommands(schemaProvider);
 			directoryListener.accept(state.directory());
 			add(MessageBlock.info(resumed.message()));
 		}
