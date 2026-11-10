@@ -11,7 +11,7 @@ import com.datev.dbui.config.ConnectionParameters;
 import com.datev.dbui.config.Profile;
 import com.datev.dbui.config.Settings;
 
-/** How Resume gets a connection without a password prompt. */
+/** How Resume reuses credentials or requests a masked prompt. */
 class ResumeConnectionTest {
 
 	private static final ConnectionParameters CURRENT = new ConnectionParameters("jdbc:postgresql://h:5432/shop",
@@ -49,11 +49,11 @@ class ResumeConnectionTest {
 	}
 
 	@Test
-	void otherwiseTheResultNamesTheMissingPasswordAndTheMissingDialog() {
+	void otherwiseTheResultRequestsAPasswordWithNonSecretConnectionValues() {
 		var result = plan(stored("db.example", 5433, "shop", "bob", null), false, name -> null);
-		var unavailable = (ResumeConnection.Unavailable) result;
-		assertThat(unavailable.message()).contains("SID", "bob@db.example:5433/shop", "password", "issue 0013")
-			.doesNotContain("secret");
+		var prompt = (ResumeConnection.Prompt) result;
+		assertThat(prompt.message()).contains("SID", "bob@db.example:5433/shop", "password").doesNotContain("secret");
+		assertThat(prompt.parameters().properties()).containsEntry("user", "bob").doesNotContainKey("password");
 	}
 
 	@Test
@@ -61,6 +61,6 @@ class ResumeConnectionTest {
 		var result = plan(stored("db.example", 5433, "shop", "bob", "prod"), false, name -> {
 			throw new ConfigException("Profile 'prod' field 'password' uses ${PG_PASSWORD}, but that environment variable is not set.");
 		});
-		assertThat(((ResumeConnection.Unavailable) result).message()).contains("PG_PASSWORD");
+		assertThat(((ResumeConnection.Prompt) result).message()).contains("PG_PASSWORD");
 	}
 }

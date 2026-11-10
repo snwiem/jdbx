@@ -23,10 +23,15 @@ final class SessionState {
 	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault());
 
 	/** A message for the user; the Session shows it in an error band. */
-	static final class ResumeException extends Exception {
+	static class ResumeException extends Exception {
 		ResumeException(String message) {
 			super(message);
 		}
+	}
+
+	static final class PasswordRequired extends ResumeException {
+		final String sessionId;
+		PasswordRequired(String sessionId, String label) { super(label); this.sessionId = sessionId; }
 	}
 
 	/** The result of a Resume: a new connection (or {@code null} to keep the old one) and the text for an info band. */
@@ -88,6 +93,13 @@ final class SessionState {
 		return info.label();
 	}
 
+	void connected(com.datev.dbui.config.ConnectionParameters parameters, String profileName) {
+		this.parameters = parameters;
+		this.info = ConnectionInfo.of(parameters, profileName);
+		metadata = metadata.withConnection(info);
+		settings(settings.withExecution(settings.rowLimit(), settings.timeout(), parameters.readOnly()));
+	}
+
 	/** Records an input: history entry and, for a Statement, the last Statement in {@code session.yaml}. */
 	void submitted(String input) {
 		history.add(input);
@@ -132,7 +144,7 @@ final class SessionState {
 	 *
 	 * @param current the open connection
 	 */
-	Resumed resume(String argument, Connection current) throws ResumeException {
+	Resumed resume(String argument, Connection current, String password) throws ResumeException {
 		requireDirectory();
 		var chosen = choose(argument);
 		var stored = chosen.metadata();
@@ -150,8 +162,11 @@ final class SessionState {
 		Connection reconnected = null;
 		var newParameters = parameters;
 		var newInfo = stored.connection();
-		if (plan instanceof ResumeConnection.Unavailable unavailable) {
-			throw new ResumeException(unavailable.message());
+		if (plan instanceof ResumeConnection.Prompt prompt) {
+			if (password == null) throw new PasswordRequired(chosen.id(), prompt.message());
+			var properties = new java.util.LinkedHashMap<>(prompt.parameters().properties());
+			properties.put("password", password);
+			plan = new ResumeConnection.Reconnect(new com.datev.dbui.config.ConnectionParameters(prompt.parameters().url(), properties, stored.readOnly()));
 		}
 		boolean previousReadOnly = false;
 		boolean restoreReadOnly = false;

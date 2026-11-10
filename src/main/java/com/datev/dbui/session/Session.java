@@ -44,6 +44,9 @@ public final class Session implements AutoCloseable {
 	private final List<MessageBlock> messageBlocks = new ArrayList<>();
 	private final ExecutionControls controls;
 	private SchemaCommands schemaCommands;
+	private com.datev.dbui.profile.ProfileCommands profiles;
+	private volatile SessionInteraction interaction;
+	private java.util.function.Function<String, Update> passwordContinuation;
 	private boolean ended;
 	private boolean running;
 	private volatile boolean cancelRequested;
@@ -78,6 +81,66 @@ public final class Session implements AutoCloseable {
 		if (directory.disabledReason() != null) {
 			messageBlocks.add(MessageBlock.info("history and Session log are disabled: " + directory.disabledReason()));
 		}
+	}
+
+	/** Enables the Profile commands without changing the persistent Session context. */
+	public void configureProfiles(Path directory, java.util.Map<String, String> environment) {
+		profiles = new com.datev.dbui.profile.ProfileCommands(directory, environment);
+		String warning = profiles.warning();
+		if (warning != null) add(MessageBlock.info(warning));
+	}
+
+	public SessionInteraction interaction() { return interaction; }
+
+	/** Cancels a dialog or prompt without submitting input or storing credentials in history. */
+	public synchronized void cancelInteraction() { interaction = null; passwordContinuation = null; }
+
+	/** The password never passes through submit, input echo, history or Session metadata. */
+	public synchronized CompletableFuture<Update> answerPassword(String password) {
+		if (running || !(interaction instanceof SessionInteraction.Password) || passwordContinuation == null) return CompletableFuture.failedFuture(new IllegalStateException("No password prompt is open."));
+		var continuation = passwordContinuation;
+		interaction = null;
+		passwordContinuation = null;
+		return run(() -> continuation.apply(password));
+	}
+
+	private void connectProfile(com.datev.dbui.config.Profile profile, String profileName) throws SQLException {
+		var supplied = profile;
+		if (profile.password() == null && (profile.url() == null || !profile.url().matches(".*[?&]password=.*"))) {
+			interaction = new SessionInteraction.Password(profile.user() == null ? "database" : profile.user());
+			passwordContinuation = password -> {
+				try {
+					var withPassword = new com.datev.dbui.config.Profile(supplied.name(), supplied.url(), supplied.host(), supplied.port(), supplied.database(), supplied.user(), password,
+						supplied.readOnly(), supplied.schema(), supplied.properties());
+					switchConnection(com.datev.dbui.config.ConnectionParameters.resolve(new com.datev.dbui.config.ConnectionOptions(), withPassword, settings()), profileName);
+				}
+				catch (com.datev.dbui.config.ConfigException | SQLException e) { add(MessageBlock.error(e instanceof SQLException sql ? SqlErrorText.of(sql) : e.getMessage())); }
+				return new Update(messageBlocks(), false);
+			};
+			return;
+		}
+		switchConnection(com.datev.dbui.config.ConnectionParameters.resolve(new com.datev.dbui.config.ConnectionOptions(), supplied, settings()), profileName);
+	}
+
+	public synchronized CompletableFuture<Update> saveDialog(boolean save) {
+		if (running || !(interaction instanceof SessionInteraction.Dialog dialog)) return CompletableFuture.failedFuture(new IllegalStateException("No Profile dialog is open."));
+		return run(() -> {
+			try {
+				dialog.model().validate(save);
+				if (!save && !dialog.connect()) throw new com.datev.dbui.config.ConfigException("Profile edits must be saved.");
+				if (save) {
+					profiles.save(dialog.model(), dialog.editingName());
+					add(MessageBlock.info("Saved Profile '" + dialog.model().savedProfile().name() + "'."));
+				}
+				interaction = null;
+				if (dialog.connect()) {
+					var profile = profiles.resolve(dialog.model().connectionProfile());
+					connectProfile(profile, save ? profile.name() : null);
+				}
+			}
+			catch (com.datev.dbui.config.ConfigException | SQLException e) { add(MessageBlock.error(e instanceof SQLException sql ? SqlErrorText.of(sql) : e.getMessage())); }
+			return new Update(messageBlocks(), false);
+		});
 	}
 
 	/** The current Session directory. {@code /resume} replaces it with a fork. */
@@ -139,9 +202,25 @@ public final class Session implements AutoCloseable {
 		if (input.isBlank()) {
 			return CompletableFuture.completedFuture(new Update(messageBlocks(), false));
 		}
+		if (interaction instanceof SessionInteraction.Confirmation confirmation) {
+			return run(() -> {
+				try {
+					if (input.strip().equalsIgnoreCase("y")) { profiles.removeConfirmed(confirmation.profileName()); add(MessageBlock.info("Removed Profile '" + confirmation.profileName() + "'.")); }
+					else add(MessageBlock.info("Profile removal cancelled."));
+				}
+				catch (com.datev.dbui.config.ConfigException e) { add(MessageBlock.error(e.getMessage())); }
+				interaction = null;
+				return new Update(messageBlocks(), false);
+			});
+		}
+		if (interaction != null) return CompletableFuture.failedFuture(new IllegalStateException("Answer or cancel the open dialog first."));
 		messageBlocks.add(MessageBlock.input(input));
 		if (state != null) {
 			state.submitted(input);
+		}
+		// Issue 0013 hook: /connect and /profile move to the shared registry in issue 0012.
+		if (profiles != null && com.datev.dbui.profile.ProfileCommands.handles(input)) {
+			return run(() -> profileCommand(input));
 		}
 		if (state != null && isResume(input)) {
 			return run(() -> resume(input.strip().substring("/resume".length()).strip()));
@@ -215,13 +294,15 @@ public final class Session implements AutoCloseable {
 		return text.equals("/resume") || text.startsWith("/resume ");
 	}
 
-	private Update resume(String argument) {
+	private Update resume(String argument) { return resume(argument, null); }
+
+	private Update resume(String argument, String password) {
 		try {
 			if (argument.isEmpty()) {
 				add(MessageBlock.info(state.list()));
 				return new Update(messageBlocks(), false);
 			}
-			var resumed = state.resume(argument, connection);
+			var resumed = state.resume(argument, connection, password);
 			synchronized (this) {
 				if (resumed.connection() != null) {
 					var old = connection;
@@ -239,10 +320,45 @@ public final class Session implements AutoCloseable {
 			directoryListener.accept(state.directory());
 			add(MessageBlock.info(resumed.message()));
 		}
+		catch (SessionState.PasswordRequired prompt) {
+			interaction = new SessionInteraction.Password(prompt.getMessage());
+			passwordContinuation = supplied -> resume(prompt.sessionId, supplied);
+		}
 		catch (SessionState.ResumeException e) {
 			add(MessageBlock.error(e.getMessage()));
 		}
 		return new Update(messageBlocks(), false);
+	}
+
+	private Update profileCommand(String input) {
+		try {
+			var action = profiles.execute(input);
+			if (action instanceof com.datev.dbui.profile.ProfileCommands.Info info) add(MessageBlock.info(info.text()));
+			else if (action instanceof com.datev.dbui.profile.ProfileCommands.Edit edit) interaction = new SessionInteraction.Dialog(edit.model(), edit.connect(), edit.editingName());
+			else if (action instanceof com.datev.dbui.profile.ProfileCommands.Remove remove) {
+				interaction = new SessionInteraction.Confirmation(remove.name());
+				add(MessageBlock.info("Remove Profile '" + remove.name() + "'? Type y to confirm; anything else cancels."));
+			}
+			else if (action instanceof com.datev.dbui.profile.ProfileCommands.Connect connect) {
+				connectProfile(connect.profile(), connect.profile().name());
+			}
+		}
+		catch (com.datev.dbui.config.ConfigException | SQLException e) { add(MessageBlock.error(e instanceof SQLException sql ? SqlErrorText.of(sql) : e.getMessage())); }
+		return new Update(messageBlocks(), false);
+	}
+
+	private void switchConnection(com.datev.dbui.config.ConnectionParameters parameters, String profileName) throws SQLException {
+		Connection next = parameters.open();
+		try { next.setAutoCommit(true); next.setReadOnly(parameters.readOnly()); }
+		catch (SQLException e) { next.close(); throw e; }
+		Connection old = connection;
+		connection = next;
+		if (state != null) state.connected(parameters, profileName);
+		else updateSettings(settings().withExecution(settings().rowLimit(), settings().timeout(), parameters.readOnly()));
+		schemaCommands = new SchemaCommands(new SchemaProvider(next));
+		lastResult = null;
+		try { old.close(); } catch (SQLException ignored) { }
+		add(MessageBlock.info("Connected to " + ConnectionInfo.of(parameters, profileName).label() + "."));
 	}
 
 	private synchronized void finished() {

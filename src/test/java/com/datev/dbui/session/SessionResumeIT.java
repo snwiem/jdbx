@@ -244,7 +244,7 @@ class SessionResumeIT {
 	}
 
 	@Test
-	void aDifferentConnectionWithoutAResolvablePasswordGivesAnErrorAndChangesNothing() throws Exception {
+	void aDifferentConnectionWithoutAResolvablePasswordOpensAPromptAndCancellationChangesNothing() throws Exception {
 		String earlier;
 		var elsewhere = new ConnectionParameters("jdbc:postgresql://elsewhere.example:5432/other", Map.of("user", "carol", "password", "x"), false);
 		try (Session first = session(Settings.defaults(), null, elsewhere, name -> null)) {
@@ -253,11 +253,32 @@ class SessionResumeIT {
 		try (Session session = session()) {
 			String current = session.directory().id();
 			var result = submit(session, "/resume " + earlier);
-			var band = result.messageBlocks().getLast();
-			assertThat(band.kind()).isEqualTo(MessageBlock.Kind.ERROR);
-			assertThat(band.text()).contains("carol@elsewhere.example:5432/other", "password", "issue 0013");
+			assertThat(session.interaction()).isInstanceOf(SessionInteraction.Password.class);
+			assertThat(((SessionInteraction.Password) session.interaction()).label()).contains("carol@elsewhere.example:5432/other");
 			assertThat(session.directory().id()).isEqualTo(current);
+			session.cancelInteraction();
 			assertThat(submit(session, "select 1").messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.RESULT);
+		}
+	}
+
+	@Test
+	void resumeUsesThePromptApiAndForksOnlyAfterThePasswordConnects() throws Exception {
+		String earlier;
+		try (Session first = session()) { earlier = first.directory().id(); }
+		var elsewhere = new ConnectionParameters("jdbc:postgresql://elsewhere.example:5432/other", Map.of("user", "carol", "password", "x"), false);
+		try (Session session = session(Settings.defaults(), null, elsewhere, name -> null)) {
+			String before = session.directory().id();
+			submit(session, "/resume " + earlier);
+			assertThat(session.interaction()).isInstanceOf(SessionInteraction.Password.class);
+			assertThat(session.directory().id()).isEqualTo(before);
+			assertThat(session.answerPassword("incorrect").get(10, TimeUnit.SECONDS).messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(session.directory().id()).isEqualTo(before);
+			submit(session, "/resume " + earlier);
+			assertThat(session.answerPassword(POSTGRES.getPassword()).get(10, TimeUnit.SECONDS).messageBlocks().getLast().text()).contains("Resumed Session");
+			assertThat(SessionMetadata.read(session.directory().metadataFile()).resumedFrom()).isEqualTo(earlier);
+			assertThat(submit(session, "select 91").messageBlocks().getLast().result().rows()).containsExactly(List.of(91));
+			assertThat(tree(session.directory().path())).doesNotContain(POSTGRES.getPassword(), "incorrect");
+			assertThat(session.messageBlocks().toString()).doesNotContain(POSTGRES.getPassword(), "incorrect");
 		}
 	}
 
