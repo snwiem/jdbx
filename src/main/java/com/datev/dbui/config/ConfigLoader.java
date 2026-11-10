@@ -75,7 +75,36 @@ public class ConfigLoader {
 			throw new ConfigException("config.yaml: 'max-width' must be 0 or more, but is '" + maxWidth + "'.");
 		}
 		return new Settings(rowLimit, timeout, format, orientation, readOnly, nullMarker, multilineMarker, maxWidth,
-				timezone(root.get("timezone")));
+				timezone(root.get("timezone")), historyEnabled(root.get("history")), sessionsKeep(root.get("sessions")));
+	}
+
+	/** {@code history: {enabled: true|false}}, the nested form of the PRD wording. */
+	private static boolean historyEnabled(Object history) {
+		if (history == null) {
+			return true;
+		}
+		if (!(history instanceof Map<?, ?> map)) {
+			throw new ConfigException("config.yaml: 'history' must be a map such as 'enabled: false', but is '" + history + "'.");
+		}
+		return map.get("enabled") == null ? true : bool("config.yaml", "history.enabled", map.get("enabled"));
+	}
+
+	/** {@code sessions: {keep: <n>}}, at least 1. */
+	private static int sessionsKeep(Object sessions) {
+		if (sessions == null) {
+			return Settings.DEFAULT_SESSIONS_KEEP;
+		}
+		if (!(sessions instanceof Map<?, ?> map)) {
+			throw new ConfigException("config.yaml: 'sessions' must be a map such as 'keep: 50', but is '" + sessions + "'.");
+		}
+		if (map.get("keep") == null) {
+			return Settings.DEFAULT_SESSIONS_KEEP;
+		}
+		int keep = integer("config.yaml", "sessions.keep", map.get("keep"));
+		if (keep < 1) {
+			throw new ConfigException("config.yaml: 'sessions.keep' must be 1 or more, but is '" + keep + "'.");
+		}
+		return keep;
 	}
 
 	public List<String> profileNames() {

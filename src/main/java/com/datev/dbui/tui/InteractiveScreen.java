@@ -33,10 +33,14 @@ public final class InteractiveScreen {
 	private final ScrollbarState scrollbar = new ScrollbarState();
 	private int transcriptHeight;
 	private boolean busy;
-	private final String connection;
+	private String connection;
 	private final Consumer<String> send;
 	private final EditorKeys keys;
 	private final TextAreaState editor = new TextAreaState();
+	private final HistoryNavigator history = new HistoryNavigator();
+	private List<String> historyEntries = List.of();
+	private ReverseSearch search;
+	private String searchDraft = "";
 	private final TextArea editorWidget = TextArea.builder().overflow(Overflow.WRAP_WORD).build();
 
 	public InteractiveScreen(String connection, Consumer<String> send) {
@@ -60,6 +64,17 @@ public final class InteractiveScreen {
 
 	public void update(List<MessageBlock> blocks) {
 		transcript.replace(blocks);
+	}
+
+	/** The history of the Session, oldest first. Up, Down and Ctrl-R use it. */
+	public void history(List<String> entries) {
+		historyEntries = List.copyOf(entries);
+		history.entries(entries);
+	}
+
+	/** The connection text of the Status bar; it changes when {@code /resume} reconnects. */
+	public void connection(String connection) {
+		this.connection = connection;
 	}
 
 	public void busy(boolean busy) {
@@ -87,8 +102,20 @@ public final class InteractiveScreen {
 			if (busy) {
 				return true;
 			}
+			if (search != null) {
+				return handleSearch(key);
+			}
+			if (key.hasCtrl() && key.isCharIgnoreCase('r')) {
+				searchDraft = editor.text();
+				search = new ReverseSearch(historyEntries);
+				return true;
+			}
 			if (key.hasCtrl() && key.isCharIgnoreCase('c')) {
 				editor.clear();
+				return true;
+			}
+			if (!key.hasCtrl() && !key.hasAlt() && (key.isKey(KeyCode.UP) || key.isKey(KeyCode.DOWN))
+					&& handleHistory(key.isKey(KeyCode.UP))) {
 				return true;
 			}
 			if (key.hasCtrl() && key.isCharIgnoreCase('d')) {
@@ -101,6 +128,7 @@ public final class InteractiveScreen {
 			if (keys.send().matches(key)) {
 				String input = editor.text();
 				editor.clear();
+				history.reset();
 				if (!input.isBlank()) {
 					send.accept(input);
 				}
@@ -108,6 +136,49 @@ public final class InteractiveScreen {
 			}
 		}
 		return !busy && TextEditing.handle(editor, event, Overflow.WRAP_WORD);
+	}
+
+	/** Up on the first display row or Down on the last one moves through the history; elsewhere the editor moves. */
+	private boolean handleHistory(boolean up) {
+		int width = editor.lastRenderedWidth();
+		var rows = editor.computeDisplayRows(width > 0 ? width : Integer.MAX_VALUE / 2, Overflow.WRAP_WORD);
+		int row = TextAreaState.findDisplayRowIndex(rows, editor.cursorRow(), editor.cursorCol());
+		if (up ? row > 0 : row < rows.size() - 1) {
+			return false;
+		}
+		var text = up ? history.previous(editor.text()) : history.next();
+		text.ifPresent(this::setEditorText);
+		return true;
+	}
+
+	private void setEditorText(String text) {
+		editor.setText(text);
+		editor.moveCursorToEnd();
+	}
+
+	/** Ctrl-R again: older match. Enter accepts into the editor, Esc and Ctrl-C cancel. */
+	private boolean handleSearch(KeyEvent key) {
+		if (key.isKey(KeyCode.ENTER)) {
+			search = null;
+			history.reset();
+		}
+		else if (key.isKey(KeyCode.ESCAPE) || key.hasCtrl() && key.isCharIgnoreCase('c')) {
+			search = null;
+			setEditorText(searchDraft);
+		}
+		else if (key.hasCtrl() && key.isCharIgnoreCase('r')) {
+			search.older();
+		}
+		else if (key.isKey(KeyCode.BACKSPACE)) {
+			search.backspace();
+		}
+		else if (!key.hasCtrl() && !key.hasAlt() && key.code() == KeyCode.CHAR && !Character.isISOControl(key.character())) {
+			search.type(key.character());
+		}
+		if (search != null) {
+			setEditorText(search.match() != null ? search.match() : searchDraft);
+		}
+		return true;
 	}
 
 	public void render(Frame frame) {
@@ -134,7 +205,16 @@ public final class InteractiveScreen {
 				editor.scrollUp(Integer.MAX_VALUE);
 			}
 			editorWidget.renderWithCursor(new Rect(0, transcriptHeight + 1, width, editorHeight), buffer, editor, frame);
-			buffer.setString(0, transcriptHeight + editorHeight + 1, "─".repeat(width), rule);
+			int bottom = transcriptHeight + editorHeight + 1;
+			if (search != null) {
+				String text = " (reverse-search)`" + search.query() + "'" + (search.failing() ? "  no match" : "")
+					+ "  Enter accepts · Esc cancels";
+				buffer.fill(new Rect(0, bottom, width, 1), new Cell(" ", statusStyle));
+				buffer.setString(0, bottom, CharWidth.substringByWidth(text, width), statusStyle);
+			}
+			else {
+				buffer.setString(0, bottom, "─".repeat(width), rule);
+			}
 		}
 		String[] status = { " " + connection, busy ? " Running Statement…" : " Enter sends · Ctrl-J newline · /quit exits" };
 		for (int row = 0; row < statusHeight; row++) {

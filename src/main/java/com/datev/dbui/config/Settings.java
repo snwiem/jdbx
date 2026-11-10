@@ -11,9 +11,13 @@ import java.time.ZoneId;
  * @param multilineMarker text for a line break inside a cell in {@code table}
  * @param maxWidth maximum text width of a cell in {@code table}; 0 means no cut
  * @param timezone time zone for {@code timestamptz} values, or {@code null} for the JVM default
+ * @param historyEnabled whether the input history is saved ({@code history.enabled})
+ * @param sessionsKeep how many Session directories to keep ({@code sessions.keep})
  */
 public record Settings(int rowLimit, Duration timeout, String format, String orientation, boolean readOnly,
-		String nullMarker, String multilineMarker, int maxWidth, ZoneId timezone) {
+		String nullMarker, String multilineMarker, int maxWidth, ZoneId timezone, boolean historyEnabled, int sessionsKeep) {
+
+	public static final int DEFAULT_SESSIONS_KEEP = 50;
 
 	public static final String DEFAULT_NULL_MARKER = "NULL";
 	public static final String DEFAULT_MULTILINE_MARKER = "⏎";
@@ -21,7 +25,19 @@ public record Settings(int rowLimit, Duration timeout, String format, String ori
 
 	public Settings(int rowLimit, Duration timeout, String format, String orientation, boolean readOnly) {
 		this(rowLimit, timeout, format, orientation, readOnly, DEFAULT_NULL_MARKER, DEFAULT_MULTILINE_MARKER,
-				DEFAULT_MAX_WIDTH, null);
+				DEFAULT_MAX_WIDTH, null, true, DEFAULT_SESSIONS_KEEP);
+	}
+
+	public Settings(int rowLimit, Duration timeout, String format, String orientation, boolean readOnly,
+			String nullMarker, String multilineMarker, int maxWidth, ZoneId timezone) {
+		this(rowLimit, timeout, format, orientation, readOnly, nullMarker, multilineMarker, maxWidth, timezone, true,
+				DEFAULT_SESSIONS_KEEP);
+	}
+
+	/** The same Settings with other values for the settings that Resume restores. */
+	public Settings withExecution(int rowLimit, Duration timeout, boolean readOnly) {
+		return new Settings(rowLimit, timeout, format, orientation, readOnly, nullMarker, multilineMarker, maxWidth,
+				timezone, historyEnabled, sessionsKeep);
 	}
 
 	public static Settings defaults() {

@@ -22,6 +22,8 @@ import com.datev.dbui.config.ConnectionOptions;
 import com.datev.dbui.config.ConnectionParameters;
 import com.datev.dbui.config.Profile;
 import com.datev.dbui.config.Settings;
+import com.datev.dbui.session.SessionContext;
+import com.datev.dbui.session.SessionDirectory;
 import com.datev.dbui.tui.InteractiveMode;
 
 import picocli.CommandLine.Command;
@@ -85,9 +87,10 @@ class BatchCommand implements Callable<Integer> {
 		}
 		ConnectionParameters parameters;
 		Settings settings;
+		ConfigLoader loader;
 		try {
 			Map<String, String> environment = System.getenv();
-			ConfigLoader loader = new ConfigLoader(ConfigLoader.directory(connectionOptions.configDir, environment,
+			loader = new ConfigLoader(ConfigLoader.directory(connectionOptions.configDir, environment,
 					Path.of(System.getProperty("user.home"))), environment);
 			settings = loader.settings();
 			Profile profile = connectionOptions.profile == null ? null : loader.profile(connectionOptions.profile);
@@ -99,7 +102,8 @@ class BatchCommand implements Callable<Integer> {
 		}
 		try (Connection connection = parameters.open()) {
 			if (commands.isEmpty() && files.isEmpty() && stdinIsTerminal()) {
-				return InteractiveMode.run(connection, label(parameters));
+				return InteractiveMode.run(connection, label(parameters), new SessionContext(SessionDirectory.defaultStateBase(),
+						settings, parameters, connectionOptions.profile, loader::profile));
 			}
 			return runBatch(connection, settings);
 		}

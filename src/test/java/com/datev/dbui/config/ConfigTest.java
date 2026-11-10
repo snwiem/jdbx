@@ -25,6 +25,43 @@ class ConfigTest {
 		Files.writeString(dir.resolve(file), content);
 	}
 
+	// --- history and Sessions ---
+
+	@Test
+	void historyIsOnAndFiftySessionsAreKeptByDefault() {
+		assertThat(loader(Map.of()).settings().historyEnabled()).isTrue();
+		assertThat(loader(Map.of()).settings().sessionsKeep()).isEqualTo(50);
+	}
+
+	@Test
+	void historyEnabledAndSessionsKeepComeFromNestedKeys() throws Exception {
+		write("config.yaml", """
+				history:
+				  enabled: false
+				sessions:
+				  keep: 7
+				""");
+		var settings = loader(Map.of()).settings();
+		assertThat(settings.historyEnabled()).isFalse();
+		assertThat(settings.sessionsKeep()).isEqualTo(7);
+	}
+
+	@Test
+	void invalidHistoryAndSessionsKeysGiveClearErrors() throws Exception {
+		write("config.yaml", "history:\n  enabled: maybe\n");
+		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
+			.hasMessageContaining("history.enabled");
+		write("config.yaml", "history: off\n");
+		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
+			.hasMessageContaining("history");
+		write("config.yaml", "sessions:\n  keep: 0\n");
+		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
+			.hasMessageContaining("sessions.keep");
+		write("config.yaml", "sessions:\n  keep: many\n");
+		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
+			.hasMessageContaining("sessions.keep");
+	}
+
 	// --- config directory ---
 
 	@Test

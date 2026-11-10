@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.datev.dbui.session.Session;
+import com.datev.dbui.session.SessionContext;
 import com.datev.dbui.session.SessionDirectory;
 
 import dev.tamboui.terminal.KeyboardProtocol;
@@ -28,11 +29,19 @@ public final class InteractiveMode {
 		this.screen = new InteractiveScreen(connection, this::submit);
 	}
 
-	public static int run(Connection connection, String label) throws Exception {
+	public static int run(Connection connection, String label, SessionContext sessionContext) throws Exception {
 		AtomicReference<Throwable> failure = new AtomicReference<>();
-		var directory = SessionDirectory.create(SessionDirectory.defaultStateBase());
-		try (var terminalLogging = new TerminalLogging(); var sessionLogging = new SessionLogging(directory.logFile());
-			var session = new Session(connection, directory)) {
+		// A state directory that cannot be used disables history and Session log; it does not stop dbui.
+		var directory = SessionDirectory.createOrDisabled(sessionContext.stateBase());
+		var logging = new AtomicReference<SessionLogging>(directory.logFile() == null ? null : new SessionLogging(directory.logFile()));
+		try (var terminalLogging = new TerminalLogging(); var session = new Session(connection, directory, sessionContext)) {
+			// /resume switches to a new Session directory: move the log file with it.
+			session.onDirectoryChange(next -> {
+				var old = logging.getAndSet(next.logFile() == null ? null : new SessionLogging(next.logFile()));
+				if (old != null) {
+					old.close();
+				}
+			});
 			// TuiRunner owns and closes its backend, including when initialization fails.
 			var config = TuiConfig.builder().backend(new InteractiveBackend()).alternateScreen(true).mouseCapture(true)
 				.bracketedPaste(true).hideCursor(true).keyboardProtocol(KeyboardProtocol.AUTO)
@@ -43,7 +52,16 @@ public final class InteractiveMode {
 				}).build();
 			try (var runner = TuiRunner.create(config)) {
 				var mode = new InteractiveMode(session, runner, label, failure);
-				runner.run((event, ignored) -> mode.screen.handle(event), mode.screen::render);
+				mode.screen.update(session.messageBlocks());
+				try {
+					runner.run((event, ignored) -> mode.screen.handle(event), mode.screen::render);
+				}
+				finally {
+					var last = logging.getAndSet(null);
+					if (last != null) {
+						last.close();
+					}
+				}
 			}
 		}
 		if (failure.get() != null) {
@@ -56,6 +74,7 @@ public final class InteractiveMode {
 		screen.busy(true);
 		var pending = session.submit(input);
 		screen.update(session.messageBlocks());
+		screen.history(session.history());
 		pending.whenComplete((update, error) -> runner.runLater(() -> {
 			screen.busy(false);
 			if (error != null) {
@@ -64,6 +83,10 @@ public final class InteractiveMode {
 			}
 			else {
 				screen.update(update.messageBlocks());
+				screen.history(session.history());
+				if (session.connectionLabel() != null) {
+					screen.connection(session.connectionLabel());
+				}
 				if (update.ended()) {
 					runner.quit();
 				}

@@ -11,8 +11,8 @@ import java.util.HexFormat;
 import java.util.Map;
 
 /**
- * The directory of one Session: {@code <state base>/sessions/<id>/}. Today it holds only the Session log.
- * Issue 0017 (history, metadata, Resume) adds more files here, next to {@link #logFile()}.
+ * The directory of one Session: {@code <state base>/sessions/<id>/}. It holds the Session log,
+ * the input history and the Session metadata.
  */
 public final class SessionDirectory {
 
@@ -21,10 +21,35 @@ public final class SessionDirectory {
 
 	private final String id;
 	private final Path path;
+	private final String disabledReason;
 
 	private SessionDirectory(String id, Path path) {
+		this(id, path, null);
+	}
+
+	private SessionDirectory(String id, Path path, String disabledReason) {
 		this.id = id;
 		this.path = path;
+		this.disabledReason = disabledReason;
+	}
+
+	/**
+	 * Like {@link #create(Path)}, but a failure does not abort the application: the result is a disabled directory
+	 * that has no files and says why in {@link #disabledReason()}.
+	 */
+	public static SessionDirectory createOrDisabled(Path stateBase) {
+		try {
+			return create(stateBase);
+		}
+		catch (IOException | RuntimeException e) {
+			String reason = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+			return new SessionDirectory(null, null, stateBase + ": " + reason);
+		}
+	}
+
+	/** The reason why history and Session log are disabled, or {@code null} when the directory works. */
+	public String disabledReason() {
+		return disabledReason;
 	}
 
 	/** DBUI_STATE_DIR, else $XDG_STATE_HOME/dbui, else ~/.local/state/dbui. Empty variables count as unset. */
@@ -72,7 +97,18 @@ public final class SessionDirectory {
 		return path;
 	}
 
+	/** The Session log file, or {@code null} when the directory is disabled. */
 	public Path logFile() {
-		return path.resolve("session.log");
+		return path == null ? null : path.resolve("session.log");
+	}
+
+	/** The input history file, or {@code null} when the directory is disabled. */
+	public Path historyFile() {
+		return path == null ? null : path.resolve("history");
+	}
+
+	/** The Session metadata file, or {@code null} when the directory is disabled. */
+	public Path metadataFile() {
+		return path == null ? null : path.resolve("session.yaml");
 	}
 }
