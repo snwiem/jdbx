@@ -57,6 +57,18 @@ class SessionIT {
 	}
 
 	@Test
+	void unknownSlashCommandIsNotSentToTheDatabase() throws Exception {
+		try (Session session = session()) {
+			var update = session.submit("/not-a-command").get(5, TimeUnit.SECONDS);
+			assertThat(update.ended()).isFalse();
+			assertThat(update.messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(update.messageBlocks().getLast().text()).isEqualTo("Unknown Slash command: /not-a-command");
+			assertThat(session.submit("select 1").get(5, TimeUnit.SECONDS).messageBlocks().getLast().result().rows().getFirst())
+				.containsExactly(1);
+		}
+	}
+
+	@Test
 	void sqlErrorLeavesSessionUsable() throws Exception {
 		try (Session session = session()) {
 			var failed = session.submit("select * from no_such_table").get(5, TimeUnit.SECONDS);
