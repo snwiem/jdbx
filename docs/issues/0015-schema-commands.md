@@ -4,12 +4,12 @@
 
 **Blocked by:** 0008 Interactive tracer
 
-**Status:** done
+**Status:** in-progress (only the Format and Orientation criterion is open, blocked by 0012)
 
 **Parent:** `docs/prd/mvp-1.0.md`
 
 - [x] Integration tests with a small test schema
 - [x] `/describe` shows column name, type, nullable, default, primary and foreign keys
 - [x] A refresh command or key reloads the cache
-- [x] Output uses the current Format and Orientation
+- [ ] Output uses the current Format and Orientation (Results are normal Result blocks; Format switching is issue 0012)
 - [x] Large schemas do not block the editor for long. Loading shows a running indicator
