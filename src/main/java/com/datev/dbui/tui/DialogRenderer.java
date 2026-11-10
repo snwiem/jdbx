@@ -77,7 +77,8 @@ final class DialogRenderer {
 		int fx = cx + LABEL_COLUMN, fw = cw - LABEL_COLUMN;
 		Style style = focused ? styles.focusedField() : DialogForm.dimmed(field, model) ? styles.dimmedField() : styles.field();
 		if (field == Field.READ_ONLY) {
-			paintField(fx, y, fw, DialogForm.readOnlyText(model.value(field), globalReadOnly, fw >= 43), style, true);
+			String wide = DialogForm.readOnlyText(model.value(field), globalReadOnly, true);
+			paintField(fx, y, fw, CharWidth.of(wide) <= fw ? wide : DialogForm.readOnlyText(model.value(field), globalReadOnly, false), style, true);
 			return;
 		}
 		var state = states.apply(field);

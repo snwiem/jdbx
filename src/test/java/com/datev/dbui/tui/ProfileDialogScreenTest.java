@@ -430,4 +430,12 @@ class ProfileDialogScreenTest {
 		screen.interaction(new SessionInteraction.Dialog(model("other", "h", null), true, "other"));
 		assertThat(draw(screen, 100, 30).text()).contains("> Name");
 	}
+
+	@Test
+	void readOnlyChoiceFallsBackToTheShortFormInsteadOfBeingCutOff() {
+		var screen = screen(false);
+		screen.interaction(new SessionInteraction.Dialog(model("dev", "localhost", null), false, "dev"));
+		assertThat(draw(screen, 70, 24).text()).contains("‹ default (global: off) ›").doesNotContain("( ) of ");
+		assertThat(draw(screen, 74, 24).text()).contains("(•) default (global: off)   ( ) on   ( ) off");
+	}
 }
