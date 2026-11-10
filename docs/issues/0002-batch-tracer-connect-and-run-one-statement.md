@@ -11,5 +11,5 @@
 - [ ] `*IT` test against a PostgreSQL Testcontainer runs the call above and checks stdout and exit code 0
 - [ ] Missing connection values give a clear error on stderr and a non-zero exit code. Batch mode never prompts
 - [ ] The connection sets the application name `dbui`
-- [ ] The test seams of the PRD (Batch entry point) are in place and `AGENTS.md` rules are followed
-- [ ] Unneeded Spring Boot auto-configuration, web server and connection pool are not on the classpath
+- [x] The test seams of the PRD (Batch entry point) are in place and `AGENTS.md` rules are followed
+- [x] Unneeded Spring Boot auto-configuration, web server and connection pool are not on the classpath
