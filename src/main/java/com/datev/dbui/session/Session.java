@@ -17,6 +17,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import com.datev.dbui.Result;
+import com.datev.dbui.schema.SchemaCommands;
+import com.datev.dbui.schema.SchemaProvider;
 
 /** Owns one JDBC connection. Statement execution never runs on the input thread. */
 public final class Session implements AutoCloseable {
@@ -31,12 +33,14 @@ public final class Session implements AutoCloseable {
 	private final SessionDirectory directory;
 	private final ExecutorService executor = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dbui-statement").factory());
 	private final List<MessageBlock> messageBlocks = new ArrayList<>();
+	private final SchemaCommands schemaCommands;
 	private boolean ended;
 	private boolean running;
 
 	public Session(Connection connection, SessionDirectory directory) throws SQLException {
 		this.connection = connection;
 		this.directory = directory;
+		this.schemaCommands = new SchemaCommands(new SchemaProvider(connection));
 		connection.setAutoCommit(true);
 	}
 
@@ -65,6 +69,17 @@ public final class Session implements AutoCloseable {
 			ended = true;
 			return CompletableFuture.completedFuture(new Update(messageBlocks(), true));
 		}
+		if (SchemaCommands.handles(input)) {
+			running = true;
+			return CompletableFuture.supplyAsync(() -> {
+				try {
+					return runSchemaCommand(input);
+				}
+				finally {
+					finished();
+				}
+			}, executor);
+		}
 		String stripped = input.stripLeading();
 		if (stripped.startsWith("/") && !stripped.startsWith("/*")) {
 			messageBlocks.add(MessageBlock.error("Unknown Slash command: " + input.strip()));
@@ -83,6 +98,20 @@ public final class Session implements AutoCloseable {
 
 	private synchronized void finished() {
 		running = false;
+	}
+
+	private Update runSchemaCommand(String input) {
+		try {
+			schemaCommands.run(input).forEach(this::add);
+		}
+		catch (SQLException e) {
+			add(MessageBlock.error(SqlErrorText.of(e)));
+		}
+		catch (RuntimeException | Error e) {
+			add(MessageBlock.error("Unexpected error: " + e.getMessage() + ". Details: " + logFile()));
+			writeLog(e);
+		}
+		return new Update(messageBlocks(), false);
 	}
 
 	private Update execute(String input) {
