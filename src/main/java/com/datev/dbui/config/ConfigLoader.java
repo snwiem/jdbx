@@ -135,7 +135,7 @@ public class ConfigLoader {
 						+ String.join(", ", new TreeSet<>(PROFILE_KEYS)));
 			}
 		}
-		String url = text(where, "url", fields);
+		String url = resolvePassword ? text(where, "url", fields) : fields.get("url") == null ? null : String.valueOf(fields.get("url"));
 		String host = text(where, "host", fields);
 		if (url != null && host != null) {
 			throw new ConfigException(where + ": give either 'url' or 'host', not both.");

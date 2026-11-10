@@ -34,6 +34,17 @@ class ProfileCommandsIT {
 	}
 
 	@Test
+	void unchangedProfileEditsKeepPasswordReferencesInsideSavedUrls() throws Exception {
+		java.nio.file.Files.writeString(directory.resolve("profiles.yaml"), "profiles:\n  url:\n    url: '" + POSTGRES.getJdbcUrl() + "&user=" + POSTGRES.getUsername() + "&password=${URL_PASSWORD}'\n");
+		try (Session current = session(parameters().open(), Map.of("URL_PASSWORD", POSTGRES.getPassword()))) {
+			submit(current, "/profile edit url");
+			assertThat(current.interaction()).isInstanceOf(SessionInteraction.Dialog.class);
+			current.saveDialog(true).get(10, TimeUnit.SECONDS);
+			assertThat(java.nio.file.Files.readString(directory.resolve("profiles.yaml"))).contains("${URL_PASSWORD}").doesNotContain(POSTGRES.getPassword());
+		}
+	}
+
+	@Test
 	void existingEnvironmentReferencesInTypedProfileFieldsWorkForConnectListAndEdit() throws Exception {
 		java.nio.file.Files.writeString(directory.resolve("profiles.yaml"), "profiles:\n  env:\n    host: ${PG_HOST}\n    port: ${PG_PORT}\n    database: " + POSTGRES.getDatabaseName() + "\n    user: " + POSTGRES.getUsername() + "\n    password: ${MISSING_PASSWORD}\n    read-only: ${PG_READ_ONLY}\n");
 		var environment = Map.of("PG_HOST", POSTGRES.getHost(), "PG_PORT", POSTGRES.getMappedPort(5432).toString(), "PG_READ_ONLY", "true");

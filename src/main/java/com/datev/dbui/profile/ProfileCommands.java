@@ -75,7 +75,7 @@ public final class ProfileCommands {
 
 	Action edit(String name) {
 		Profile initial = name == null ? new Profile(null, null, null, null, null, null, null, null, null, Map.of()) : loader.profileForEditing(name);
-		return new Edit(new ProfileDialogModel(initial, initial.password()), false, name);
+		return new Edit(name == null ? new ProfileDialogModel(initial, null) : ProfileDialogModel.edit(initial), false, name);
 	}
 	Action remove(String name) { store.profile(name); return new Remove(name); }
 	public void removeConfirmed(String name) { store.remove(name); }

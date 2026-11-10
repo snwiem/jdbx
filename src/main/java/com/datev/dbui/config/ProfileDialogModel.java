@@ -23,9 +23,15 @@ public final class ProfileDialogModel {
 	private boolean passwordEdited;
 	private boolean urlEdited;
 	private final String transientUrl;
+	private final String persistedUrl;
 
 	/** savedPassword is the original literal password from profiles.yaml, never a resolved environment value. */
-	public ProfileDialogModel(Profile initial, String savedPassword) {
+	public ProfileDialogModel(Profile initial, String savedPassword) { this(initial, savedPassword, null, false); }
+
+	public static ProfileDialogModel edit(Profile persisted) { return new ProfileDialogModel(persisted, persisted.password(), persisted, true); }
+
+	private ProfileDialogModel(Profile initial, String savedPassword, Profile persisted, boolean keepPersistedUrl) {
+		this.persistedUrl = keepPersistedUrl && persisted != null ? persisted.url() : null;
 		this.transientPassword = initial.password();
 		this.savedPassword = savedPassword;
 		this.transientUrl = initial.url();
@@ -51,7 +57,7 @@ public final class ProfileDialogModel {
 			first(options.user, fallback.user()), first(options.password, fallback.password()),
 			options.readOnly != null ? options.readOnly : fallback.readOnly() == null ? settings.readOnly() : fallback.readOnly(),
 			first(options.schema, fallback.schema()), fallback.properties());
-		return new ProfileDialogModel(initial, raw == null ? null : raw.password());
+		return new ProfileDialogModel(initial, raw == null ? null : raw.password(), raw, options.url == null && !hostOptions);
 	}
 
 	private static <T> T first(T option, T fallback) { return option == null ? fallback : option; }
@@ -100,7 +106,8 @@ public final class ProfileDialogModel {
 
 	private Profile profile(String password, boolean saving) {
 		String url = !saving && !urlEdited ? transientUrl : blank(value(Field.URL));
-		if (saving && url != null) url = ConnectionInfo.of(new ConnectionParameters(url, Map.of(), false), null).url();
+		if (saving && !urlEdited && persistedUrl != null) url = persistedUrl;
+		else if (saving && url != null) url = ConnectionInfo.of(new ConnectionParameters(url, Map.of(), false), null).url();
 		Map<String, String> properties = new LinkedHashMap<>();
 		for (String line : value(Field.PROPERTIES).split("[;\n]")) {
 			if (line.isBlank()) continue;
@@ -115,7 +122,7 @@ public final class ProfileDialogModel {
 			blank(value(Field.SCHEMA)), properties);
 	}
 
-	private static boolean secret(String key) { return key.toLowerCase(java.util.Locale.ROOT).matches(".*(pass|secret|token|key).*|user"); }
+	private static boolean secret(String key) { return key.equalsIgnoreCase("password") || key.equalsIgnoreCase("user"); }
 	private static String text(String value) { return value == null ? "" : value; }
 	private static String blank(String value) { return value.isBlank() ? null : value.strip(); }
 }

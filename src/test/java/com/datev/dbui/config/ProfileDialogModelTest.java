@@ -6,6 +6,17 @@ import org.junit.jupiter.api.Test;
 
 class ProfileDialogModelTest {
 	@Test
+	void editingAnExistingProfileKeepsItsUrlReferencesAndSslDriverProperties() {
+		var given = new Profile("tls", "jdbc:postgresql://localhost/db?user=app&password=${PG}&sslmode=require", null, null,
+			null, null, null, null, null, Map.of("sslkey", "/tmp/key.pk8", "sslpassword", "${TLS_PASSWORD}"));
+		var dialog = ProfileDialogModel.edit(given);
+		dialog.validate(true);
+		assertThat(dialog.savedProfile()).isEqualTo(given);
+		assertThat(dialog.connectionProfile().properties()).containsEntry("sslkey", "/tmp/key.pk8");
+		assertThat(dialog.value(ProfileDialogModel.Field.URL)).doesNotContain("password=");
+	}
+
+	@Test
 	void anUnsetReadOnlyValueStaysUnsetSoTheSessionDefaultStillApplies() {
 		var given = new Profile("default", null, "localhost", null, "db", "alice", "secret", null, null, Map.of());
 		var dialog = new ProfileDialogModel(given, given.password());
