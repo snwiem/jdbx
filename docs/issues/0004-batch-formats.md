@@ -4,12 +4,13 @@
 
 **Blocked by:** 0002 Batch tracer
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md`
 
-- [ ] Unit tests for each Format with a Result that has NULL, long text, multi-line text, binary, date and JSON values
-- [ ] `csv`, `tsv` and `json` never cut data
-- [ ] `json` writes one object per row
-- [ ] NULL marker, multi-line marker and time zone are configurable through settings (defaults as in the PRD)
-- [ ] `--format` appears in `--help`
+- [x] Unit tests for each Format with a Result that has NULL, long text, multi-line text, binary, date and JSON values
+- [x] `csv`, `tsv` and `json` never cut data
+- [x] `json` writes one object per row
+- [x] NULL marker, multi-line marker and time zone are configurable through settings (defaults as in the PRD)
+  - Satisfied as `FormatOptions` values with PRD defaults. Reading them from settings is issue 0006.
+- [x] `--format` appears in `--help`

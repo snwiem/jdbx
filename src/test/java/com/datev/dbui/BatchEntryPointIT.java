@@ -85,4 +85,43 @@ class BatchEntryPointIT {
 		assertThat(outcome.stdout()).isEmpty();
 		assertThat(outcome.stderr()).contains("no_such_table");
 	}
+
+	@Test
+	void writesCsvWithTimestampAndJsonbColumn() {
+		Outcome outcome = run(connection("--format", "csv", "-c",
+				"select 1 as id, null as nothing, '{\"a\": [1, 2]}'::jsonb as doc, timestamptz '2024-03-05 10:15:30+00' as ts"));
+
+		String expectedTs = java.time.Instant.parse("2024-03-05T10:15:30Z").atZone(java.time.ZoneId.systemDefault())
+				.toOffsetDateTime().format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+		assertThat(outcome.stdout()).isEqualTo("id,nothing,doc,ts\n1,,\"{\"\"a\"\": [1, 2]}\",%s\n".formatted(expectedTs));
+		assertThat(outcome.exitCode()).isZero();
+	}
+
+	@Test
+	void writesJsonWithJsonbEmbeddedAsRealJson() {
+		Outcome outcome = run(connection("--format", "json", "-c",
+				"select 1 as id, null as nothing, '{\"a\": [1, 2]}'::jsonb as doc, true as ok, 'x'::bytea as bin"));
+
+		assertThat(outcome.stdout()).isEqualTo("""
+				[
+				{"id":1,"nothing":null,"doc":{"a": [1, 2]},"ok":true,"bin":"\\\\x78"}
+				]
+				""");
+		assertThat(outcome.exitCode()).isZero();
+	}
+
+	@Test
+	void rejectsUnknownFormat() {
+		Outcome outcome = run(connection("--format", "xml", "-c", "select 1"));
+
+		assertThat(outcome.exitCode()).isNotZero();
+		assertThat(outcome.stderr()).contains("xml");
+	}
+
+	@Test
+	void helpListsFormatOption() {
+		Outcome outcome = run("--help");
+
+		assertThat(outcome.stdout()).contains("--format");
+	}
 }

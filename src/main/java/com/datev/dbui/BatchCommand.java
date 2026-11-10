@@ -12,6 +12,7 @@ import java.util.Properties;
 import java.util.concurrent.Callable;
 
 import picocli.CommandLine.Command;
+import picocli.CommandLine.ITypeConverter;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
@@ -41,6 +42,17 @@ class BatchCommand implements Callable<Integer> {
 	@Option(names = { "-c", "--command" }, required = true, description = "Statement to run")
 	String statement;
 
+	@Option(names = "--format", defaultValue = "table", converter = FormatConverter.class,
+			description = "Output Format: table, markdown, csv, tsv or json (default: ${DEFAULT-VALUE})")
+	Format format;
+
+	static class FormatConverter implements ITypeConverter<Format> {
+		@Override
+		public Format convert(String value) {
+			return Format.parse(value);
+		}
+	}
+
 	@Override
 	public Integer call() {
 		Properties properties = new Properties();
@@ -52,7 +64,7 @@ class BatchCommand implements Callable<Integer> {
 				Statement jdbcStatement = connection.createStatement()) {
 			if (jdbcStatement.execute(statement)) {
 				try (ResultSet resultSet = jdbcStatement.getResultSet()) {
-					spec.commandLine().getOut().print(new TableFormatter().format(read(resultSet)));
+					spec.commandLine().getOut().print(format.formatter(FormatOptions.defaults()).format(read(resultSet)));
 					spec.commandLine().getOut().flush();
 				}
 			}
@@ -68,14 +80,18 @@ class BatchCommand implements Callable<Integer> {
 		ResultSetMetaData metaData = resultSet.getMetaData();
 		int count = metaData.getColumnCount();
 		List<String> columns = new ArrayList<>();
+		boolean[] jsonColumns = new boolean[count + 1];
 		for (int i = 1; i <= count; i++) {
 			columns.add(metaData.getColumnLabel(i));
+			String type = metaData.getColumnTypeName(i);
+			jsonColumns[i] = "json".equals(type) || "jsonb".equals(type);
 		}
 		List<List<Object>> rows = new ArrayList<>();
 		while (resultSet.next()) {
 			List<Object> row = new ArrayList<>();
 			for (int i = 1; i <= count; i++) {
-				row.add(resultSet.getObject(i));
+				Object value = resultSet.getObject(i);
+				row.add(value != null && jsonColumns[i] ? new JsonValue(value.toString()) : value);
 			}
 			rows.add(row);
 		}
