@@ -1,16 +1,29 @@
 package com.datev.dbui;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Writes a Result in the horizontal {@code table} Format. */
-public class TableFormatter {
+/** Writes a Result in the {@code table} Format. */
+public class TableFormatter implements ResultFormatter {
 
-	public String format(Result result) {
+	private final ValueRenderer values;
+
+	public TableFormatter() {
+		this(FormatOptions.defaults());
+	}
+
+	public TableFormatter(FormatOptions options) {
+		this.values = new ValueRenderer(options);
+	}
+
+	@Override
+	public void write(Result result, Writer out) throws IOException {
 		int count = result.columns().size();
 		List<List<String>> cells = new ArrayList<>();
 		for (List<Object> row : result.rows()) {
-			cells.add(row.stream().map(TableFormatter::render).toList());
+			cells.add(row.stream().map(values::forTable).toList());
 		}
 		int[] widths = new int[count];
 		for (int i = 0; i < count; i++) {
@@ -19,21 +32,18 @@ public class TableFormatter {
 				widths[i] = Math.max(widths[i], row.get(i).length());
 			}
 		}
-		StringBuilder out = new StringBuilder();
 		line(out, result.columns(), widths);
+		StringBuilder separator = new StringBuilder();
 		for (int i = 0; i < count; i++) {
-			out.append(i > 0 ? "-+-" : "").append("-".repeat(widths[i]));
+			separator.append(i > 0 ? "-+-" : "").append("-".repeat(widths[i]));
 		}
-		out.append('\n');
-		cells.forEach(row -> line(out, row, widths));
-		return out.toString();
+		out.append(separator).append('\n');
+		for (List<String> row : cells) {
+			line(out, row, widths);
+		}
 	}
 
-	private static String render(Object value) {
-		return value == null ? "NULL" : value.toString();
-	}
-
-	private static void line(StringBuilder out, List<String> cells, int[] widths) {
+	private static void line(Writer out, List<String> cells, int[] widths) throws IOException {
 		StringBuilder line = new StringBuilder();
 		for (int i = 0; i < widths.length; i++) {
 			if (i > 0) {
