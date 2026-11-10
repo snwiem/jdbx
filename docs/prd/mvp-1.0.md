@@ -11,7 +11,7 @@ A developer must run SQL quickly against a remote PostgreSQL database. They reac
 
 dbui is a Java terminal tool that talks to PostgreSQL over JDBC.
 
-- **Interactive mode** looks like the pi agent: output flows into the normal scrollback, a small multi-line editor sits at the bottom, and a status bar sits under it. Everything else is a Slash command.
+- **Interactive mode** looks like the pi agent: output flows into the normal scrollback, a small multi-line editor sits at the bottom between two horizontal rules, and a status bar (one or more lines) sits under it. Reference layout: `docs/assets/pi_layout.png`. Everything else is a Slash command.
 - **Batch mode** runs Statements from the command line, a file or stdin, and writes Results to stdout.
 - Connections come from Profiles or command-line options. Each run is a Session with its own history and log. Sessions can be resumed (forked).
 - Tunnel setup stays outside dbui.
@@ -140,7 +140,7 @@ dbui is a Java terminal tool that talks to PostgreSQL over JDBC.
 - *Statement splitter*: splits input at `;`, aware of quotes, comments and dollar quoting.
 - *Executor*: runs Statements, applies Row limit, timeout and cancel, reconnects once.
 - *Result formatter registry*: one formatter per Format, each supporting both Orientations except `json`. Shared by Interactive and Batch mode.
-- *Message block renderer*: kinds input echo, result, info, error. Colors and box style configurable.
+- *Message block renderer*: kinds input echo, result, info, error. Each block is a full-width band with a background color, one padded line above and below, and no border. Optional footer line inside a band (for example duration). Colors configurable.
 - *Schema provider*: reads schemas, tables, columns and keys through JDBC metadata and caches them.
 - *Completion engine*: keyword plus schema-name completion from nearby text. No full SQL parsing.
 - *Profile store*: reads and writes `profiles.yaml` atomically. Before saving, it rereads the file and applies only the one changed Profile. File mode `600`.
@@ -165,7 +165,7 @@ A small spike must confirm that JLine supports all of: `Enter` to send, `Ctrl-J`
 
 - A good test checks external behavior at a seam, never internals. It reads like a specification.
 - Work is test-first (TDD), see `AGENTS.md`. Unit tests are `*Test`. Integration tests are `*IT` and use Testcontainers with PostgreSQL.
-- **Proposed seams** (to be confirmed before tests are written):
+- **Agreed seams** (accepted in refinement; may be adjusted during the build):
   1. **Session input to Message blocks and Results**, against a real PostgreSQL (`*IT`). Covers execution, Row limit, cancel, timeout, read-only, reconnect, `/save`, `/dump`, schema commands and Resume. This is the main seam.
   2. **Result formatter**: pure unit tests (`*Test`) for every Format and Orientation, and value rendering.
   3. **Statement splitter**: pure unit tests.
@@ -188,5 +188,5 @@ A small spike must confirm that JLine supports all of: `Enter` to send, `Ctrl-J`
 
 ## Further Notes
 
-- Open items for later: ADRs for the main decisions (JLine over TamboUI, own Sessions with fork, stripped-down Spring Boot, no `.pgpass`), exact key binding defaults, exact box styles and colors (a pi screenshot may help), state directory layout details.
+- Open items for later: ADRs for the main decisions (JLine over TamboUI, own Sessions with fork, stripped-down Spring Boot, no `.pgpass`), exact key binding defaults, exact band colors and status bar lines, state directory layout details.
 - Layout of the Session directory is an implementation detail. It holds at least the history, the log and the Session metadata.

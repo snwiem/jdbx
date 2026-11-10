@@ -75,9 +75,9 @@ _Avoid_: export, backup
 ## Screen
 
 **Message block**:
-A framed, colored entry in the scrollback. Its kind is input echo (gray), result, info (yellow) or error (red). The scrollback of Message blocks is the log of the Session.
+A full-width entry in the scrollback with its own background color and padding, and no border. Its kind is input echo (gray), result, info (yellow) or error (red). The scrollback of Message blocks is the log of the Session.
 _Avoid_: notification, alert, log line
 
 **Status bar**:
-The line under the editor that shows the current connection, read-only state, Format, Orientation, Row limit and last Result summary.
+The area under the editor (one or more lines) that shows the current connection, read-only state, Format, Orientation, Row limit and last Result summary.
 _Avoid_: footer, header
