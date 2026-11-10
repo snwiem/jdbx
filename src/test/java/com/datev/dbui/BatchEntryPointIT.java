@@ -5,6 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.testcontainers.junit.jupiter.Container;
@@ -75,6 +79,24 @@ class BatchEntryPointIT {
 		assertThat(outcome.exitCode()).isNotZero();
 		assertThat(outcome.stdout()).isEmpty();
 		assertThat(outcome.stderr()).contains("--db").contains("--user").contains("--password");
+	}
+
+	@Test
+	void refusesInteractiveModeWithoutTerminalInputAndOutput() throws Exception {
+		var command = new ArrayList<>(List.of(Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+			"-cp", System.getProperty("java.class.path"), DbuiApplication.class.getName()));
+		command.addAll(List.of(connection()));
+		Process process = new ProcessBuilder(command).start();
+		try {
+			process.getOutputStream().close();
+			assertThat(process.waitFor(15, TimeUnit.SECONDS)).isTrue();
+			assertThat(process.exitValue()).isEqualTo(2);
+			assertThat(new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8)).isEmpty();
+			assertThat(new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8)).contains("terminal");
+		}
+		finally {
+			process.destroyForcibly();
+		}
 	}
 
 	@Test

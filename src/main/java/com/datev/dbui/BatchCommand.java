@@ -45,6 +45,10 @@ class BatchCommand implements Callable<Integer> {
 
 	@Override
 	public Integer call() {
+		if (statement == null && (System.console() == null || !System.console().isTerminal())) {
+			spec.commandLine().getErr().println("Error: Interactive mode requires terminal input and output. Use -c for Batch mode.");
+			return 2;
+		}
 		Properties properties = new Properties();
 		properties.setProperty("user", user);
 		properties.setProperty("password", password);
