@@ -251,4 +251,99 @@ class InteractiveScreenTest {
 			terminal.pilot().quit();
 		}
 	}
+
+	private static InteractiveScreen screenWithHistory(java.util.function.Consumer<String> send, String... entries) {
+		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", send);
+		screen.history(List.of(entries));
+		return screen;
+	}
+
+	private static void type(InteractiveScreen screen, String text) {
+		text.chars().forEach(c -> screen.handle(KeyEvent.ofChar((char) c)));
+	}
+
+	@Test
+	void upAndDownUseHistoryOnlyAtTheFirstAndLastLineOfTheEditor() {
+		var inputs = new CopyOnWriteArrayList<String>();
+		var screen = screenWithHistory(inputs::add, "select 1", "select 2\nfrom t");
+		screen.handle(new PasteEvent("x\ny"));
+		screen.handle(KeyEvent.ofKey(KeyCode.UP)); // moves inside the buffer, history stays out
+		screen.handle(KeyEvent.ofKey(KeyCode.UP)); // first line: newest history entry (multi-line)
+		draw(screen, new Size(60, 20));
+		screen.handle(KeyEvent.ofKey(KeyCode.UP)); // inside the entry: first line of the entry
+		screen.handle(KeyEvent.ofKey(KeyCode.DOWN)); // back to its last line
+		screen.handle(KeyEvent.ofKey(KeyCode.DOWN)); // below the last line: the draft
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(inputs).containsExactly("x\ny");
+		screen.handle(KeyEvent.ofKey(KeyCode.UP));
+		screen.handle(KeyEvent.ofKey(KeyCode.UP)); // an entry that was inside, then at the top
+		screen.handle(KeyEvent.ofKey(KeyCode.UP));
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(inputs.getLast()).isEqualTo("select 1");
+	}
+
+	@Test
+	void ctrlROpensASearchLineAndEnterAcceptsTheMatchWithoutSendingIt() {
+		var inputs = new CopyOnWriteArrayList<String>();
+		var screen = screenWithHistory(inputs::add, "select 1", "insert into t values (1)", "update t set a = 2");
+		type(screen, "draft");
+		screen.handle(KeyEvent.ofChar('r', KeyModifiers.CTRL));
+		type(screen, "ins");
+		var buffer = draw(screen, new Size(60, 20));
+		assertThat(line(buffer, 17)).contains("reverse-search").contains("ins");
+		assertThat(line(buffer, 16)).contains("insert into t values (1)");
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(inputs).isEmpty();
+		assertThat(line(draw(screen, new Size(60, 20)), 17)).doesNotContain("reverse-search");
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(inputs).containsExactly("insert into t values (1)");
+	}
+
+	@Test
+	void ctrlCCancelsTheStatementOrSearchOrClearsIdleInputWithoutColliding() {
+		var inputs = new CopyOnWriteArrayList<String>();
+		var cancellations = new java.util.concurrent.atomic.AtomicInteger();
+		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add, cancellations::incrementAndGet,
+			com.datev.dbui.config.Settings.defaults());
+		screen.history(List.of("select 1"));
+		type(screen, "draft");
+		screen.handle(KeyEvent.ofChar('r', KeyModifiers.CTRL));
+		type(screen, "sel");
+		screen.handle(KeyEvent.ofChar('c', KeyModifiers.CTRL));
+		var buffer = draw(screen, new Size(60, 20));
+		assertThat(line(buffer, 17)).doesNotContain("reverse-search");
+		assertThat(line(buffer, 16)).startsWith("draft");
+		assertThat(cancellations.get()).isZero();
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(inputs).containsExactly("draft");
+
+		screen.busy(true);
+		screen.handle(KeyEvent.ofChar('r', KeyModifiers.CTRL));
+		screen.handle(KeyEvent.ofKey(KeyCode.UP));
+		screen.handle(new PasteEvent("ignored"));
+		screen.handle(KeyEvent.ofChar('c', KeyModifiers.CTRL));
+		assertThat(cancellations.get()).isEqualTo(1);
+		assertThat(line(draw(screen, new Size(60, 20)), 17)).doesNotContain("reverse-search");
+		screen.busy(false);
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(inputs).containsExactly("draft");
+
+		type(screen, "discard");
+		screen.handle(KeyEvent.ofChar('c', KeyModifiers.CTRL));
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(inputs).containsExactly("draft");
+		assertThat(cancellations.get()).isEqualTo(1);
+	}
+
+	@Test
+	void escapeCancelsTheSearchAndRestoresTheDraft() {
+		var inputs = new CopyOnWriteArrayList<String>();
+		var screen = screenWithHistory(inputs::add, "select 1", "insert into t values (1)");
+		type(screen, "draft");
+		screen.handle(KeyEvent.ofChar('r', KeyModifiers.CTRL));
+		type(screen, "sel");
+		screen.handle(KeyEvent.ofKey(KeyCode.ESCAPE));
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(inputs).containsExactly("draft");
+	}
 }

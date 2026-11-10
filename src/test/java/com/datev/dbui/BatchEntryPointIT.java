@@ -356,4 +356,78 @@ class BatchEntryPointIT {
 	void helpListsOrientationOption() {
 		assertThat(run("--help").stdout()).contains("--orientation");
 	}
+
+	private static final int MANY_ROWS = 3_000_000;
+
+	/** Runs Batch mode in a JVM with a 64 MB heap; counts stdout lines without storing them. */
+	private static long countLines(String... more) throws Exception {
+		var command = new ArrayList<>(List.of(Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+				"-Xmx64m", "-cp", System.getProperty("java.class.path"), DbuiApplication.class.getName()));
+		command.addAll(List.of(connection(more)));
+		Process process = new ProcessBuilder(command).redirectError(new java.io.File("target/mem-stderr.txt")).start();
+		try {
+			process.getOutputStream().close();
+			long lines = 0;
+			byte[] buffer = new byte[65536];
+			try (var in = process.getInputStream()) {
+				for (int n; (n = in.read(buffer)) > 0;) {
+					for (int i = 0; i < n; i++) {
+						if (buffer[i] == '\n') {
+							lines++;
+						}
+					}
+				}
+			}
+			assertThat(process.waitFor(60, TimeUnit.SECONDS)).isTrue();
+			assertThat(process.exitValue()).isZero();
+			return lines;
+		}
+		finally {
+			process.destroyForcibly();
+		}
+	}
+
+	private static final String MANY = "select g, md5(g::text) from generate_series(1, " + MANY_ROWS + ") g";
+
+	@Test
+	void writesMillionsOfRowsAsCsvWithSmallHeap() throws Exception {
+		assertThat(countLines("--format", "csv", "-c", MANY)).isEqualTo(MANY_ROWS + 1L);
+	}
+
+	@Test
+	void writesMillionsOfRowsAsJsonWithSmallHeap() throws Exception {
+		assertThat(countLines("--format", "json", "-c", MANY)).isEqualTo(MANY_ROWS + 2L);
+	}
+
+	@Test
+	void configuredTimeoutAlsoStopsASlowCursorFetchAfterTheFirst1000Rows(
+			@org.junit.jupiter.api.io.TempDir Path config) throws Exception {
+		java.nio.file.Files.writeString(config.resolve("config.yaml"), "timeout: 1\n");
+		long started = System.nanoTime();
+		Outcome outcome = run(connection("--config-dir", config.toString(), "--format", "csv", "-c",
+			"select case when g = 1001 then pg_sleep(5) end as value from generate_series(1,2000) g"));
+		assertThat(outcome.exitCode()).isNotZero();
+		assertThat(outcome.stderr()).contains("canceling statement due to statement timeout");
+		assertThat(java.time.Duration.ofNanos(System.nanoTime() - started)).isLessThan(java.time.Duration.ofSeconds(4));
+	}
+
+	@Test
+	void configuredStreamingTimeoutDoesNotRelaxAShorterServerTimeout(
+			@org.junit.jupiter.api.io.TempDir Path config) throws Exception {
+		java.nio.file.Files.writeString(config.resolve("config.yaml"), "timeout: 7\n");
+		Outcome outcome = run(connection("--config-dir", config.toString(), "-c",
+			"set statement_timeout = '100ms'; show statement_timeout"));
+		assertThat(outcome.exitCode()).as(outcome.stderr()).isZero();
+		assertThat(outcome.stdout()).contains("100ms");
+	}
+
+	@Test
+	void keepsAutocommitForStatementsAfterAStreamedQuery() {
+		Outcome first = run(connection("-c", "select 1; create table stream_commit(a int); insert into stream_commit values (7)"));
+		Outcome second = run(connection("-c", "vacuum; select a from stream_commit"));
+
+		assertThat(first.exitCode()).isZero();
+		assertThat(second.exitCode()).as(second.stderr()).isZero();
+		assertThat(second.stdout()).contains("7");
+	}
 }

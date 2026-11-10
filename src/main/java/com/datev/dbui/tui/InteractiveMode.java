@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.datev.dbui.config.Settings;
 import com.datev.dbui.session.Session;
+import com.datev.dbui.session.SessionContext;
 import com.datev.dbui.session.SessionDirectory;
 
 import dev.tamboui.terminal.Frame;
@@ -30,15 +31,19 @@ public final class InteractiveMode {
 		this.screen = new InteractiveScreen(connection, this::submit, session::cancel, settings);
 	}
 
-	public static int run(Connection connection, String label) throws Exception {
-		return run(connection, label, Settings.defaults());
-	}
-
-	public static int run(Connection connection, String label, Settings settings) throws Exception {
+	public static int run(Connection connection, String label, SessionContext sessionContext) throws Exception {
 		AtomicReference<Throwable> failure = new AtomicReference<>();
-		var directory = SessionDirectory.create(SessionDirectory.defaultStateBase());
-		try (var terminalLogging = new TerminalLogging(); var sessionLogging = new SessionLogging(directory.logFile());
-			var session = new Session(connection, directory, settings)) {
+		// A state directory that cannot be used disables history and Session log; it does not stop dbui.
+		var directory = SessionDirectory.createOrDisabled(sessionContext.stateBase());
+		var logging = new AtomicReference<SessionLogging>(directory.logFile() == null ? null : new SessionLogging(directory.logFile()));
+		try (var terminalLogging = new TerminalLogging(); var session = new Session(connection, directory, sessionContext)) {
+			// /resume switches to a new Session directory: move the log file with it.
+			session.onDirectoryChange(next -> {
+				var old = logging.getAndSet(next.logFile() == null ? null : new SessionLogging(next.logFile()));
+				if (old != null) {
+					old.close();
+				}
+			});
 			// TuiRunner owns and closes its backend, including when initialization fails.
 			var config = TuiConfig.builder().backend(new InteractiveBackend()).alternateScreen(true).mouseCapture(true)
 				.bracketedPaste(true).hideCursor(true).keyboardProtocol(KeyboardProtocol.AUTO)
@@ -48,8 +53,16 @@ public final class InteractiveMode {
 					return ErrorAction.QUIT_IMMEDIATELY;
 				}).build();
 			try (var runner = TuiRunner.create(config)) {
-				var mode = new InteractiveMode(session, runner, label, settings, failure);
+				var mode = new InteractiveMode(session, runner, label, session.settings(), failure);
+				mode.screen.update(session.messageBlocks());
+				mode.screen.history(session.history());
 				runner.run((event, ignored) -> mode.screen.handle(event), mode::render);
+			}
+		}
+		finally {
+			var last = logging.getAndSet(null);
+			if (last != null) {
+				last.close();
 			}
 		}
 		if (failure.get() != null) {
@@ -67,6 +80,7 @@ public final class InteractiveMode {
 		screen.busy(true);
 		var pending = session.submit(input);
 		screen.update(session.messageBlocks());
+		screen.history(session.history());
 		pending.whenComplete((update, error) -> runner.runLater(() -> {
 			screen.busy(false);
 			if (error != null) {
@@ -75,6 +89,10 @@ public final class InteractiveMode {
 			}
 			else {
 				screen.update(update.messageBlocks());
+				screen.history(session.history());
+				if (session.connectionLabel() != null) {
+					screen.connection(session.connectionLabel());
+				}
 				if (update.ended()) {
 					runner.quit();
 				}

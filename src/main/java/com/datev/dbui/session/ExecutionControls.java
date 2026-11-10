@@ -1,30 +1,42 @@
 package com.datev.dbui.session;
 
+import java.time.Duration;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
 import com.datev.dbui.config.Settings;
 
 /** Session-local execution settings and their Slash commands. No JDBC or terminal knowledge. */
 final class ExecutionControls {
 
-	private int rowLimit;
-	private int timeoutSeconds;
+	private final Supplier<Settings> settings;
+	private final Consumer<Settings> update;
 
-	ExecutionControls(Settings settings) {
+	ExecutionControls(Supplier<Settings> settings, Consumer<Settings> update) {
+		this.settings = settings;
+		this.update = update;
+		validate(settings.get());
+	}
+
+	static void validate(Settings settings) {
 		if (settings.rowLimit() < 1) {
 			throw new IllegalArgumentException("Row limit must be 1 or more");
 		}
 		if (settings.timeout() != null && settings.timeout().isNegative()) {
 			throw new IllegalArgumentException("Timeout must be 0 or more seconds");
 		}
-		rowLimit = settings.rowLimit();
-		timeoutSeconds = settings.timeout() == null ? 0 : Math.toIntExact(settings.timeout().toSeconds());
+		if (settings.timeout() != null) {
+			Math.toIntExact(settings.timeout().toSeconds());
+		}
 	}
 
 	int rowLimit() {
-		return rowLimit;
+		return settings.get().rowLimit();
 	}
 
 	int timeoutSeconds() {
-		return timeoutSeconds;
+		var timeout = settings.get().timeout();
+		return timeout == null ? 0 : Math.toIntExact(timeout.toSeconds());
 	}
 
 	/** Returns null when another command handler should handle this input. */
@@ -40,8 +52,9 @@ final class ExecutionControls {
 			if (parts.length != 2 || Integer.parseInt(parts[1]) < 1) {
 				return MessageBlock.error("Usage: /limit N (1 to 2147483647)");
 			}
-			rowLimit = Integer.parseInt(parts[1]);
-			return MessageBlock.info("Row limit: " + rowLimit);
+			var current = settings.get();
+			update.accept(current.withExecution(Integer.parseInt(parts[1]), current.timeout(), current.readOnly()));
+			return MessageBlock.info("Row limit: " + rowLimit());
 		}
 		catch (NumberFormatException e) {
 			return MessageBlock.error("Usage: /limit N (1 to 2147483647)");
@@ -50,15 +63,17 @@ final class ExecutionControls {
 
 	private MessageBlock timeout(String[] parts) {
 		if (parts.length == 2 && parts[1].equals("off")) {
-			timeoutSeconds = 0;
+			var current = settings.get();
+			update.accept(current.withExecution(current.rowLimit(), null, current.readOnly()));
 			return MessageBlock.info("Timeout: off");
 		}
 		try {
 			if (parts.length != 2 || Integer.parseInt(parts[1]) < 1) {
 				return MessageBlock.error("Usage: /timeout <seconds|off> (seconds: 1 to 2147483647)");
 			}
-			timeoutSeconds = Integer.parseInt(parts[1]);
-			return MessageBlock.info("Timeout: " + timeoutSeconds + " s");
+			var current = settings.get();
+			update.accept(current.withExecution(current.rowLimit(), Duration.ofSeconds(Integer.parseInt(parts[1])), current.readOnly()));
+			return MessageBlock.info("Timeout: " + timeoutSeconds() + " s");
 		}
 		catch (NumberFormatException e) {
 			return MessageBlock.error("Usage: /timeout <seconds|off> (seconds: 1 to 2147483647)");

@@ -4,12 +4,14 @@
 
 **Blocked by:** 0008 Interactive tracer
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md`
 
-- [ ] Integration tests with a small test schema
-- [ ] `/describe` shows column name, type, nullable, default, primary and foreign keys
-- [ ] A refresh command or key reloads the cache
-- [ ] Output uses the current Format and Orientation
-- [ ] Large schemas do not block the editor for long. Loading shows a running indicator
+- [x] Integration tests with a small test schema
+- [x] `/describe` shows column name, type, nullable, default, primary and foreign keys
+- [x] A refresh command or key reloads the cache
+- [x] Output uses the Transcript's Result rendering. Rendering with the current Format and Orientation moves to issue 0012
+
+Note: `/tables` and `/describe` use the connection's current schema, not the full `search_path`. Other schemas need `schema.table`.
+- [x] Large schemas do not block the editor for long. Loading shows a running indicator
