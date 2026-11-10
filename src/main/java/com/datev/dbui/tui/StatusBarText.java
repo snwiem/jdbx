@@ -9,6 +9,10 @@ final class StatusBarText {
 
 	private StatusBarText() { }
 
+	static String output(com.datev.dbui.config.Settings settings) {
+		return "Format: " + settings.format() + " · Orientation: " + settings.orientation();
+	}
+
 	static String of(ExecutionStatus status) {
 		String text = "Row limit: " + status.rowLimit();
 		if (status.running()) {

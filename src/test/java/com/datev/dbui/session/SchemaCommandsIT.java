@@ -63,6 +63,18 @@ class SchemaCommandsIT {
 	}
 
 	@Test
+	void quotedSchemaAndTableNamesKeepTheirSqlQuotesAndInternalWhitespace() throws Exception {
+		try (Session session = session()) {
+			session.submit("create schema \"Mixed Schema\"; create table \"Mixed Schema\".\"Order  Items\" (\"a\"\"b\" int)").get(5, TimeUnit.SECONDS);
+			assertThat(last(session.submit("/tables \"Mixed Schema\"").get(5, TimeUnit.SECONDS)).result().rows())
+				.extracting(row -> row.getFirst()).containsExactly("Order  Items");
+			var described = last(session.submit("/describe \"Mixed Schema\".\"Order  Items\"").get(5, TimeUnit.SECONDS));
+			assertThat(described.kind()).isEqualTo(MessageBlock.Kind.RESULT);
+			assertThat(described.result().rows().getFirst().getFirst()).isEqualTo("a\"b");
+		}
+	}
+
+	@Test
 	void refreshReloadsTheCache() throws Exception {
 		try (Session session = session()) {
 			session.submit("/tables").get(5, TimeUnit.SECONDS);

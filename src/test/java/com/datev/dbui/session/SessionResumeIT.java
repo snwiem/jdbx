@@ -181,6 +181,79 @@ class SessionResumeIT {
 		assertThat(tree(stateDir.resolve("sessions").resolve(earlier))).isEqualTo(before);
 	}
 
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.CsvSource({ "xml,horizontal", "table,diagonal" })
+	void invalidStoredOutputSettingsDoNotForkOrChangeTheCurrentSession(String format, String orientation) throws Exception {
+		String earlier;
+		try (Session first = session()) {
+			earlier = first.directory().id();
+			var stored = SessionMetadata.read(first.directory().metadataFile());
+			new SessionMetadata(stored.started(), stored.connection(), 1000, null, false, null, null, format, orientation)
+				.write(first.directory().metadataFile());
+		}
+		try (Session current = session()) {
+			String directory = current.directory().id();
+			var band = submit(current, "/resume " + earlier).messageBlocks().getLast();
+			assertThat(band.kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(band.text()).contains("Invalid", "settings");
+			assertThat(current.directory().id()).isEqualTo(directory);
+			assertThat(current.settings().format()).isEqualTo("table");
+			assertThat(current.settings().orientation()).isEqualTo("horizontal");
+			assertThat(submit(current, "select 7 as id").messageBlocks().getLast().text()).isEqualTo("id\n--\n7\n");
+		}
+	}
+
+	@Test
+	void theOrientationCyclePersistsTheSettingWithoutAddingInputEchoOrHistory() throws Exception {
+		try (Session current = session()) {
+			var changed = current.cycleOrientation();
+			assertThat(changed.messageBlocks()).extracting(MessageBlock::kind).containsExactly(MessageBlock.Kind.INFO);
+			assertThat(changed.messageBlocks().getLast().text()).isEqualTo("Orientation: vertical");
+			assertThat(current.history()).isEmpty();
+			assertThat(SessionMetadata.read(current.directory().metadataFile()).orientation()).isEqualTo("vertical");
+			assertThat(submit(current, "select 7 as id").messageBlocks().getLast().text()).isEqualTo("id | 7\n");
+			current.cycleOrientation();
+			assertThat(current.settings().orientation()).isEqualTo("horizontal");
+			assertThat(current.history()).containsExactly("select 7 as id");
+		}
+	}
+
+	@Test
+	void legacyMetadataWithoutOutputSettingsResumesAsTableHorizontalLikeTheEarlierTranscript() throws Exception {
+		String earlier;
+		try (Session first = session()) {
+			earlier = first.directory().id();
+			Path metadata = first.directory().metadataFile();
+			Files.writeString(metadata, Files.readString(metadata).replace("  format: table\n", "").replace("  orientation: horizontal\n", ""));
+		}
+		try (Session current = session(Settings.defaults().withOutput("json", "vertical"), null, parameters(), name -> null)) {
+			assertThat(submit(current, "/resume " + earlier).messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.INFO);
+			assertThat(current.settings().format()).isEqualTo("table");
+			assertThat(current.settings().orientation()).isEqualTo("horizontal");
+		}
+	}
+
+	@Test
+	void outputChangesPersistImmediatelyAndResumeRestoresTheFormatAndOrientation() throws Exception {
+		String earlier;
+		try (Session first = session()) {
+			earlier = first.directory().id();
+			submit(first, "/format csv");
+			submit(first, "/orientation vertical");
+			assertThat(Files.readString(first.directory().metadataFile())).contains("format: csv", "orientation: vertical");
+		}
+		String before = tree(stateDir.resolve("sessions").resolve(earlier));
+		try (Session current = session()) {
+			submit(current, "/resume " + earlier);
+			assertThat(current.settings().format()).isEqualTo("csv");
+			assertThat(current.settings().orientation()).isEqualTo("vertical");
+			assertThat(submit(current, "select 7 as id, 'Alice' as name").messageBlocks().getLast().text())
+				.isEqualTo("id,7\nname,Alice\n");
+			assertThat(current.history()).startsWith("/format csv", "/orientation vertical").doesNotContain("/resume " + earlier);
+		}
+		assertThat(tree(stateDir.resolve("sessions").resolve(earlier))).isEqualTo(before);
+	}
+
 	@Test
 	void resumeRestoresRowLimitTimeoutAndReadOnly() throws Exception {
 		String earlier;
@@ -309,6 +382,16 @@ class SessionResumeIT {
 			var timedOut = current.submit("select pg_sleep(10)").get(4, TimeUnit.SECONDS).messageBlocks().getLast();
 			assertThat(timedOut.kind()).isEqualTo(MessageBlock.Kind.ERROR);
 			assertThat(timedOut.text()).contains("57014");
+		}
+	}
+
+	@Test
+	void quitAndResumeStayOutOfHistoryWithAnyCommandWhitespaceOrInvalidArguments() throws Exception {
+		try (Session current = session()) {
+			for (String input : List.of("/resume\tmissing", "/resume\nmissing", "/quit now")) {
+				assertThat(submit(current, input).messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			}
+			assertThat(current.history()).isEmpty();
 		}
 	}
 

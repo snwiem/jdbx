@@ -19,6 +19,8 @@ final class ExecutionControls {
 	}
 
 	static void validate(Settings settings) {
+		com.datev.dbui.Format.parse(settings.format());
+		com.datev.dbui.Orientation.parse(settings.orientation());
 		if (settings.rowLimit() < 1) {
 			throw new IllegalArgumentException("Row limit must be 1 or more");
 		}
@@ -39,44 +41,35 @@ final class ExecutionControls {
 		return timeout == null ? 0 : Math.toIntExact(timeout.toSeconds());
 	}
 
-	/** Returns null when another command handler should handle this input. */
-	MessageBlock handle(String input) {
-		String[] parts = input.strip().split("\\s+");
-		if (parts[0].equals("/timeout")) {
-			return timeout(parts);
-		}
-		if (!parts[0].equals("/limit")) {
-			return null;
-		}
+	/** Picocli converter shared by /limit and /timeout. */
+	static String positiveInteger(String argument) {
 		try {
-			if (parts.length != 2 || Integer.parseInt(parts[1]) < 1) {
-				return MessageBlock.error("Usage: /limit N (1 to 2147483647)");
+			int value = Integer.parseInt(argument);
+			if (value > 0) {
+				return Integer.toString(value);
 			}
-			var current = settings.get();
-			update.accept(current.withExecution(Integer.parseInt(parts[1]), current.timeout(), current.readOnly()));
-			return MessageBlock.info("Row limit: " + rowLimit());
 		}
-		catch (NumberFormatException e) {
-			return MessageBlock.error("Usage: /limit N (1 to 2147483647)");
+		catch (NumberFormatException ignored) {
+			// Use the same range message for a non-integer and an overflow.
 		}
+		throw new picocli.CommandLine.TypeConversionException("Use an integer from 1 to 2147483647");
 	}
 
-	private MessageBlock timeout(String[] parts) {
-		if (parts.length == 2 && parts[1].equals("off")) {
+	/** The registry has already validated the argument through picocli. */
+	MessageBlock limit(String argument) {
+		var current = settings.get();
+		update.accept(current.withExecution(Integer.parseInt(argument), current.timeout(), current.readOnly()));
+		return MessageBlock.info("Row limit: " + rowLimit());
+	}
+
+	MessageBlock timeout(String argument) {
+		if (argument.equals("off")) {
 			var current = settings.get();
 			update.accept(current.withExecution(current.rowLimit(), null, current.readOnly()));
 			return MessageBlock.info("Timeout: off");
 		}
-		try {
-			if (parts.length != 2 || Integer.parseInt(parts[1]) < 1) {
-				return MessageBlock.error("Usage: /timeout <seconds|off> (seconds: 1 to 2147483647)");
-			}
-			var current = settings.get();
-			update.accept(current.withExecution(current.rowLimit(), Duration.ofSeconds(Integer.parseInt(parts[1])), current.readOnly()));
-			return MessageBlock.info("Timeout: " + timeoutSeconds() + " s");
-		}
-		catch (NumberFormatException e) {
-			return MessageBlock.error("Usage: /timeout <seconds|off> (seconds: 1 to 2147483647)");
-		}
+		var current = settings.get();
+		update.accept(current.withExecution(current.rowLimit(), Duration.ofSeconds(Integer.parseInt(argument)), current.readOnly()));
+		return MessageBlock.info("Timeout: " + timeoutSeconds() + " s");
 	}
 }

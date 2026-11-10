@@ -38,9 +38,11 @@ public final class InteractiveScreen {
 	private int transcriptHeight;
 	private boolean busy;
 	private ExecutionStatus status;
+	private Settings settings;
 	private String connection;
 	private final Consumer<String> send;
 	private final Runnable cancel;
+	private final Runnable cycleOrientation;
 	private final EditorKeys keys;
 	private final TextAreaState editor = new TextAreaState();
 	private final HistoryNavigator history = new HistoryNavigator();
@@ -59,15 +61,22 @@ public final class InteractiveScreen {
 
 	/** With {@code color == false} (NO_COLOR) the screen uses no color codes; the Status bar is reversed instead. */
 	InteractiveScreen(String connection, Consumer<String> send, EditorKeys keys, boolean color) {
-		this(connection, send, keys, color, () -> { }, Settings.defaults());
+		this(connection, send, keys, color, () -> { }, Settings.defaults(), () -> { });
 	}
 
 	public InteractiveScreen(String connection, Consumer<String> send, Runnable cancel, Settings settings) {
-		this(connection, send, EditorKeys.defaults(), MessageBlockRenderer.colorEnabled(System.getenv()), cancel, settings);
+		this(connection, send, cancel, settings, () -> { });
 	}
 
-	private InteractiveScreen(String connection, Consumer<String> send, EditorKeys keys, boolean color, Runnable cancel, Settings settings) {
+	public InteractiveScreen(String connection, Consumer<String> send, Runnable cancel, Settings settings, Runnable cycleOrientation) {
+		this(connection, send, EditorKeys.defaults(), MessageBlockRenderer.colorEnabled(System.getenv()), cancel, settings, cycleOrientation);
+	}
+
+	private InteractiveScreen(String connection, Consumer<String> send, EditorKeys keys, boolean color, Runnable cancel, Settings settings,
+			Runnable cycleOrientation) {
 		this.cancel = cancel;
+		this.cycleOrientation = cycleOrientation;
+		this.settings = settings;
 		this.status = new ExecutionStatus(settings.rowLimit(), false, java.time.Duration.ZERO, null);
 		this.renderer = new MessageBlockRenderer(color, FormatOptions.from(settings));
 		this.transcript = new Transcript(renderer);
@@ -95,6 +104,11 @@ public final class InteractiveScreen {
 
 	public void busy(boolean busy) {
 		this.busy = busy;
+	}
+
+	/** Current Session settings, including changes made by Slash commands and Resume. */
+	public void settings(Settings settings) {
+		this.settings = settings;
 	}
 
 	public void status(ExecutionStatus status) {
@@ -140,6 +154,10 @@ public final class InteractiveScreen {
 			}
 			if (search != null) {
 				return handleSearch(key);
+			}
+			if (keys.orientationCycle().matches(key) || keys.orientationFallback().matches(key)) {
+				cycleOrientation.run();
+				return true;
 			}
 			if (key.hasCtrl() && key.isCharIgnoreCase('r')) {
 				searchDraft = editor.text();
@@ -248,7 +266,7 @@ public final class InteractiveScreen {
 				buffer.setString(0, bottom, "─".repeat(width), rule);
 			}
 		}
-		String[] status = { " " + connection, " " + StatusBarText.of(this.status) };
+		String[] status = { " " + connection + " · " + StatusBarText.output(settings), " " + StatusBarText.of(this.status) };
 		for (int row = 0; row < statusHeight; row++) {
 			int y = height - statusHeight + row;
 			buffer.fill(new Rect(0, y, width, 1), new Cell(" ", statusStyle));

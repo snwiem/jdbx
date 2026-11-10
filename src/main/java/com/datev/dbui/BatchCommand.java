@@ -101,8 +101,10 @@ class BatchCommand implements Callable<Integer> {
 		}
 		try (Connection connection = parameters.open()) {
 			if (commands.isEmpty() && files.isEmpty() && stdinIsTerminal()) {
+				Settings interactiveSettings = settings.withExecution(settings.rowLimit(), settings.timeout(), parameters.readOnly())
+					.withOutput((format == null ? Format.parse(settings.format()) : format).id(), orientation(settings).id());
 				return InteractiveMode.run(connection, label(parameters), new SessionContext(SessionDirectory.defaultStateBase(),
-						settings.withExecution(settings.rowLimit(), settings.timeout(), parameters.readOnly()), parameters,
+						interactiveSettings, parameters,
 						connectionOptions.profile, loader::profile));
 			}
 			return runBatch(connection, settings);

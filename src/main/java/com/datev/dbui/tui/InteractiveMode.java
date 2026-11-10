@@ -28,7 +28,7 @@ public final class InteractiveMode {
 		this.session = session;
 		this.runner = runner;
 		this.failure = failure;
-		this.screen = new InteractiveScreen(connection, this::submit, session::cancel, settings);
+		this.screen = new InteractiveScreen(connection, this::submit, session::cancel, settings, this::cycleOrientation);
 	}
 
 	public static int run(Connection connection, String label, SessionContext sessionContext) throws Exception {
@@ -73,7 +73,13 @@ public final class InteractiveMode {
 
 	private void render(Frame frame) {
 		screen.status(session.status());
+		screen.settings(session.settings());
 		screen.render(frame);
+	}
+
+	private void cycleOrientation() {
+		screen.update(session.cycleOrientation().messageBlocks());
+		screen.settings(session.settings());
 	}
 
 	private void submit(String input) {
