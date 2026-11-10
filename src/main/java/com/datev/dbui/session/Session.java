@@ -24,6 +24,7 @@ public final class Session implements AutoCloseable {
 	private final ExecutorService executor = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dbui-statement").factory());
 	private final List<MessageBlock> messageBlocks = new ArrayList<>();
 	private boolean ended;
+	private boolean running;
 
 	public Session(Connection connection) throws SQLException {
 		this.connection = connection;
@@ -34,9 +35,13 @@ public final class Session implements AutoCloseable {
 		return List.copyOf(messageBlocks);
 	}
 
+	/** Accepts the next input after the previous submission completes; type-ahead is not supported. */
 	public synchronized CompletableFuture<Update> submit(String input) {
 		if (ended) {
 			return CompletableFuture.completedFuture(new Update(messageBlocks(), true));
+		}
+		if (running) {
+			return CompletableFuture.failedFuture(new IllegalStateException("A Statement is already running"));
 		}
 		if (input.isBlank()) {
 			return CompletableFuture.completedFuture(new Update(messageBlocks(), false));
@@ -46,7 +51,19 @@ public final class Session implements AutoCloseable {
 			ended = true;
 			return CompletableFuture.completedFuture(new Update(messageBlocks(), true));
 		}
-		return CompletableFuture.supplyAsync(() -> execute(input), executor);
+		running = true;
+		return CompletableFuture.supplyAsync(() -> {
+			try {
+				return execute(input);
+			}
+			finally {
+				finished();
+			}
+		}, executor);
+	}
+
+	private synchronized void finished() {
+		running = false;
 	}
 
 	private Update execute(String input) {

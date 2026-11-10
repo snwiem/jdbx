@@ -1,6 +1,7 @@
 package com.datev.dbui.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.sql.DriverManager;
 import java.util.concurrent.TimeUnit;
@@ -28,6 +29,20 @@ class SessionIT {
 			assertThat(pending).isNotDone();
 			assertThat(session.messageBlocks()).extracting(MessageBlock::text).containsExactly("select pg_sleep(1)");
 			assertThat(pending.get(5, TimeUnit.SECONDS).messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.RESULT);
+		}
+	}
+
+	@Test
+	void aSecondInputIsRejectedUntilTheStatementCompletes() throws Exception {
+		try (Session session = session()) {
+			var pending = session.submit("select pg_sleep(1)");
+			var rejected = session.submit("select 2");
+			assertThatThrownBy(() -> rejected.get(5, TimeUnit.SECONDS)).hasCauseInstanceOf(IllegalStateException.class);
+			var update = pending.get(5, TimeUnit.SECONDS);
+			assertThat(update.messageBlocks()).extracting(MessageBlock::kind)
+				.containsExactly(MessageBlock.Kind.INPUT, MessageBlock.Kind.RESULT);
+			assertThat(session.submit("select 3").get(5, TimeUnit.SECONDS).messageBlocks().getLast().result().rows().getFirst())
+				.containsExactly(3);
 		}
 	}
 
