@@ -213,9 +213,11 @@ public final class Session implements AutoCloseable {
 			return List.of();
 		}));
 		commands.add(new SlashCommand("limit", "Change the Row limit (1 to 2147483647).",
-			SlashCommand.argument("N", "1", List.of()), false, argument -> List.of(controls.limit(argument))));
+			SlashCommand.argument("N", "1", List.of(), ExecutionControls::positiveInteger), false, argument -> List.of(controls.limit(argument))));
 		commands.add(new SlashCommand("timeout", "Change the Statement timeout (seconds: 1 to 2147483647), or turn it off.",
-			SlashCommand.argument("<seconds|off>", "1", List.of("off")), false, argument -> List.of(controls.timeout(argument))));
+			SlashCommand.argument("<seconds|off>", "1", List.of("off"),
+				value -> value.equals("off") ? value : ExecutionControls.positiveInteger(value)), false,
+			argument -> List.of(controls.timeout(argument))));
 		commands.add(schemaCommand("schema", "List schemas; all includes system schemas.", "[all]", "0..1", List.of("all")));
 		commands.add(schemaCommand("tables", "List tables in the current or named schema.", "[schema]", "0..1", List.of()));
 		commands.add(schemaCommand("describe", "Describe a table, its columns and keys.", "<table>", "1", List.of()));
@@ -227,6 +229,18 @@ public final class Session implements AutoCloseable {
 				}
 				resume(argument);
 				return List.of();
+			}));
+		commands.add(new SlashCommand("format", "Change the Format for new Results.",
+			SlashCommand.argument("<table|markdown|csv|tsv|json>", "1", List.of("table", "markdown", "csv", "tsv", "json"),
+				value -> com.datev.dbui.Format.parse(value).id()), false, argument -> {
+				updateSettings(settings().withOutput(argument, settings().orientation()));
+				return List.of(MessageBlock.info("Format: " + argument));
+			}));
+		commands.add(new SlashCommand("orientation", "Change the Orientation for new Results (json ignores it).",
+			SlashCommand.argument("<horizontal|vertical>", "1", List.of("horizontal", "vertical"),
+				value -> com.datev.dbui.Orientation.parse(value).id()), false, argument -> {
+				updateSettings(settings().withOutput(settings().format(), argument));
+				return List.of(MessageBlock.info("Orientation: " + argument));
 			}));
 		commands.add(new SlashCommand("help", "List Slash commands and key bindings.", null, false,
 			argument -> List.of(MessageBlock.info(slashCommands.help()))));
@@ -353,7 +367,7 @@ public final class Session implements AutoCloseable {
 	}
 
 	private synchronized void add(MessageBlock block) {
-		messageBlocks.add(block);
+		messageBlocks.add(block.kind() == MessageBlock.Kind.RESULT ? MessageBlock.result(block.result(), settings()) : block);
 	}
 
 	@Override

@@ -73,6 +73,7 @@ public final class InteractiveMode {
 
 	private void render(Frame frame) {
 		screen.status(session.status());
+		screen.settings(session.settings());
 		screen.render(frame);
 	}
 

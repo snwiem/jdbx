@@ -20,6 +20,40 @@ class SlashCommandRegistryTest {
 	}
 
 	@Test
+	void aRequiredArgumentCannotBeOmittedOrReusedFromAnEarlierInvocation() {
+		var registry = new SlashCommandRegistry(List.of(new SlashCommand("format", "Change Format.",
+			SlashCommand.argument("<table|json>", "1", List.of("table", "json")), false,
+			argument -> List.of(MessageBlock.info(argument)))));
+		assertThat(registry.parse("/format").execute().getFirst().kind()).isEqualTo(MessageBlock.Kind.ERROR);
+		assertThat(registry.parse("/format json").execute().getFirst().text()).isEqualTo("json");
+		assertThat(registry.parse("/format").execute().getFirst().text()).startsWith("Usage: /format");
+	}
+
+	@Test
+	void picocliRejectsInvalidArgumentValuesBeforeExecutingTheCommand() {
+		var registry = new SlashCommandRegistry(List.of(new SlashCommand("orientation", "Change Orientation.",
+			SlashCommand.argument("<horizontal|vertical>", "1", List.of("horizontal", "vertical"),
+				value -> com.datev.dbui.Orientation.parse(value).id()), false,
+			argument -> List.of(MessageBlock.info("Changed to " + argument)))));
+		var invalid = registry.parse("/orientation diagonal").execute().getFirst();
+		assertThat(invalid.kind()).isEqualTo(MessageBlock.Kind.ERROR);
+		assertThat(invalid.text()).startsWith("Usage: /orientation").contains("horizontal", "vertical", "diagonal");
+		assertThat(registry.parse("/orientation VERTICAL").execute().getFirst().text()).isEqualTo("Changed to vertical");
+	}
+
+	@Test
+	void helpListsEveryRegisteredCommandAndEveryInteractiveKeyBinding() {
+		var registry = new SlashCommandRegistry(List.of(
+			new SlashCommand("help", "List commands and keys.", null, false, argument -> List.of()),
+			new SlashCommand("future", "A newly registered command.", SlashCommand.argument("<name>", "1", List.of()), false, argument -> List.of())));
+		for (var command : registry.commands()) {
+			assertThat(registry.help()).contains("/" + command.name(), command.help());
+		}
+		assertThat(registry.help()).contains("<name>", "Enter", "Ctrl-J", "Up", "Down", "Ctrl-R", "Ctrl-C", "Ctrl-D",
+			"Shift-Tab", "Ctrl-O", "Page Up", "Page Down", "Mouse wheel", "Esc", "Left", "Right", "Home", "End");
+	}
+
+	@Test
 	void aRegisteredCommandParsesAnArgumentAndAppearsInHelpAndCompletion() {
 		var registry = new SlashCommandRegistry(List.of(new SlashCommand("format", "Change the Format.",
 			SlashCommand.argument("<table|json>", "1", List.of("table", "json")), false,

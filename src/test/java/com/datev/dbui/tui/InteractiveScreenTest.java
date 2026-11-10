@@ -25,6 +25,51 @@ import dev.tamboui.tui.pilot.TuiTestRunner;
 class InteractiveScreenTest {
 
 	@Test
+	void shiftTabAndCtrlOCycleOrientationWithoutSendingOrClearingTheEditorDraft() throws Exception {
+		var inputs = new CopyOnWriteArrayList<String>();
+		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add);
+		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(120, 20))) {
+			terminal.runner().dispatch(new PasteEvent("draft"));
+			terminal.pilot().press(KeyCode.TAB, KeyModifiers.SHIFT);
+			terminal.pilot().pause();
+			assertThat(inputs).containsExactly("/orientation vertical");
+			screen.settings(com.datev.dbui.config.Settings.defaults().withOutput("table", "vertical"));
+			assertThat(line(draw(screen, new Size(120, 20)), 18)).contains("Orientation: vertical");
+			terminal.pilot().press('o', KeyModifiers.CTRL);
+			terminal.pilot().pause();
+			assertThat(inputs).containsExactly("/orientation vertical", "/orientation horizontal");
+			screen.busy(true);
+			terminal.pilot().press(KeyCode.TAB, KeyModifiers.SHIFT);
+			terminal.pilot().press('o', KeyModifiers.CTRL);
+			terminal.pilot().pause();
+			assertThat(inputs).hasSize(2);
+			screen.busy(false);
+			terminal.pilot().press(KeyCode.ENTER);
+			terminal.pilot().pause();
+			assertThat(inputs).endsWith("draft");
+			terminal.pilot().quit();
+		}
+	}
+
+	@Test
+	void statusBarShowsTheCurrentFormatAndOrientation() {
+		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { }, () -> { },
+			com.datev.dbui.config.Settings.defaults().withOutput("csv", "vertical"));
+		assertThat(line(draw(screen, new Size(140, 20)), 18)).contains("Format: csv", "Orientation: vertical");
+		assertThat(line(draw(screen, new Size(140, 20)), 19)).contains("Row limit: 1000");
+	}
+
+	@Test
+	void transcriptDrawsTheFormatFrozenOnEachResultInsteadOfAlwaysUsingTable() {
+		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { });
+		var settings = com.datev.dbui.config.Settings.defaults().withOutput("json", "vertical");
+		screen.update(List.of(MessageBlock.result(new Result(List.of("id"), List.of(List.of(7))), settings)));
+		var buffer = draw(screen, new Size(80, 20));
+		var transcript = IntStream.range(0, 15).mapToObj(y -> line(buffer, y)).collect(java.util.stream.Collectors.joining("\n"));
+		assertThat(transcript).contains("{\"id\":7}", "[", "]").doesNotContain("--");
+	}
+
+	@Test
 	void screenDrawsConfiguredFormatterOptionsAndCurrentExecutionStatus() {
 		var settings = new com.datev.dbui.config.Settings(5, null, "table", "horizontal", false,
 			"∅", "↵", 5, java.time.ZoneId.of("UTC"));

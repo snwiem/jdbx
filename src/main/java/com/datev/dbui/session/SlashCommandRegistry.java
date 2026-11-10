@@ -51,7 +51,7 @@ public final class SlashCommandRegistry {
 			return new Invocation(command.background(), () -> command.action().apply(value));
 		}
 		catch (CommandLine.ParameterException e) {
-			String usage = commandLine.getUsageMessage(CommandLine.Help.Ansi.OFF).lines().findFirst().orElseThrow();
+			String usage = usage(commandLine).lines().findFirst().orElseThrow();
 			return new Invocation(false, () -> List.of(MessageBlock.error(usage + (argument.isEmpty() ? "" : "\n" + e.getMessage()))));
 		}
 	}
@@ -73,11 +73,32 @@ public final class SlashCommandRegistry {
 		return List.copyOf(candidates);
 	}
 
+	private static String usage(CommandLine command) {
+		// The invisible root has an empty name; picocli otherwise includes its separator in the synopsis.
+		return command.getUsageMessage(CommandLine.Help.Ansi.OFF).replaceFirst("^Usage:\\s+", "Usage: ");
+	}
+
 	public String help() {
 		var text = new StringBuilder("Slash commands\n");
 		for (var command : commands) {
-			text.append(line.getSubcommands().get("/" + command.name()).getUsageMessage(CommandLine.Help.Ansi.OFF)).append('\n');
+			text.append(usage(line.getSubcommands().get("/" + command.name()))).append('\n');
 		}
+		text.append("""
+			Key bindings
+			Enter                     Send input; accept a Ctrl-R match without sending
+			Ctrl-J                    Insert a newline (Kitty); use bracketed paste on legacy terminals
+			Up / Down                 History at the first / last editor line; otherwise move the cursor
+			Ctrl-R                    Search history; press again for an older match
+			Esc                       Cancel history search and restore the draft
+			Ctrl-C                    Cancel a running Statement, cancel search, or clear idle input; never exit
+			Ctrl-D                    Ignore; never exit (use /quit)
+			Shift-Tab / Ctrl-O         Cycle Orientation; Ctrl-O is the legacy terminal fallback
+			Page Up / Page Down        Scroll the Transcript
+			Mouse wheel               Scroll the Transcript
+			Left / Right               Move the cursor; Ctrl-Left / Ctrl-Right move by word
+			Home / End                 Move to the start / end of a line
+			Backspace / Delete         Delete before / after the cursor
+			""");
 		return text.toString().stripTrailing();
 	}
 }

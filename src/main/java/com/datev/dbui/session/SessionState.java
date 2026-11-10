@@ -60,7 +60,7 @@ final class SessionState {
 
 	private static SessionMetadata metadataOf(Settings settings, ConnectionInfo info, String resumedFrom) {
 		return new SessionMetadata(Instant.now(), info, settings.rowLimit(),
-			settings.timeout() == null ? null : settings.timeout().toSeconds(), settings.readOnly(), null, resumedFrom);
+			settings.timeout() == null ? null : settings.timeout().toSeconds(), settings.readOnly(), null, resumedFrom, settings.format(), settings.orientation());
 	}
 
 	SessionDirectory directory() {
@@ -80,7 +80,7 @@ final class SessionState {
 		this.settings = settings;
 		metadata = new SessionMetadata(metadata.started(), metadata.connection(), settings.rowLimit(),
 			settings.timeout() == null ? null : settings.timeout().toSeconds(), settings.readOnly(),
-			metadata.lastStatement(), metadata.resumedFrom());
+			metadata.lastStatement(), metadata.resumedFrom(), settings.format(), settings.orientation());
 		writeMetadata();
 	}
 
@@ -139,7 +139,7 @@ final class SessionState {
 		Settings restored;
 		try {
 			restored = settings.withExecution(stored.rowLimit(), stored.timeoutSeconds() == null ? null
-				: Duration.ofSeconds(stored.timeoutSeconds()), stored.readOnly());
+				: Duration.ofSeconds(stored.timeoutSeconds()), stored.readOnly()).withOutput(stored.format(), stored.orientation());
 			ExecutionControls.validate(restored);
 		}
 		catch (IllegalArgumentException | ArithmeticException e) {

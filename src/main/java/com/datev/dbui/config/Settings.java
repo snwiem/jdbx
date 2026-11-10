@@ -40,6 +40,12 @@ public record Settings(int rowLimit, Duration timeout, String format, String ori
 				timezone, historyEnabled, sessionsKeep);
 	}
 
+	/** The same Settings with another Format and Orientation for subsequent Results. */
+	public Settings withOutput(String format, String orientation) {
+		return new Settings(rowLimit, timeout, format, orientation, readOnly, nullMarker, multilineMarker, maxWidth,
+				timezone, historyEnabled, sessionsKeep);
+	}
+
 	public static Settings defaults() {
 		return new Settings(1000, null, "table", "horizontal", false);
 	}

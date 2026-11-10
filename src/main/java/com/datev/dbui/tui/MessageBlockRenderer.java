@@ -64,9 +64,9 @@ public final class MessageBlockRenderer {
 			rows.add(new Row(block.kind(), ""));
 			String text = label(block.kind()) + block.text();
 			if (block.kind() == MessageBlock.Kind.RESULT) {
-				String table = formatter.format(block.result());
+				String formatted = block.text().isEmpty() ? formatter.format(block.result()) : block.text();
 				// Remove only the formatter's line terminator, not an empty row or trailing cell whitespace.
-				text = table.endsWith("\n") ? table.substring(0, table.length() - 1) : table;
+				text = formatted.endsWith("\n") ? formatted.substring(0, formatted.length() - 1) : formatted;
 			}
 			for (String line : text.split("\n", -1)) {
 				do {

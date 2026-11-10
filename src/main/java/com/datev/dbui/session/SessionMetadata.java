@@ -18,20 +18,26 @@ import org.yaml.snakeyaml.Yaml;
  * Statement (shortened) and the id of the Session this one was forked from.
  */
 public record SessionMetadata(Instant started, ConnectionInfo connection, int rowLimit, Long timeoutSeconds,
-		boolean readOnly, String lastStatement, String resumedFrom) {
+		boolean readOnly, String lastStatement, String resumedFrom, String format, String orientation) {
+
+	/** Metadata written before output settings were stored used table and horizontal. */
+	public SessionMetadata(Instant started, ConnectionInfo connection, int rowLimit, Long timeoutSeconds,
+			boolean readOnly, String lastStatement, String resumedFrom) {
+		this(started, connection, rowLimit, timeoutSeconds, readOnly, lastStatement, resumedFrom, "table", "horizontal");
+	}
 
 	static final int LAST_STATEMENT_LENGTH = 80;
 
 	public SessionMetadata withLastStatement(String statement) {
-		return new SessionMetadata(started, connection, rowLimit, timeoutSeconds, readOnly, shorten(statement), resumedFrom);
+		return new SessionMetadata(started, connection, rowLimit, timeoutSeconds, readOnly, shorten(statement), resumedFrom, format, orientation);
 	}
 
 	public SessionMetadata withConnection(ConnectionInfo info) {
-		return new SessionMetadata(started, info, rowLimit, timeoutSeconds, readOnly, lastStatement, resumedFrom);
+		return new SessionMetadata(started, info, rowLimit, timeoutSeconds, readOnly, lastStatement, resumedFrom, format, orientation);
 	}
 
 	public SessionMetadata forkedFrom(String id, Instant now) {
-		return new SessionMetadata(now, connection, rowLimit, timeoutSeconds, readOnly, lastStatement, id);
+		return new SessionMetadata(now, connection, rowLimit, timeoutSeconds, readOnly, lastStatement, id, format, orientation);
 	}
 
 	static String shorten(String statement) {
@@ -55,6 +61,8 @@ public record SessionMetadata(Instant started, ConnectionInfo connection, int ro
 		settings.put("row-limit", rowLimit);
 		settings.put("timeout", timeoutSeconds);
 		settings.put("read-only", readOnly);
+		settings.put("format", format);
+		settings.put("orientation", orientation);
 		Map<String, Object> root = new LinkedHashMap<>();
 		root.put("started", started.toString());
 		root.put("connection", connectionMap);
@@ -81,7 +89,8 @@ public record SessionMetadata(Instant started, ConnectionInfo connection, int ro
 			return new SessionMetadata(Instant.parse(root.get("started").toString()), info,
 				Integer.parseInt(settings.get("row-limit").toString()), timeout == null ? null : Long.valueOf(timeout.toString()),
 				Boolean.parseBoolean(settings.get("read-only").toString()), text(root.get("last-statement")),
-				text(root.get("resumed-from")));
+				text(root.get("resumed-from")), settings.get("format") == null ? "table" : text(settings.get("format")),
+				settings.get("orientation") == null ? "horizontal" : text(settings.get("orientation")));
 		}
 		catch (RuntimeException e) {
 			throw new IOException("Invalid session.yaml " + file + ": " + e.getMessage(), e);

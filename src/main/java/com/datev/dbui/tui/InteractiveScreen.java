@@ -38,6 +38,7 @@ public final class InteractiveScreen {
 	private int transcriptHeight;
 	private boolean busy;
 	private ExecutionStatus status;
+	private Settings settings;
 	private String connection;
 	private final Consumer<String> send;
 	private final Runnable cancel;
@@ -68,6 +69,7 @@ public final class InteractiveScreen {
 
 	private InteractiveScreen(String connection, Consumer<String> send, EditorKeys keys, boolean color, Runnable cancel, Settings settings) {
 		this.cancel = cancel;
+		this.settings = settings;
 		this.status = new ExecutionStatus(settings.rowLimit(), false, java.time.Duration.ZERO, null);
 		this.renderer = new MessageBlockRenderer(color, FormatOptions.from(settings));
 		this.transcript = new Transcript(renderer);
@@ -95,6 +97,11 @@ public final class InteractiveScreen {
 
 	public void busy(boolean busy) {
 		this.busy = busy;
+	}
+
+	/** Current Session settings, including changes made by Slash commands and Resume. */
+	public void settings(Settings settings) {
+		this.settings = settings;
 	}
 
 	public void status(ExecutionStatus status) {
@@ -140,6 +147,10 @@ public final class InteractiveScreen {
 			}
 			if (search != null) {
 				return handleSearch(key);
+			}
+			if (keys.orientationCycle().matches(key) || keys.orientationFallback().matches(key)) {
+				send.accept("/orientation " + (settings.orientation().equals("horizontal") ? "vertical" : "horizontal"));
+				return true;
 			}
 			if (key.hasCtrl() && key.isCharIgnoreCase('r')) {
 				searchDraft = editor.text();
@@ -248,7 +259,7 @@ public final class InteractiveScreen {
 				buffer.setString(0, bottom, "─".repeat(width), rule);
 			}
 		}
-		String[] status = { " " + connection, " " + StatusBarText.of(this.status) };
+		String[] status = { " " + connection + " · " + StatusBarText.output(settings), " " + StatusBarText.of(this.status) };
 		for (int row = 0; row < statusHeight; row++) {
 			int y = height - statusHeight + row;
 			buffer.fill(new Rect(0, y, width, 1), new Cell(" ", statusStyle));

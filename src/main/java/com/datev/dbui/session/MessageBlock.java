@@ -15,6 +15,14 @@ public record MessageBlock(Kind kind, String text, Result result) {
 		return new MessageBlock(Kind.RESULT, "", result);
 	}
 
+	/** Freeze the rendered text when the Result enters the Transcript; later setting changes do not rewrite it. */
+	public static MessageBlock result(Result result, com.datev.dbui.config.Settings settings) {
+		String text = com.datev.dbui.Format.parse(settings.format())
+			.formatter(com.datev.dbui.FormatOptions.from(settings), com.datev.dbui.Orientation.parse(settings.orientation()))
+			.format(result);
+		return new MessageBlock(Kind.RESULT, text, result);
+	}
+
 	public static MessageBlock info(String text) {
 		return new MessageBlock(Kind.INFO, text, null);
 	}

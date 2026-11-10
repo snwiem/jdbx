@@ -19,6 +19,8 @@ final class ExecutionControls {
 	}
 
 	static void validate(Settings settings) {
+		com.datev.dbui.Format.parse(settings.format());
+		com.datev.dbui.Orientation.parse(settings.orientation());
 		if (settings.rowLimit() < 1) {
 			throw new IllegalArgumentException("Row limit must be 1 or more");
 		}
@@ -37,6 +39,20 @@ final class ExecutionControls {
 	int timeoutSeconds() {
 		var timeout = settings.get().timeout();
 		return timeout == null ? 0 : Math.toIntExact(timeout.toSeconds());
+	}
+
+	/** Picocli converter shared by /limit and /timeout. */
+	static String positiveInteger(String argument) {
+		try {
+			int value = Integer.parseInt(argument);
+			if (value > 0) {
+				return Integer.toString(value);
+			}
+		}
+		catch (NumberFormatException ignored) {
+			// Use the same range message for a non-integer and an overflow.
+		}
+		throw new picocli.CommandLine.TypeConversionException("Use an integer from 1 to 2147483647");
 	}
 
 	MessageBlock limit(String argument) {
