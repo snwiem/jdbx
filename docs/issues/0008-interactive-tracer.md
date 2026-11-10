@@ -18,21 +18,29 @@
 
 ## Implementation
 
-- `com.datev.dbui.session.Session` owns one autocommit JDBC connection and runs Statements on a single background executor. Its public boundary accepts input and returns Message blocks, Results and the ended state. It has no TamboUI dependency.
+- `com.datev.dbui.session.Session` owns one autocommit JDBC connection and runs Statements on a single background executor. Its public boundary accepts input and returns Message blocks, Results and the ended state. It has no TamboUI dependency. It rejects overlapping submissions; callers wait for completion before the next input. Unknown Slash commands produce an error without reaching JDBC.
 - `com.datev.dbui.tui.MessageBlockRenderer` reuses `TableFormatter`. Every Message block has horizontal and vertical padding and no border. The Transcript caches wrapped rows and provides scrolling independently of the editor.
 - `InteractiveScreen` adapts TamboUI's multi-line `TextArea`, editor keys and viewport. `InteractiveMode` owns terminal resources and transfers completed Session updates to the terminal thread. The editor ignores input while a Statement runs; cancellation belongs to issue 0010.
-- TamboUI is pinned to 0.7.0. Its JLine 3 backend resolves JLine 3.30.17. `InteractiveBackend` preserves bare LF as Ctrl-J outside bracketed paste and also accepts Kitty keyboard events. Console logging is detached while Interactive mode owns the screen, then restored.
-- The existing connection options stay on `BatchCommand`. With `-c`, Batch mode is unchanged. Without `-c`, it starts Interactive mode. When issue 0003 adds `-f` and other batch inputs, its mode selection must also account for them.
+- TamboUI is pinned to 0.7.0. Its JLine 3 backend resolves JLine 3.30.17. `InteractiveBackend` delegates bare-LF and paste handling to the plain `EditorInput` class and also accepts Kitty keyboard events. Console logging is detached while Interactive mode owns the screen, then restored. The executable jar declares `Enable-Native-Access: ALL-UNNAMED`, so plain `java -jar` does not print JLine's native-access warning.
+- The existing connection options stay on `BatchCommand`. With `-c`, Batch mode is unchanged. Without `-c`, terminal stdin and stdout are required for Interactive mode; otherwise it returns exit code 2 with an error on stderr and empty stdout. When issue 0003 adds `-f` and other batch inputs, its mode selection must also account for them.
 
 ## Verification (2026-11-10)
 
-- `./mvnw -q verify` passes: 5 Session integration tests, 4 existing batch integration tests, 5 Message block renderer tests, 6 terminal adapter tests and 3 existing formatter tests. PostgreSQL integration tests use Testcontainers through Podman.
-- `Frame.forTesting(Buffer)` verifies bands, padding, colors, viewport clipping, fixed editor and Status bar, PageUp/PageDown and wheel scrolling. It covers 60×20, 40×10 and 100×40 layouts, plus very small viewports. Pilot verifies Enter, Ctrl-J, Ctrl-C/Ctrl-D, paste, and navigation across lines and words.
+- `./mvnw -q verify` passes: 8 Session integration tests, 5 batch entry point integration tests, 5 Message block renderer tests, 6 terminal adapter tests, 1 terminal byte test and 3 existing formatter tests. PostgreSQL integration tests use Testcontainers through Podman.
+- `Frame.forTesting(Buffer)` verifies bands, padding, colors, viewport clipping, fixed editor and Status bar, PageUp/PageDown and wheel scrolling. It covers 60×20, 40×10 and 100×40 layouts, plus very small viewports. Pilot verifies Enter, Ctrl-J, Ctrl-C/Ctrl-D, paste, and navigation across lines and words. One extra terminal byte test uses an in-memory JLine terminal and the real TamboUI event parser. This is necessary because Pilot bypasses the backend: it cannot detect incorrect LF rewrites, paste framing or peek/read inconsistencies.
 - The packaged jar ran in a real Python pseudo-terminal with `pyte`, against a disposable PostgreSQL 17 container. Checks passed for SQL Results, recovery after a SQL error, bare LF and Kitty Ctrl-J, Ctrl-C/Ctrl-D, CRLF bracketed paste, PageUp and wheel events, and resizes to 40×10, 30×8, 100×40 and 100×24.
-- `/quit` returned exit code 0. Captured bytes show alternate screen exit, bracketed paste off, mouse capture off and Kitty mode pop. Terminal local flags returned to their original values. Missing connection options returned exit code 2, empty stdout and an error on stderr, without opening Interactive mode.
+- `/quit` returned exit code 0. Captured bytes show alternate screen exit, bracketed paste off, mouse capture off and Kitty mode pop. Terminal local flags returned to their original values. Missing connection options returned exit code 2, empty stdout and an error on stderr, without opening Interactive mode. Redirected starts were checked with neither stream attached to a terminal and with only stdin or only stdout attached; all returned exit code 2 without terminal escape sequences. Plain `java -jar` passed the same terminal checks without native-access warnings.
 - A temporary Java agent emitted JUL warnings every 100 ms. Captured warnings appeared before and after Interactive mode, but none appeared while the alternate screen was active. Runtime checks also found and fixed an absent redraw after `runLater` and a duplicate backend close. Temporary tools, virtual environment and captures stayed under `/tmp`, not in the repository.
 
+Cross-family review found non-terminal startup and native-access warnings; both were reproduced and fixed. Follow-up fixes added terminal-byte regression coverage, prevented overlapping Session submissions and kept unknown Slash commands out of JDBC. A second review confirmed those fixes and found that SQL block comments also start with `/`; a failing Session integration test reproduced that regression, and SQL beginning with `/*` now reaches PostgreSQL correctly. The review also prompted an explicit record of the limits below.
+
 The structural layout and terminal bytes are verified. A human must still judge the final look and feel on a real keyboard and display; automated checks do not establish that it feels good.
+
+### Known limits
+
+- If the terminal fails during a long-running Statement, terminal cleanup runs first, but process shutdown waits for that Statement. Execution cancellation and bounded shutdown belong to issue 0010.
+- Statements without a Result currently show only the input echo. Rich info blocks and update-count feedback belong to subsequent message/execution work.
+- The Status bar displays the default key hints. Configurable keys and their hints belong to issue 0018. Selection/copy support beyond native Shift-drag is outside issue 0008.
 
 ## Run and check by hand
 
@@ -41,7 +49,7 @@ Requires Java 25 and a container runtime. From the project root:
 ```sh
 podman compose up -d postgres
 ./mvnw -q verify
-java --enable-native-access=ALL-UNNAMED -jar target/dbui-0.0.1-SNAPSHOT.jar \
+java -jar target/dbui-0.0.1-SNAPSHOT.jar \
   --host localhost --port 5432 --db dbui --user dbui --password dbui
 ```
 
