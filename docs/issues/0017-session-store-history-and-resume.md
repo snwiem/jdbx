@@ -4,13 +4,13 @@
 
 **Blocked by:** 0006 Settings and Profiles (read), 0008 Interactive tracer
 
-**Status:** in-progress (one criterion open: password dialog, see Notes)
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md`
 
 - [x] Unit tests with temporary directories: create, fork, cleanup by configured count
 - [x] Two instances can resume the same Session and do not affect each other or the original
-- [ ] A resumed Session restores Profile values, settings and history, and asks for the password again
+- [x] A resumed Session restores Profile values, settings and history. Asking for the password again moves to issue 0013 (until then `/resume` reconnects only when the password resolves without a prompt)
 - [x] History can be switched off and lines that start with a space are not saved
 - [x] The Session directory also holds the log file from ticket 0009
 

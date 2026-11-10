@@ -13,3 +13,4 @@
 - [ ] Two instances that edit different Profiles do not lose each other's change
 - [ ] `/connect` switches the connection inside one Session and the status bar updates
 - [ ] A masked prompt asks for a missing password in Interactive mode
+- [ ] `/resume` (issue 0017) asks for the password in the masked prompt when the resumed Session's connection needs one that cannot be resolved without a prompt

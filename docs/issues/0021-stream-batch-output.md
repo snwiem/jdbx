@@ -21,3 +21,5 @@
 - Vertical layouts (all Formats) buffer the whole Result, because each line needs one value of every row. In practice `--limit` bounds this.
 - Batch mode reads a Statement that starts with `select`, `with`, `values`, `table` or `show` with fetch size 1000 and autocommit off, then commits and restores autocommit. Other Statements keep autocommit on, because some (for example `vacuum`) cannot run in a transaction block.
 - `RowSource` (columns and a one-pass row iterator) is the formatter input; `ResultFormatter.write(Result, Writer)` stays as a convenience. `JdbcRowSource` holds the JDBC reading.
+
+Known limits: streaming applies to Statements that start with `select`, `with`, `values`, `table` or `show` (a `WITH ... INSERT ... RETURNING` counts as a read). A `begin;` inside one input is committed after a streamed query.
