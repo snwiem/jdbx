@@ -85,3 +85,13 @@ Run `./spikes/0019-tamboui-spike/run.sh` in your real terminal, once directly an
 7. Flicker and feel: hold a key, type fast, run `/work`. The timer must not flicker.
 8. Exit: `/quit` returns a clean shell. `./run.sh --dump` prints the Transcript to the normal screen. `/crash` shows the error screen; `q` restores the shell. In another pane run `kill -9 <java pid>`, then `reset`.
 9. `LANG=C ./spikes/0019-tamboui-spike/run.sh`: rules and scrollbar still look right.
+
+### Hand check by the user (2026-11-10)
+
+- Resize works.
+- Editing feels the same as with plain JLine in the first spike.
+- Selection works with `Shift`-drag. The text is highlighted but not copied automatically.
+- `/copy` copies the last Result.
+- Look and feel are good. No flicker.
+
+Result: the spike is a full success.
