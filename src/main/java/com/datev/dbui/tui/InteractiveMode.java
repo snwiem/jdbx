@@ -48,7 +48,7 @@ public final class InteractiveMode {
 		ConnectionParameters parameters = null;
 		try {
 			model.validate(false);
-			parameters = ConnectionParameters.resolve(new ConnectionOptions(), model.connectionProfile(), settings);
+			parameters = ConnectionParameters.resolve(new ConnectionOptions(), profiles.resolve(model.connectionProfile()), settings);
 		}
 		catch (ConfigException e) {
 			// Missing or invalid fields are edited in Interactive mode; Batch mode keeps its fail-fast path.

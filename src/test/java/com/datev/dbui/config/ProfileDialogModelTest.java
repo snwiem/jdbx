@@ -6,6 +6,16 @@ import org.junit.jupiter.api.Test;
 
 class ProfileDialogModelTest {
 	@Test
+	void startupKeepsLiteralReferencesInSavedDriverProperties() {
+		var raw = new Profile("tls", "jdbc:postgresql://localhost/db", null, null, null, "alice", "${PG}", null, null,
+			Map.of("sslpassword", "${TLS_PASSWORD}"));
+		var resolved = new Profile("tls", raw.url(), null, null, null, raw.user(), "pg-secret", null, null,
+			Map.of("sslpassword", "tls-secret"));
+		var dialog = ProfileDialogModel.prefill(new ConnectionOptions(), resolved, raw, Settings.defaults());
+		assertThat(dialog.savedProfile().properties()).containsEntry("sslpassword", "${TLS_PASSWORD}");
+	}
+
+	@Test
 	void savingATransientUrlKeepsItsUserButNotItsPassword() {
 		var given = new Profile(null, "jdbc:postgresql://localhost/db?user=alice&password=url-secret", null, null,
 			null, null, null, null, null, Map.of());

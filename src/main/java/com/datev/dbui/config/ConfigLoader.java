@@ -149,7 +149,7 @@ public class ConfigLoader {
 			if (!(rawProperties instanceof Map<?, ?> map)) {
 				throw new ConfigException(where + ": 'properties' must be a map.");
 			}
-			map.forEach((k, v) -> properties.put(String.valueOf(k), String.valueOf(resolve(where, v))));
+			map.forEach((k, v) -> properties.put(String.valueOf(k), String.valueOf(resolvePassword ? resolve(where, v) : v)));
 		}
 		return new Profile(name, url, host, port, text(where, "database", fields), text(where, "user", fields),
 				resolvePassword ? text(where, "password", fields) : fields.get("password") == null ? null : String.valueOf(fields.get("password")),
