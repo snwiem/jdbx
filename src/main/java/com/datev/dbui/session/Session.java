@@ -51,7 +51,8 @@ public final class Session implements AutoCloseable {
 			ended = true;
 			return CompletableFuture.completedFuture(new Update(messageBlocks(), true));
 		}
-		if (input.stripLeading().startsWith("/")) {
+		String stripped = input.stripLeading();
+		if (stripped.startsWith("/") && !stripped.startsWith("/*")) {
 			messageBlocks.add(MessageBlock.error("Unknown Slash command: " + input.strip()));
 			return CompletableFuture.completedFuture(new Update(messageBlocks(), false));
 		}

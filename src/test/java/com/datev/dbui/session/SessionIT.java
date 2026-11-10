@@ -57,6 +57,15 @@ class SessionIT {
 	}
 
 	@Test
+	void aLeadingSqlBlockCommentIsNotASlashCommand() throws Exception {
+		try (Session session = session()) {
+			var update = session.submit("  /* report */ select 17 as id").get(5, TimeUnit.SECONDS);
+			assertThat(update.messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.RESULT);
+			assertThat(update.messageBlocks().getLast().result().rows().getFirst()).containsExactly(17);
+		}
+	}
+
+	@Test
 	void unknownSlashCommandIsNotSentToTheDatabase() throws Exception {
 		try (Session session = session()) {
 			var update = session.submit("/not-a-command").get(5, TimeUnit.SECONDS);
