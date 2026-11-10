@@ -11,7 +11,7 @@ import com.datev.dbui.session.ConnectionInfo;
 public final class ProfileDialogModel {
 	public enum Field {
 		NAME("Name"), URL("JDBC URL"), HOST("Host"), PORT("Port"), DATABASE("Database"), USER("User"),
-		PASSWORD("Password"), READ_ONLY("Read-only (true/false)"), SCHEMA("Schema"), PROPERTIES("Properties (k=v;k=v)");
+		PASSWORD("Password"), READ_ONLY("Read-only (true/false/empty=default)"), SCHEMA("Schema"), PROPERTIES("Properties (k=v;k=v)");
 		private final String label;
 		Field(String label) { this.label = label; }
 		public String label() { return label; }
@@ -36,7 +36,7 @@ public final class ProfileDialogModel {
 		fields.put(Field.DATABASE, text(initial.database()));
 		fields.put(Field.USER, text(initial.user()));
 		fields.put(Field.PASSWORD, text(savedPassword));
-		fields.put(Field.READ_ONLY, initial.readOnly() == null ? "false" : initial.readOnly().toString());
+		fields.put(Field.READ_ONLY, initial.readOnly() == null ? "" : initial.readOnly().toString());
 		fields.put(Field.SCHEMA, text(initial.schema()));
 		fields.put(Field.PROPERTIES, initial.properties().entrySet().stream().filter(e -> !secret(e.getKey()))
 			.map(e -> e.getKey() + "=" + e.getValue()).collect(Collectors.joining(";")));
@@ -82,8 +82,8 @@ public final class ProfileDialogModel {
 			}
 			catch (NumberFormatException e) { throw new ConfigException("Port must be a whole number from 1 to 65535."); }
 		}
-		if (!value(Field.READ_ONLY).equals("true") && !value(Field.READ_ONLY).equals("false")) {
-			throw new ConfigException("Read-only must be true or false.");
+		if (!value(Field.READ_ONLY).isBlank() && !value(Field.READ_ONLY).equals("true") && !value(Field.READ_ONLY).equals("false")) {
+			throw new ConfigException("Read-only must be true, false or empty (Session default).");
 		}
 		connectionProfile(); // validates the driver property syntax
 	}
@@ -111,7 +111,7 @@ public final class ProfileDialogModel {
 		}
 		String port = blank(value(Field.PORT));
 		return new Profile(blank(value(Field.NAME)), url, blank(value(Field.HOST)), port == null ? null : Integer.valueOf(port),
-			blank(value(Field.DATABASE)), blank(value(Field.USER)), password, Boolean.valueOf(value(Field.READ_ONLY)),
+			blank(value(Field.DATABASE)), blank(value(Field.USER)), password, value(Field.READ_ONLY).isBlank() ? null : Boolean.valueOf(value(Field.READ_ONLY)),
 			blank(value(Field.SCHEMA)), properties);
 	}
 

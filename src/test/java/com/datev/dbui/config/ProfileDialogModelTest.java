@@ -6,6 +6,15 @@ import org.junit.jupiter.api.Test;
 
 class ProfileDialogModelTest {
 	@Test
+	void anUnsetReadOnlyValueStaysUnsetSoTheSessionDefaultStillApplies() {
+		var given = new Profile("default", null, "localhost", null, "db", "alice", "secret", null, null, Map.of());
+		var dialog = new ProfileDialogModel(given, given.password());
+		dialog.validate(true);
+		assertThat(dialog.savedProfile().readOnly()).isNull();
+		assertThat(ConnectionParameters.resolve(new ConnectionOptions(), dialog.connectionProfile(), Settings.defaults().withExecution(1000, null, true)).readOnly()).isTrue();
+	}
+
+	@Test
 	void startupPrefillsOptionsOverProfileValuesButDoesNotSaveTheOptionPassword() {
 		var raw = new Profile("dev", "jdbc:postgresql://saved/db", null, null, null, "saved-user", "${ENV_PASSWORD}", true, "app", Map.of("sslmode", "require"));
 		var resolved = new Profile("dev", raw.url(), null, null, null, raw.user(), "env-secret", true, "app", raw.properties());
