@@ -82,6 +82,8 @@ public record ConnectionParameters(String url, Map<String, String> properties, b
 	public Connection open() throws SQLException {
 		Properties driverProperties = new Properties();
 		driverProperties.putAll(properties);
+		// Without this the driver sends no read-only flag to the server while autocommit is on (finding of issue 0006).
+		driverProperties.setProperty("readOnlyMode", "always");
 		Connection connection = DriverManager.getConnection(url, driverProperties);
 		if (readOnly) {
 			connection.setReadOnly(true);

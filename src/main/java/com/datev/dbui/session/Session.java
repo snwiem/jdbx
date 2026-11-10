@@ -284,18 +284,18 @@ public final class Session implements AutoCloseable {
 					break;
 				}
 				long statementStartedAt = System.nanoTime();
-				if (statement.execute(sql)) {
-					try (var rows = statement.getResultSet()) {
-						var read = JdbcResultReader.read(rows, rowLimit);
-						resultSummary(read.result().rows().size(), statementStartedAt, read.truncated());
-						add(MessageBlock.result(read.result()));
-						if (read.truncated()) {
-							add(MessageBlock.info("truncated at " + rowLimit + " rows"));
-						}
-					}
+				// Read-only: every Statement gets its own explicit READ ONLY transaction (see ReadOnlyIT).
+				boolean guarded = connection.isReadOnly();
+				if (guarded) {
+					connection.setAutoCommit(false);
 				}
-				else {
-					add(MessageBlock.info(CommandTag.of(sql, statement.getLargeUpdateCount())));
+				try {
+					runStatement(statement, sql, rowLimit, statementStartedAt);
+				}
+				finally {
+					if (guarded) {
+						endReadOnlyTransaction();
+					}
 				}
 			}
 			return new Update(messageBlocks(), false);
@@ -309,6 +309,32 @@ public final class Session implements AutoCloseable {
 			add(MessageBlock.error("Unexpected error: " + e.getMessage() + (logFile() == null ? "" : ". Details: " + logFile())));
 			writeLog(e);
 			return new Update(messageBlocks(), false);
+		}
+	}
+
+	private void endReadOnlyTransaction() throws SQLException {
+		try {
+			connection.rollback();
+		}
+		catch (SQLException ignored) {
+			// the connection may be broken; setAutoCommit below reports it if it matters
+		}
+		connection.setAutoCommit(true);
+	}
+
+	private void runStatement(Statement statement, String sql, int rowLimit, long statementStartedAt) throws SQLException {
+		if (statement.execute(sql)) {
+			try (var rows = statement.getResultSet()) {
+				var read = JdbcResultReader.read(rows, rowLimit);
+				resultSummary(read.result().rows().size(), statementStartedAt, read.truncated());
+				add(MessageBlock.result(read.result()));
+				if (read.truncated()) {
+					add(MessageBlock.info("truncated at " + rowLimit + " rows"));
+				}
+			}
+		}
+		else {
+			add(MessageBlock.info(CommandTag.of(sql, statement.getLargeUpdateCount())));
 		}
 	}
 

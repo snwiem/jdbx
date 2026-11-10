@@ -301,7 +301,7 @@ class SessionResumeIT {
 				.isNotEqualTo(oldPid);
 			assertThat(submit(current, "/tables public").messageBlocks().getLast().result().rows())
 				.extracting(row -> row.getFirst()).contains("resume_cache_rebound");
-			assertThat(submit(current, "show default_transaction_read_only").messageBlocks().getLast().result().rows())
+			assertThat(submit(current, "show transaction_read_only").messageBlocks().getLast().result().rows())
 				.containsExactly(List.of("on"));
 			var limited = submit(current, "select generate_series(1,5)").messageBlocks();
 			assertThat(limited.get(limited.size() - 2).result().rows()).hasSize(2);
