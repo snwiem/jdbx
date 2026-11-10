@@ -71,7 +71,7 @@ class ConnectionModalTest {
 		screen.onInteraction(save -> { }, passwords::add, cancelled::incrementAndGet);
 		screen.interaction(new SessionInteraction.Password("alice@db"));
 		screen.handle(new PasteEvent("super-secret"));
-		assertThat(draw(screen, 90, 20)).contains("Password", "************").doesNotContain("super-secret");
+		assertThat(draw(screen, 90, 20)).contains("Password", "********").doesNotContain("super-secret", "************");
 		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
 		assertThat(passwords).containsExactly("super-secret");
 		assertThat(inputs).isEmpty();
@@ -104,7 +104,7 @@ class ConnectionModalTest {
 			terminal.pilot().press('g', KeyModifiers.CTRL);
 			terminal.pilot().pause();
 			assertThat(saved).containsExactly(true, false);
-			assertThat(draw(screen, 100, 24)).contains("Edit Connection Profile", "Password", "Ctrl-G");
+			assertThat(draw(screen, 100, 24)).contains("Connect", "Password", "Ctrl-G");
 			var blocks = new ArrayList<com.datev.dbui.session.MessageBlock>();
 			for (int i = 0; i < 10; i++) blocks.add(com.datev.dbui.session.MessageBlock.info("earlier event"));
 			blocks.add(com.datev.dbui.session.MessageBlock.error("Name is required to save a Profile."));
