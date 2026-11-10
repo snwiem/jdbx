@@ -77,7 +77,10 @@ public final class ProfileCommands {
 		Profile initial = name == null ? new Profile(null, null, null, null, null, null, null, null, null, Map.of()) : loader.profileForEditing(name);
 		return new Edit(name == null ? new ProfileDialogModel(initial, null) : ProfileDialogModel.edit(initial), false, name);
 	}
-	Action remove(String name) { store.profile(name); return new Remove(name); }
+	Action remove(String name) {
+		if (!store.names().contains(name)) throw new ConfigException("Unknown Profile '" + name + "'.");
+		return new Remove(name);
+	}
 	public void removeConfirmed(String name) { store.remove(name); }
 	public void save(ProfileDialogModel model, String editingName) {
 		if (editingName != null && !editingName.equals(model.savedProfile().name())) throw new ConfigException("Keep the existing Profile name when editing. Use /profile add for a new name.");

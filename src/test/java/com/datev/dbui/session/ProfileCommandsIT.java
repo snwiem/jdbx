@@ -77,6 +77,11 @@ class ProfileCommandsIT {
 			assertThat(model.value(ProfileDialogModel.Field.PORT)).isEqualTo(POSTGRES.getMappedPort(5432).toString());
 			assertThat(model.value(ProfileDialogModel.Field.PASSWORD)).isEqualTo("${MISSING_PASSWORD}");
 			assertThat(model.value(ProfileDialogModel.Field.READ_ONLY)).isEqualTo("true");
+			current.cancelInteraction();
+			submit(current, "/profile remove env");
+			assertThat(current.interaction()).isInstanceOf(SessionInteraction.Confirmation.class);
+			submit(current, "y");
+			assertThat(new ProfileStore(directory).names()).isEmpty();
 		}
 	}
 
