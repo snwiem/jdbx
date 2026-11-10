@@ -3,6 +3,7 @@ package com.datev.dbui;
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
+import java.util.Iterator;
 import java.util.List;
 
 /** Writes a Result in the {@code json} Format: an array with one object per row, one object per line. Never cuts data. */
@@ -15,24 +16,25 @@ public class JsonFormatter implements ResultFormatter {
 	}
 
 	@Override
-	public void write(Result result, Writer out) throws IOException {
-		if (result.rows().isEmpty()) {
+	public void write(RowSource source, Writer out) throws IOException {
+		Iterator<List<Object>> rows = source.rows();
+		if (!rows.hasNext()) {
 			out.append("[]\n");
 			return;
 		}
 		out.append("[\n");
-		List<List<Object>> rows = result.rows();
-		for (int r = 0; r < rows.size(); r++) {
+		while (rows.hasNext()) {
+			List<Object> row = rows.next();
 			StringBuilder line = new StringBuilder("{");
-			for (int i = 0; i < result.columns().size(); i++) {
+			for (int i = 0; i < source.columns().size(); i++) {
 				if (i > 0) {
 					line.append(',');
 				}
-				string(line, result.columns().get(i));
+				string(line, source.columns().get(i));
 				line.append(':');
-				value(line, rows.get(r).get(i));
+				value(line, row.get(i));
 			}
-			out.append(line).append('}').append(r < rows.size() - 1 ? ",\n" : "\n");
+			out.append(line).append('}').append(rows.hasNext() ? ",\n" : "\n");
 		}
 		out.append("]\n");
 	}

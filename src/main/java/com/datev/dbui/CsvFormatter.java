@@ -2,6 +2,7 @@ package com.datev.dbui;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Iterator;
 import java.util.List;
 
 /** Writes a Result in the {@code csv} Format (RFC 4180 quoting, {@code \n} line ends, NULL as empty). Never cuts data. */
@@ -21,20 +22,28 @@ public class CsvFormatter implements ResultFormatter {
 	}
 
 	@Override
-	public void write(Result result, Writer out) throws IOException {
+	public void write(RowSource source, Writer out) throws IOException {
 		if (orientation == Orientation.VERTICAL) {
-			for (int c = 0; c < result.columns().size(); c++) {
-				List<String> record = new java.util.ArrayList<>(List.of(result.columns().get(c)));
-				for (List<Object> row : result.rows()) {
-					record.add(cell(row.get(c)));
+			List<List<String>> records = new java.util.ArrayList<>();
+			for (String column : source.columns()) {
+				records.add(new java.util.ArrayList<>(List.of(column)));
+			}
+			Iterator<List<Object>> rows = source.rows();
+			while (rows.hasNext()) {
+				List<Object> row = rows.next();
+				for (int c = 0; c < records.size(); c++) {
+					records.get(c).add(cell(row.get(c)));
 				}
+			}
+			for (List<String> record : records) {
 				line(out, record);
 			}
 			return;
 		}
-		line(out, result.columns());
-		for (List<Object> row : result.rows()) {
-			line(out, row.stream().map(this::cell).toList());
+		line(out, source.columns());
+		Iterator<List<Object>> rows = source.rows();
+		while (rows.hasNext()) {
+			line(out, rows.next().stream().map(this::cell).toList());
 		}
 	}
 
