@@ -51,7 +51,7 @@ public final class ProfileCommands {
 		}
 		return new Connect(load(name));
 	}
-	public Profile load(String name) { return resolve(store.profile(name)); }
+	public Profile load(String name) { return resolve(loader.profileForEditing(name)); }
 
 	/** Resolve dialog references, but request a prompt when only the password reference is unavailable. */
 	public Profile resolve(Profile raw) {
@@ -74,7 +74,7 @@ public final class ProfileCommands {
 	}
 
 	Action edit(String name) {
-		Profile initial = name == null ? new Profile(null, null, null, null, null, null, null, null, null, Map.of()) : store.profile(name);
+		Profile initial = name == null ? new Profile(null, null, null, null, null, null, null, null, null, Map.of()) : loader.profileForEditing(name);
 		return new Edit(new ProfileDialogModel(initial, initial.password()), false, name);
 	}
 	Action remove(String name) { store.profile(name); return new Remove(name); }
@@ -89,7 +89,7 @@ public final class ProfileCommands {
 		var text = new StringBuilder("Profiles. Type /connect <name|number>. Use /profile add to create a Profile.");
 		if (listing.isEmpty()) text.append("\n(none)");
 		for (int i = 0; i < listing.size(); i++) {
-			Profile profile = store.profile(listing.get(i));
+			Profile profile = loader.profileForEditing(listing.get(i));
 			String url = profile.url() == null ? "jdbc:postgresql://" + profile.host() + ":"
 				+ (profile.port() == null ? 5432 : profile.port()) + "/" + profile.database() : profile.url();
 			String label = ConnectionInfo.of(new ConnectionParameters(url, profile.user() == null ? Map.of() : Map.of("user", profile.user()), false), profile.name()).label();

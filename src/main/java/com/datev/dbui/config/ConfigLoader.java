@@ -112,7 +112,12 @@ public class ConfigLoader {
 	}
 
 	/** Loads one Profile and resolves its {@code ${ENV}} references. Other Profiles are not resolved. */
-	public Profile profile(String name) {
+	public Profile profile(String name) { return profile(name, true); }
+
+	/** Resolve typed fields, but keep the literal password for the editor and its provenance rules. */
+	public Profile profileForEditing(String name) { return profile(name, false); }
+
+	private Profile profile(String name, boolean resolvePassword) {
 		Map<String, Object> raw = rawProfiles();
 		if (!raw.containsKey(name)) {
 			throw new ConfigException("Unknown Profile '" + name + "'. Known Profiles in "
@@ -147,7 +152,8 @@ public class ConfigLoader {
 			map.forEach((k, v) -> properties.put(String.valueOf(k), String.valueOf(resolve(where, v))));
 		}
 		return new Profile(name, url, host, port, text(where, "database", fields), text(where, "user", fields),
-				text(where, "password", fields), readOnly, text(where, "schema", fields), properties);
+				resolvePassword ? text(where, "password", fields) : fields.get("password") == null ? null : String.valueOf(fields.get("password")),
+				readOnly, text(where, "schema", fields), properties);
 	}
 
 	private Map<String, Object> rawProfiles() {

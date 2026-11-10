@@ -20,16 +20,35 @@ class ProfileCommandsIT {
 	private ConnectionParameters parameters() {
 		return new ConnectionParameters(POSTGRES.getJdbcUrl(), Map.of("user", POSTGRES.getUsername(), "password", POSTGRES.getPassword()), false);
 	}
-	private Session session(Connection connection) throws Exception {
-		var context = new SessionContext(directory.resolve("state"), Settings.defaults(), parameters(), null, new ConfigLoader(directory, Map.of())::profile);
+	private Session session(Connection connection) throws Exception { return session(connection, Map.of()); }
+	private Session session(Connection connection, Map<String, String> environment) throws Exception {
+		var context = new SessionContext(directory.resolve("state"), Settings.defaults(), parameters(), null, new ConfigLoader(directory, environment)::profile);
 		var session = new Session(connection, SessionDirectory.create(context.stateBase()), context);
-		session.configureProfiles(directory, Map.of());
+		session.configureProfiles(directory, environment);
 		return session;
 	}
 	private static Session.Update submit(Session session, String text) throws Exception { return session.submit(text).get(10, TimeUnit.SECONDS); }
 	private Profile profile(String name, boolean readOnly) {
 		return new Profile(name, POSTGRES.getJdbcUrl(), null, null, null, POSTGRES.getUsername(), POSTGRES.getPassword(), readOnly,
 			"public", Map.of("readOnlyMode", "always"));
+	}
+
+	@Test
+	void existingEnvironmentReferencesInTypedProfileFieldsWorkForConnectListAndEdit() throws Exception {
+		java.nio.file.Files.writeString(directory.resolve("profiles.yaml"), "profiles:\n  env:\n    host: ${PG_HOST}\n    port: ${PG_PORT}\n    database: " + POSTGRES.getDatabaseName() + "\n    user: " + POSTGRES.getUsername() + "\n    password: ${MISSING_PASSWORD}\n    read-only: ${PG_READ_ONLY}\n");
+		var environment = Map.of("PG_HOST", POSTGRES.getHost(), "PG_PORT", POSTGRES.getMappedPort(5432).toString(), "PG_READ_ONLY", "true");
+		try (Session current = session(parameters().open(), environment)) {
+			assertThat(submit(current, "/profile list").messageBlocks().getLast().text()).contains("env", POSTGRES.getHost());
+			submit(current, "/connect env");
+			assertThat(current.interaction()).isInstanceOf(SessionInteraction.Password.class);
+			current.answerPassword(POSTGRES.getPassword()).get(10, TimeUnit.SECONDS);
+			assertThat(submit(current, "select 12").messageBlocks().getLast().result().rows()).containsExactly(List.of(12));
+			submit(current, "/profile edit env");
+			var model = ((SessionInteraction.Dialog) current.interaction()).model();
+			assertThat(model.value(ProfileDialogModel.Field.PORT)).isEqualTo(POSTGRES.getMappedPort(5432).toString());
+			assertThat(model.value(ProfileDialogModel.Field.PASSWORD)).isEqualTo("${MISSING_PASSWORD}");
+			assertThat(model.value(ProfileDialogModel.Field.READ_ONLY)).isEqualTo("true");
+		}
 	}
 
 	@Test

@@ -42,7 +42,7 @@ public final class InteractiveMode {
 		Map<String, String> environment = System.getenv();
 		Path configDirectory = ConfigLoader.directory(options.configDir, environment, Path.of(System.getProperty("user.home")));
 		var profiles = new ProfileCommands(configDirectory, environment);
-		Profile raw = options.profile == null ? null : new ProfileStore(configDirectory).profile(options.profile);
+		Profile raw = options.profile == null ? null : new ConfigLoader(configDirectory, environment).profileForEditing(options.profile);
 		Profile resolved = raw == null ? null : profiles.resolve(raw);
 		var model = ProfileDialogModel.prefill(options, resolved, raw, settings);
 		ConnectionParameters parameters = null;
