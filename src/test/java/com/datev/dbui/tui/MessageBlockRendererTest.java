@@ -44,6 +44,13 @@ class MessageBlockRendererTest {
 	}
 
 	@Test
+	void resultKeepsAnEmptyLastRowInsteadOfTreatingItAsPadding() {
+		var result = new Result(List.of("value"), List.of(List.of("")));
+		assertThat(renderer.rows(List.of(MessageBlock.result(result)), 20))
+			.extracting(MessageBlockRenderer.Row::text).containsExactly("", "value", "-----", "", "");
+	}
+
+	@Test
 	void narrowBandsWrapWithoutWritingOutsideTheViewport() {
 		var rows = renderer.rows(List.of(MessageBlock.input("abcdef\ngh")), 6);
 		assertThat(rows).extracting(MessageBlockRenderer.Row::text).containsExactly("", "abcd", "ef", "gh", "");

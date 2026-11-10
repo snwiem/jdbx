@@ -22,8 +22,12 @@ public final class MessageBlockRenderer {
 		List<Row> rows = new ArrayList<>();
 		for (var block : blocks) {
 			rows.add(new Row(block.kind(), ""));
-			String text = block.kind() == MessageBlock.Kind.RESULT
-				? new TableFormatter().format(block.result()).stripTrailing() : block.text();
+			String text = block.text();
+			if (block.kind() == MessageBlock.Kind.RESULT) {
+				String table = new TableFormatter().format(block.result());
+				// Remove only the formatter's line terminator, not an empty row or trailing cell whitespace.
+				text = table.endsWith("\n") ? table.substring(0, table.length() - 1) : table;
+			}
 			for (String line : text.split("\n", -1)) {
 				do {
 					String part = CharWidth.substringByWidth(line, Math.max(1, width - 2));
