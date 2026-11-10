@@ -55,7 +55,7 @@ public final class ProfileDialogModel {
 		Profile initial = new Profile(fallback.name(), url, url == null ? first(options.host, fallback.host()) : null,
 			url == null ? first(options.port, fallback.port()) : null, url == null ? first(options.database, fallback.database()) : null,
 			first(options.user, fallback.user()), first(options.password, fallback.password()),
-			options.readOnly != null ? options.readOnly : fallback.readOnly() == null ? settings.readOnly() : fallback.readOnly(),
+			options.readOnly != null ? options.readOnly : fallback.readOnly(),
 			first(options.schema, fallback.schema()), raw == null ? fallback.properties() : raw.properties());
 		return new ProfileDialogModel(initial, raw == null ? null : raw.password(), raw, options.url == null && !hostOptions);
 	}

@@ -57,6 +57,9 @@ class ProfileDialogModelTest {
 		dialog.validate(true);
 		assertThat(dialog.savedProfile().readOnly()).isNull();
 		assertThat(ConnectionParameters.resolve(new ConnectionOptions(), dialog.connectionProfile(), Settings.defaults().withExecution(1000, null, true)).readOnly()).isTrue();
+		var startup = ProfileDialogModel.prefill(new ConnectionOptions(), given, given, Settings.defaults().withExecution(1000, null, true));
+		assertThat(startup.savedProfile().readOnly()).isNull();
+		assertThat(ConnectionParameters.resolve(new ConnectionOptions(), startup.connectionProfile(), Settings.defaults().withExecution(1000, null, true)).readOnly()).isTrue();
 	}
 
 	@Test
