@@ -402,13 +402,13 @@ public final class Session implements AutoCloseable {
 				return List.of();
 			}));
 		commands.add(new SlashCommand("connect", "List Profiles or switch to one; open a dialog when none exist.",
-			SlashCommand.argument("name|number", "0..1", () -> (profiles == null ? List.<String>of() : profiles.names()).iterator()),
+			SlashCommand.argument("name|number", "0..1", () -> (profiles == null ? List.<String>of() : profiles.completionNames()).iterator()),
 			true, argument -> {
 				profileCommand("/connect" + (argument.isEmpty() ? "" : " " + argument));
 				return List.of();
 			}));
 		commands.add(new SlashCommand("profile", "List, add, edit or remove a saved Profile.",
-			SlashCommand.argument("list|add|edit <name>|remove <name>", "1", List.of("list", "add", "edit", "remove")),
+			SlashCommand.argument("list|add|edit <name|number>|remove <name|number>", "1", List.of("list", "add", "edit", "remove")),
 			true, argument -> {
 				profileCommand("/profile " + argument);
 				return List.of();

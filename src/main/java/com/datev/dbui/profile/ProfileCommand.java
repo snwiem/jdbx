@@ -11,6 +11,6 @@ public final class ProfileCommand {
 		if (argument.equals("add")) return profiles.edit(null);
 		if (argument.startsWith("edit ") && !argument.substring(5).isBlank()) return profiles.edit(argument.substring(5).strip());
 		if (argument.startsWith("remove ") && !argument.substring(7).isBlank()) return profiles.remove(argument.substring(7).strip());
-		throw new ConfigException("Usage: /profile list|add|edit <name>|remove <name>");
+		throw new ConfigException("Usage: /profile list|add|edit <name|number>|remove <name|number>. Put a name with spaces in quotes, for example edit \"Test 3\".");
 	}
 }
