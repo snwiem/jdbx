@@ -51,12 +51,14 @@ class ProfileCommandsIT {
 
 	@Test
 	void unchangedProfileEditsKeepPasswordReferencesInsideSavedUrls() throws Exception {
-		java.nio.file.Files.writeString(directory.resolve("profiles.yaml"), "profiles:\n  url:\n    url: '" + POSTGRES.getJdbcUrl() + "&user=" + POSTGRES.getUsername() + "&password=${URL_PASSWORD}'\n");
-		try (Session current = session(parameters().open(), Map.of("URL_PASSWORD", POSTGRES.getPassword()))) {
+		java.nio.file.Files.writeString(directory.resolve("profiles.yaml"), "profiles:\n  url:\n    url: '" + POSTGRES.getJdbcUrl() + "&user=" + POSTGRES.getUsername() + "&password=${URL_PASSWORD}'\n    properties:\n      sslpassword: ${TLS_PASSWORD}\n");
+		try (Session current = session(parameters().open(), Map.of("URL_PASSWORD", POSTGRES.getPassword(), "TLS_PASSWORD", "tls-secret-not-for-files"))) {
 			submit(current, "/profile edit url");
 			assertThat(current.interaction()).isInstanceOf(SessionInteraction.Dialog.class);
+			assertThat(((SessionInteraction.Dialog) current.interaction()).model().value(ProfileDialogModel.Field.PROPERTIES)).contains("${TLS_PASSWORD}").doesNotContain("tls-secret-not-for-files");
 			current.saveDialog(true).get(10, TimeUnit.SECONDS);
-			assertThat(java.nio.file.Files.readString(directory.resolve("profiles.yaml"))).contains("${URL_PASSWORD}").doesNotContain(POSTGRES.getPassword());
+			assertThat(java.nio.file.Files.readString(directory.resolve("profiles.yaml"))).contains("${URL_PASSWORD}", "${TLS_PASSWORD}")
+				.doesNotContain(POSTGRES.getPassword(), "tls-secret-not-for-files");
 		}
 	}
 

@@ -98,6 +98,7 @@ final class ConnectionModal {
 		else if (interaction instanceof SessionInteraction.Password prompt) {
 			line(frame, x, y, width, " Password for " + prompt.label(), style.bold());
 			line(frame, x, y + 2, width, " > " + "*".repeat(passwordInput.text().length()), style.reversed());
+			if (error != null) line(frame, x, y + height - 2, width, " " + error, style.bold());
 			line(frame, x, y + height - 1, width, " Enter connects · Esc cancels · password is never saved", style);
 		}
 		else if (interaction instanceof SessionInteraction.Confirmation confirmation) {

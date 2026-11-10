@@ -50,6 +50,8 @@ class ConnectionModalTest {
 		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
 		assertThat(passwords).containsExactly("super-secret");
 		assertThat(inputs).isEmpty();
+		screen.update(List.of(com.datev.dbui.session.MessageBlock.info("earlier"), com.datev.dbui.session.MessageBlock.error("Password authentication failed.")));
+		assertThat(draw(screen, 90, 8)).contains("Password authentication failed.");
 		screen.handle(KeyEvent.ofKey(KeyCode.ESCAPE));
 		assertThat(cancelled.get()).isEqualTo(1);
 		for (var size : List.of(new Size(1,1), new Size(30,8), new Size(110,40))) draw(screen, size.width(), size.height());

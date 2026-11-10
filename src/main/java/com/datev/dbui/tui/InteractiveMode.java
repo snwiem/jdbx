@@ -100,7 +100,7 @@ public final class InteractiveMode {
 
 	private void render(Frame frame) { screen.status(session.status()); screen.render(frame); }
 	private void refresh() {
-		screen.update(session.messageBlocks()); screen.history(session.history()); screen.interaction(session.interaction());
+		screen.interaction(session.interaction()); screen.update(session.messageBlocks()); screen.history(session.history());
 		if (session.connectionLabel() != null) screen.connection(session.connectionLabel());
 	}
 	private void submit(String input) { complete(session.submit(input)); }
