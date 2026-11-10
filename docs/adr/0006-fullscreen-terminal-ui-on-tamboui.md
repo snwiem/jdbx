@@ -13,7 +13,8 @@ Interactive mode owns the whole terminal window (alternate screen) like the pi a
 
 ## Consequences
 
-- Native scrollback and plain mouse selection are lost. The app must handle wheel scrolling, selection and copy, or rely on `Shift`-drag with mouse capture on. Issue 0019 checks this in Herdr.
-- TamboUI has no multi-line editor. We write one.
+- Native scrollback and plain mouse selection are lost. The app must handle wheel scrolling, selection and copy, or rely on `Shift`-drag with mouse capture on. Issue 0019 checked mouse capture and OSC 52 at byte level; native `Shift`-drag and OSC 52 in Herdr need a human check (see its Findings).
+- TamboUI 0.7.0 has a multi-line `TextArea`. We add send and newline keys and the height logic. Spike 0019: legacy key parsing cannot tell `Ctrl-J` from `Enter`; use the Kitty protocol (active in Herdr) or a thin backend wrapper.
 - TamboUI is young (0.7.0, "experimental"). The UI stays behind a thin boundary so plain JLine remains a fallback.
 - The Session log in the terminal disappears on exit. Whether to print the transcript on exit is open (issue 0019).
+- Spike 0019 result: all capabilities work or have small fixes, including Herdr split and unsplit. Decision stays: TamboUI.
