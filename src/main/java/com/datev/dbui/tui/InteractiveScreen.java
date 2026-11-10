@@ -33,7 +33,7 @@ public final class InteractiveScreen {
 	private final ScrollbarState scrollbar = new ScrollbarState();
 	private int transcriptHeight;
 	private boolean busy;
-	private final String connection;
+	private String connection;
 	private final Consumer<String> send;
 	private final EditorKeys keys;
 	private final TextAreaState editor = new TextAreaState();
@@ -70,6 +70,11 @@ public final class InteractiveScreen {
 	public void history(List<String> entries) {
 		historyEntries = List.copyOf(entries);
 		history.entries(entries);
+	}
+
+	/** The connection text of the Status bar; it changes when {@code /resume} reconnects. */
+	public void connection(String connection) {
+		this.connection = connection;
 	}
 
 	public void busy(boolean busy) {

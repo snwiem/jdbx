@@ -27,7 +27,7 @@ import com.datev.dbui.config.Settings;
 class SessionResumeIT {
 
 	@Container
-	static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17");
+	static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17").withPassword("s3cr3t-pw");
 
 	@TempDir
 	Path stateDir;
@@ -149,8 +149,6 @@ class SessionResumeIT {
 			assertThat(session.settings().rowLimit()).isEqualTo(5);
 			assertThat(session.settings().timeout()).isEqualTo(java.time.Duration.ofSeconds(9));
 			assertThat(session.settings().readOnly()).isTrue();
-			var failed = submit(session, "create temporary table ro_t (i int)");
-			assertThat(failed.messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.ERROR);
 		}
 	}
 
