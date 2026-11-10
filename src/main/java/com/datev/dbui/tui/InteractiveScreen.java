@@ -26,11 +26,10 @@ import dev.tamboui.widgets.scrollbar.ScrollbarState;
 /** Terminal adapter for the editor and Transcript. Contains no JDBC or Slash command logic. */
 public final class InteractiveScreen {
 
-	private static final Style RULE = Style.EMPTY.fg(Color.indexed(244));
-	private static final Style STATUS = Style.EMPTY.fg(Color.indexed(252)).bg(Color.indexed(236));
-
-	private final MessageBlockRenderer renderer = new MessageBlockRenderer();
-	private final Transcript transcript = new Transcript(renderer);
+	private final MessageBlockRenderer renderer;
+	private final Style rule;
+	private final Style statusStyle;
+	private final Transcript transcript;
 	private final ScrollbarState scrollbar = new ScrollbarState();
 	private int transcriptHeight;
 	private boolean busy;
@@ -45,6 +44,15 @@ public final class InteractiveScreen {
 	}
 
 	public InteractiveScreen(String connection, Consumer<String> send, EditorKeys keys) {
+		this(connection, send, keys, MessageBlockRenderer.colorEnabled(System.getenv()));
+	}
+
+	/** With {@code color == false} (NO_COLOR) the screen uses no color codes; the Status bar is reversed instead. */
+	InteractiveScreen(String connection, Consumer<String> send, EditorKeys keys, boolean color) {
+		this.renderer = new MessageBlockRenderer(color);
+		this.transcript = new Transcript(renderer);
+		this.rule = color ? Style.EMPTY.fg(Color.indexed(244)) : Style.EMPTY;
+		this.statusStyle = color ? Style.EMPTY.fg(Color.indexed(252)).bg(Color.indexed(236)) : Style.EMPTY.reversed();
 		this.connection = connection;
 		this.send = send;
 		this.keys = keys;
@@ -121,18 +129,18 @@ public final class InteractiveScreen {
 			frame.renderStatefulWidget(Scrollbar.vertical(), new Rect(width - 1, 0, 1, transcriptHeight), scrollbar);
 		}
 		if (editorHeight > 0) {
-			buffer.setString(0, transcriptHeight, "─".repeat(width), RULE);
+			buffer.setString(0, transcriptHeight, "─".repeat(width), rule);
 			if (preferred <= editorHeight) {
 				editor.scrollUp(Integer.MAX_VALUE);
 			}
 			editorWidget.renderWithCursor(new Rect(0, transcriptHeight + 1, width, editorHeight), buffer, editor, frame);
-			buffer.setString(0, transcriptHeight + editorHeight + 1, "─".repeat(width), RULE);
+			buffer.setString(0, transcriptHeight + editorHeight + 1, "─".repeat(width), rule);
 		}
 		String[] status = { " " + connection, busy ? " Running Statement…" : " Enter sends · Ctrl-J newline · /quit exits" };
 		for (int row = 0; row < statusHeight; row++) {
 			int y = height - statusHeight + row;
-			buffer.fill(new Rect(0, y, width, 1), new Cell(" ", STATUS));
-			buffer.setString(0, y, CharWidth.substringByWidth(status[row], width), STATUS);
+			buffer.fill(new Rect(0, y, width, 1), new Cell(" ", statusStyle));
+			buffer.setString(0, y, CharWidth.substringByWidth(status[row], width), statusStyle);
 		}
 	}
 }

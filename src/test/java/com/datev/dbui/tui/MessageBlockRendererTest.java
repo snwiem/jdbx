@@ -68,6 +68,47 @@ class MessageBlockRendererTest {
 		assertThat(buffer.get(23, 1).style().bg()).contains(Color.indexed(52));
 	}
 
+	@Test
+	void infoIsAYellowBandWithTheCommandTag() {
+		var rows = renderer.rows(List.of(MessageBlock.info("INSERT 0 3")), 24);
+		assertThat(rows).extracting(MessageBlockRenderer.Row::text).containsExactly("", "INSERT 0 3", "");
+		var buffer = Buffer.empty(Rect.of(24, 3));
+		renderer.render(buffer, buffer.area(), rows, 0);
+		assertThat(line(buffer, 1)).startsWith(" INSERT 0 3");
+		assertThat(buffer.get(23, 1).style().bg()).contains(Color.indexed(58));
+	}
+
+	@Test
+	void errorBandKeepsTheServerTextWithSqlStateAndPosition() {
+		var text = "ERROR: column \"nme\" does not exist (42703), position 8";
+		assertThat(renderer.rows(List.of(MessageBlock.error(text)), 80))
+			.extracting(MessageBlockRenderer.Row::text).containsExactly("", text, "");
+	}
+
+	@Test
+	void withoutColorNoColorIsWrittenAndBandsDifferByLabel() {
+		var plain = new MessageBlockRenderer(false);
+		var blocks = List.of(MessageBlock.input("select 1"), MessageBlock.info("INSERT 0 3"), MessageBlock.error("bad"));
+		var rows = plain.rows(blocks, 20);
+		assertThat(rows).extracting(MessageBlockRenderer.Row::text)
+			.containsExactly("", "> select 1", "", "", "info: INSERT 0 3", "", "", "error: bad", "");
+		var buffer = Buffer.empty(Rect.of(20, rows.size()));
+		plain.render(buffer, buffer.area(), rows, 0);
+		for (int y = 0; y < rows.size(); y++) {
+			for (int x = 0; x < 20; x++) {
+				assertThat(buffer.get(x, y).style().fg()).isEmpty();
+				assertThat(buffer.get(x, y).style().bg()).isEmpty();
+			}
+		}
+	}
+
+	@Test
+	void noColorEnvironmentVariableMustBeNonEmpty() {
+		assertThat(MessageBlockRenderer.colorEnabled(java.util.Map.of())).isTrue();
+		assertThat(MessageBlockRenderer.colorEnabled(java.util.Map.of("NO_COLOR", ""))).isTrue();
+		assertThat(MessageBlockRenderer.colorEnabled(java.util.Map.of("NO_COLOR", "1"))).isFalse();
+	}
+
 	private static String line(Buffer buffer, int y) {
 		var text = new StringBuilder();
 		for (int x = 0; x < buffer.area().width(); x++) {

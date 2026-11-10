@@ -93,6 +93,20 @@ class InteractiveScreenTest {
 		}
 	}
 
+	@Test
+	void withoutColorTheWholeScreenWritesNoColorCodes() {
+		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { }, EditorKeys.defaults(), false);
+		screen.update(List.of(MessageBlock.input("select 1"), MessageBlock.info("CREATE TABLE"), MessageBlock.error("bad")));
+		var buffer = draw(screen, new Size(40, 14));
+		for (int y = 0; y < 14; y++) {
+			for (int x = 0; x < 40; x++) {
+				assertThat(buffer.get(x, y).style().fg()).as("fg at %d,%d", x, y).isEmpty();
+				assertThat(buffer.get(x, y).style().bg()).as("bg at %d,%d", x, y).isEmpty();
+			}
+		}
+		assertThat(line(buffer, 12)).contains("dbui@localhost");
+	}
+
 	private static Buffer drawAtBottom(InteractiveScreen screen, Size size) {
 		for (int page = 0; page < 50; page++) {
 			screen.handle(KeyEvent.ofKey(KeyCode.PAGE_DOWN));
