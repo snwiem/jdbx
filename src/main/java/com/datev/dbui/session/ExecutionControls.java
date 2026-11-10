@@ -9,6 +9,12 @@ final class ExecutionControls {
 	private int timeoutSeconds;
 
 	ExecutionControls(Settings settings) {
+		if (settings.rowLimit() < 1) {
+			throw new IllegalArgumentException("Row limit must be 1 or more");
+		}
+		if (settings.timeout() != null && settings.timeout().isNegative()) {
+			throw new IllegalArgumentException("Timeout must be 0 or more seconds");
+		}
 		rowLimit = settings.rowLimit();
 		timeoutSeconds = settings.timeout() == null ? 0 : Math.toIntExact(settings.timeout().toSeconds());
 	}

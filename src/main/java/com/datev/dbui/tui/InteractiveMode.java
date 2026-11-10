@@ -7,10 +7,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.datev.dbui.config.Settings;
 import com.datev.dbui.session.Session;
-
-import dev.tamboui.terminal.Frame;
 import com.datev.dbui.session.SessionDirectory;
 
+import dev.tamboui.terminal.Frame;
 import dev.tamboui.terminal.KeyboardProtocol;
 import dev.tamboui.tui.TuiConfig;
 import dev.tamboui.tui.TuiRunner;

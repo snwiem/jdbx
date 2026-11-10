@@ -78,10 +78,21 @@ class InteractiveScreenTest {
 			assertThat(line(buffer, y)).doesNotContain("\u001b", "\u0007");
 		}
 		// Disable the legitimate Kitty negotiation ESC, so raw output here can only be application data.
-		var config = dev.tamboui.tui.TuiConfig.builder().backend(new dev.tamboui.terminal.TestBackend(100, 24))
+		var terminalCells = new StringBuilder();
+		var backend = new dev.tamboui.terminal.TestBackend(100, 24) {
+			@Override
+			public void draw(dev.tamboui.buffer.DiffResult diff) throws java.io.IOException {
+				for (int i = 0; i < diff.size(); i++) {
+					terminalCells.append(diff.getCell(i).symbol());
+				}
+				super.draw(diff);
+			}
+		};
+		var config = dev.tamboui.tui.TuiConfig.builder().backend(backend)
 			.keyboardProtocol(dev.tamboui.terminal.KeyboardProtocol.LEGACY).build();
 		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(100, 24), config)) {
 			terminal.pilot().pause();
+			assertThat(terminalCells.toString()).contains("control", "title").doesNotContain("\u001b", "\u0007");
 			assertThat(terminal.backend().rawOutput()).doesNotContain("\u001b", "\u0007");
 			terminal.pilot().quit();
 		}

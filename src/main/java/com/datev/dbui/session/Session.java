@@ -9,8 +9,8 @@ import java.nio.file.StandardOpenOption;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.Instant;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -33,6 +33,7 @@ public final class Session implements AutoCloseable {
 	private final Connection connection;
 	private final SessionDirectory directory;
 	private final ExecutorService executor = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dbui-statement").factory());
+	private final ExecutorService cancellations = Executors.newVirtualThreadPerTaskExecutor();
 	private final List<MessageBlock> messageBlocks = new ArrayList<>();
 	private final ExecutionControls controls;
 	private boolean ended;
@@ -114,15 +115,26 @@ public final class Session implements AutoCloseable {
 		cancelRequested = true;
 		Statement statement = activeStatement;
 		return CompletableFuture.runAsync(() -> {
-			if (statement != null) {
+			// pgjdbc ignores cancel while idle. Retry across its idle-to-executing window, but never target a later input.
+			while (statement != null && isActive(statement)) {
 				try {
 					statement.cancel();
+					Thread.sleep(50);
 				}
 				catch (SQLException e) {
-					add(MessageBlock.error(SqlErrorText.of(e)));
+					writeLog(e);
+					return;
+				}
+				catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					return;
 				}
 			}
-		});
+		}, cancellations);
+	}
+
+	private synchronized boolean isActive(Statement statement) {
+		return running && activeStatement == statement;
 	}
 
 	private synchronized void finished() {
@@ -185,7 +197,7 @@ public final class Session implements AutoCloseable {
 			Files.writeString(logFile(), Instant.now() + " Unexpected error\n" + trace, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 		}
 		catch (IOException ignored) {
-			// The log is best effort; the red band already tells the user.
+			// Logging is best effort; never send a logging failure to the terminal.
 		}
 	}
 
@@ -195,7 +207,9 @@ public final class Session implements AutoCloseable {
 
 	@Override
 	public void close() throws SQLException {
+		cancel();
 		executor.close();
+		cancellations.close();
 		connection.close();
 	}
 }

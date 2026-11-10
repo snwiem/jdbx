@@ -36,6 +36,99 @@ class SessionIT {
 	}
 
 	@Test
+	void invalidConfiguredTimeoutIsRejectedBeforeExecutingStatements() throws Exception {
+		var settings = new com.datev.dbui.config.Settings(1000, java.time.Duration.ofSeconds(-1), "table", "horizontal", false);
+		try (Connection connection = connection()) {
+			assertThatThrownBy(() -> new Session(connection, SessionDirectory.create(stateDir), settings))
+				.isInstanceOf(IllegalArgumentException.class).hasMessage("Timeout must be 0 or more seconds");
+		}
+	}
+
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(ints = { 0, -1, -2 })
+	void invalidConfiguredRowLimitCannotDisableTheJdbcRowLimit(int rowLimit) throws Exception {
+		var settings = new com.datev.dbui.config.Settings(rowLimit, null, "table", "horizontal", false);
+		try (Connection connection = connection()) {
+			assertThatThrownBy(() -> new Session(connection, SessionDirectory.create(stateDir), settings))
+				.isInstanceOf(IllegalArgumentException.class).hasMessage("Row limit must be 1 or more");
+		}
+	}
+
+	@Test
+	void closingTheSessionCancelsAnActiveStatementInsteadOfWaitingForIt() throws Exception {
+		Session session = session();
+		try {
+			var pending = session.submit("select pg_sleep(10)");
+			Thread.sleep(200);
+			java.util.concurrent.CompletableFuture.runAsync(() -> {
+				try {
+					session.close();
+				}
+				catch (java.sql.SQLException e) {
+					throw new java.util.concurrent.CompletionException(e);
+				}
+			}).get(4, TimeUnit.SECONDS);
+			assertThat(pending).isDone();
+		}
+		finally {
+			session.close();
+		}
+	}
+
+	@Test
+	void cancelJustBeforeJdbcExecutionIsNotLost() throws Exception {
+		var beforeExecute = new java.util.concurrent.CountDownLatch(1);
+		var allowExecute = new java.util.concurrent.CountDownLatch(1);
+		var cancelSent = new java.util.concurrent.CountDownLatch(1);
+		Connection real = connection();
+		// Pause at the JDBC boundary to reproduce pgjdbc's idle-to-executing cancellation window.
+		Connection delayed = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] { Connection.class },
+			(proxy, method, args) -> {
+				try {
+					Object value = method.invoke(real, args);
+					if (method.getName().equals("createStatement")) {
+						return Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] { java.sql.Statement.class },
+							(statementProxy, statementMethod, statementArgs) -> {
+								if (statementMethod.getName().equals("execute")) {
+									beforeExecute.countDown();
+									allowExecute.await(5, TimeUnit.SECONDS);
+								}
+								try {
+									Object result = statementMethod.invoke(value, statementArgs);
+									if (statementMethod.getName().equals("cancel")) {
+										cancelSent.countDown();
+									}
+									return result;
+								}
+								catch (InvocationTargetException e) {
+									throw e.getCause();
+								}
+							});
+					}
+					return value;
+				}
+				catch (InvocationTargetException e) {
+					throw e.getCause();
+				}
+			});
+		try (Session session = new Session(delayed, SessionDirectory.create(stateDir))) {
+			var pending = session.submit("select pg_sleep(10)");
+			assertThat(beforeExecute.await(2, TimeUnit.SECONDS)).isTrue();
+			var cancellation = session.cancel();
+			try {
+				assertThat(cancelSent.await(2, TimeUnit.SECONDS)).isTrue();
+			}
+			finally {
+				allowExecute.countDown();
+			}
+			assertThat(pending.get(4, TimeUnit.SECONDS).messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			cancellation.get(2, TimeUnit.SECONDS);
+			assertThat(session.submit("select 42").get(5, TimeUnit.SECONDS).messageBlocks().getLast().result().rows().getFirst())
+				.containsExactly(42);
+		}
+	}
+
+	@Test
 	void firstErrorStopsTheInputAndDoesNotUndoEarlierStatements() throws Exception {
 		try (Session session = session()) {
 			var blocks = session.submit("create temporary table stop_values (v int); insert into stop_values values (1); "
