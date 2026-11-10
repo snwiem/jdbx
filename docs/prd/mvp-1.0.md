@@ -11,7 +11,7 @@ A developer must run SQL quickly against a remote PostgreSQL database. They reac
 
 dbui is a Java terminal tool that talks to PostgreSQL over JDBC.
 
-- **Interactive mode** looks like the pi agent: output flows into the normal scrollback, a small multi-line editor sits at the bottom between two horizontal rules, and a status bar (one or more lines) sits under it. Reference layout: `docs/assets/pi_layout.png`. Everything else is a Slash command.
+- **Interactive mode** looks like the pi agent in its fullscreen mode: dbui owns the terminal window. The Transcript scrolls above. A small multi-line editor sits at the bottom between two horizontal rules, and a status bar (one or more lines) sits under it. Editor and status bar stay fixed while the Transcript scrolls. Reference layout: `docs/assets/pi_layout.png`. Everything else is a Slash command.
 - **Batch mode** runs Statements from the command line, a file or stdin, and writes Results to stdout.
 - Connections come from Profiles or command-line options. Each run is a Session with its own history and log. Sessions can be resumed (forked).
 - Tunnel setup stays outside dbui.
@@ -82,7 +82,7 @@ dbui is a Java terminal tool that talks to PostgreSQL over JDBC.
 
 ### Screen and messages
 
-54. As a developer, I want every event shown as a Message block in the scrollback, so that the scrollback is a complete log of my Session.
+54. As a developer, I want every event shown as a Message block in the Transcript, so that the Transcript is a complete log of my Session.
 55. As a developer, I want input echo in gray, info in yellow and errors in red, so that I can tell them apart at a glance.
 56. As a developer, I want SQL errors to show the server message, the SQL state and the position, so that I can fix the Statement.
 57. As a developer, I want no Java stack trace in the terminal, so that errors stay readable.
@@ -125,12 +125,15 @@ dbui is a Java terminal tool that talks to PostgreSQL over JDBC.
 82. As a developer, I want hand-edited settings in `config.yaml` that dbui never writes, so that my comments stay intact.
 83. As a developer, I want Profiles in `profiles.yaml`, so that I can encrypt or manage that file separately.
 84. As a developer, I want key bindings configurable in `config.yaml`, so that I can adapt dbui to my terminal.
+85. As a developer, I want the editor and status bar to stay fixed while I scroll the Transcript with the mouse wheel and the keyboard, so that I never lose the prompt.
+86. As a developer, I want the screen to redraw correctly when the window is resized or a multiplexer pane is split or unsplit, so that the layout never breaks.
+87. As a developer, I want to select and copy text from the Transcript, so that I can reuse Results.
 
 ## Implementation Decisions
 
 **Technology**
 - Java 25. Spring Boot, stripped down: no web server, no connection pool, auto-configuration disabled where possible, lazy beans. Used for dependency injection and configuration binding (YAML, `${ENV}` placeholders). Startup time is not a goal.
-- JLine for the editor, status bar, key bindings, history and Completion. TamboUI and Spring Shell are not used.
+- TamboUI (with the JLine backend) for the fullscreen layout, Transcript, editor, status bar and key handling (ADR 0006). Spring Shell is not used. History and Completion logic are our own code.
 - picocli for command-line parsing and for Slash commands (each Slash command is a subcommand).
 - PostgreSQL JDBC driver only. One plain JDBC connection per Session, autocommit on, no transaction handling.
 - Single executable jar plus a thin wrapper script. Other distribution forms are out of scope.
@@ -146,7 +149,7 @@ dbui is a Java terminal tool that talks to PostgreSQL over JDBC.
 - *Profile store*: reads and writes `profiles.yaml` atomically. Before saving, it rereads the file and applies only the one changed Profile. File mode `600`.
 - *Settings*: reads `config.yaml`. Defaults: Row limit 1000, Format `table`, Orientation horizontal, Read-only off, timeout none.
 - *Session store*: one directory per Session in the state directory, holding the history, the log file and the Session metadata (Profile values and settings, no password). Resume copies a Session directory into a new one. A configured count limits old Sessions.
-- *Terminal glue*: thin JLine adapter (key bindings, status bar drawing, locked editor during execution). Contains no logic that can live elsewhere.
+- *Terminal glue*: thin TamboUI adapter (multi-line editor widget, Transcript viewport, key bindings, status bar drawing, locked editor during execution). Contains no logic that can live elsewhere.
 
 **Behavior decisions**
 - Connection precedence: command-line options override Profile fields. Direct connect when values are complete. Otherwise the edit dialog opens prefilled.
@@ -159,7 +162,7 @@ dbui is a Java terminal tool that talks to PostgreSQL over JDBC.
 - Batch mode: data on stdout, messages on stderr, stop at first error with non-zero exit code, no Row limit unless `--limit`.
 
 **Prototype first**
-A small spike must confirm that JLine supports all of: `Enter` to send, `Ctrl-J` newline, word and line navigation, a status bar that survives scrolling output, bracketed paste, on-demand Completion and a locked editor during execution.
+The JLine spike (issue 0001) is done. Its result led to ADR 0006. A second spike (issue 0019) must confirm that TamboUI supports all of: `Enter` to send, `Ctrl-J` newline, word and line navigation, a status bar that survives scrolling output, bracketed paste, on-demand Completion and a locked editor during execution.
 
 ## Testing Decisions
 
@@ -170,7 +173,7 @@ A small spike must confirm that JLine supports all of: `Enter` to send, `Ctrl-J`
   2. **Result formatter**: pure unit tests (`*Test`) for every Format and Orientation, and value rendering.
   3. **Statement splitter**: pure unit tests.
   4. **Batch entry point** (arguments, stdin, stdout, stderr, exit code) against PostgreSQL (`*IT`).
-  5. **Terminal glue**: a few tests on a virtual terminal for key bindings (`Enter` sends, `Ctrl-J` newline, `Ctrl-C` cancels). Decision logic lives outside the glue and is tested at seam 1.
+  5. **Terminal glue**: a few tests with the TamboUI test tool (Pilot) for key bindings (`Enter` sends, `Ctrl-J` newline, `Ctrl-C` cancels). Decision logic lives outside the glue and is tested at seam 1.
 - Profile store and Settings: unit tests with temporary directories (round trip, atomic write, change merge, file mode).
 - Prior art: none. The project has only a generated context test.
 
@@ -188,5 +191,5 @@ A small spike must confirm that JLine supports all of: `Enter` to send, `Ctrl-J`
 
 ## Further Notes
 
-- Open items for later: ADRs for the main decisions (JLine over TamboUI, own Sessions with fork, stripped-down Spring Boot, no `.pgpass`), exact key binding defaults, exact band colors and status bar lines, state directory layout details.
+- Open items for later: whether the Transcript is printed to the normal terminal on exit (decide after issue 0019), exact key binding defaults, exact band colors and status bar lines, state directory layout details.
 - Layout of the Session directory is an implementation detail. It holds at least the history, the log and the Session metadata.

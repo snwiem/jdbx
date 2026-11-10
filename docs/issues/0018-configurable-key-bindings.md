@@ -11,4 +11,4 @@
 - [ ] Unit tests for key binding parsing and defaults
 - [ ] An invalid key name gives a clear error band at start and defaults apply
 - [ ] `/help` shows the current bindings
-- [ ] A virtual-terminal test shows a changed newline key works
+- [ ] A Pilot test shows a changed newline key works

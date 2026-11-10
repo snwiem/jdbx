@@ -5,7 +5,7 @@ A terminal tool to run SQL statements against a database over JDBC and read the 
 ## Modes
 
 **Interactive mode**:
-The mode where dbui stays open, shows an editor and a status bar, and runs Statements and Slash commands you enter.
+The mode where dbui stays open, shows a fixed editor and a Status bar and scrolls a Transcript, and runs Statements and Slash commands you enter.
 _Avoid_: shell, REPL, TUI
 
 **Batch mode**:
@@ -75,8 +75,12 @@ _Avoid_: export, backup
 ## Screen
 
 **Message block**:
-A full-width entry in the scrollback with its own background color and padding, and no border. Its kind is input echo (gray), result, info (yellow) or error (red). The scrollback of Message blocks is the log of the Session.
+A full-width entry in the Transcript with its own background color and padding, and no border. Its kind is input echo (gray), result, info (yellow) or error (red). The Transcript is the log of the Session.
 _Avoid_: notification, alert, log line
+
+**Transcript**:
+The scrollable area above the editor that holds the Message blocks of a Session. dbui scrolls it, while the editor and the Status bar stay fixed.
+_Avoid_: scrollback, output pane, log
 
 **Status bar**:
 The area under the editor (one or more lines) that shows the current connection, read-only state, Format, Orientation, Row limit and last Result summary.
