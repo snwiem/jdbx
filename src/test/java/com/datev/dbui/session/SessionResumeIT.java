@@ -273,7 +273,7 @@ class SessionResumeIT {
 			assertThat(session.directory().id()).isEqualTo(before);
 			assertThat(session.answerPassword("incorrect").get(10, TimeUnit.SECONDS).messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.ERROR);
 			assertThat(session.directory().id()).isEqualTo(before);
-			submit(session, "/resume " + earlier);
+			assertThat(session.interaction()).isInstanceOf(SessionInteraction.Password.class);
 			assertThat(session.answerPassword(POSTGRES.getPassword()).get(10, TimeUnit.SECONDS).messageBlocks().getLast().text()).contains("Resumed Session");
 			assertThat(SessionMetadata.read(session.directory().metadataFile()).resumedFrom()).isEqualTo(earlier);
 			assertThat(submit(session, "select 91").messageBlocks().getLast().result().rows()).containsExactly(List.of(91));

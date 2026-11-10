@@ -34,6 +34,22 @@ class ProfileCommandsIT {
 	}
 
 	@Test
+	void failedDialogConnectionsKeepTheEnteredValuesForCorrection() throws Exception {
+		var stateBase = directory.resolve("failed-startup");
+		try (Session current = new Session(SessionDirectory.create(stateBase), Settings.defaults())) {
+			current.configureProfiles(directory, Map.of());
+			var model = new ProfileDialogModel(new Profile(null, "jdbc:postgresql://127.0.0.1:1/dbui?connectTimeout=1", null, null, null,
+				POSTGRES.getUsername(), POSTGRES.getPassword(), null, null, Map.of()), null);
+			current.openConnectionDialog(model, stateBase);
+			assertThat(current.saveDialog(false).get(10, TimeUnit.SECONDS).messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(current.interaction()).isInstanceOf(SessionInteraction.Dialog.class);
+			assertThat(((SessionInteraction.Dialog) current.interaction()).model()).isSameAs(model);
+			model.set(ProfileDialogModel.Field.URL, POSTGRES.getJdbcUrl());
+			assertThat(current.saveDialog(false).get(10, TimeUnit.SECONDS).messageBlocks().getLast().text()).contains("Connected to");
+		}
+	}
+
+	@Test
 	void unchangedProfileEditsKeepPasswordReferencesInsideSavedUrls() throws Exception {
 		java.nio.file.Files.writeString(directory.resolve("profiles.yaml"), "profiles:\n  url:\n    url: '" + POSTGRES.getJdbcUrl() + "&user=" + POSTGRES.getUsername() + "&password=${URL_PASSWORD}'\n");
 		try (Session current = session(parameters().open(), Map.of("URL_PASSWORD", POSTGRES.getPassword()))) {

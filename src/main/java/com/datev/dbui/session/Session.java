@@ -111,11 +111,18 @@ public final class Session implements AutoCloseable {
 
 	/** The password never passes through submit, input echo, history or Session metadata. */
 	public synchronized CompletableFuture<Update> answerPassword(String password) {
-		if (running || !(interaction instanceof SessionInteraction.Password) || passwordContinuation == null) return CompletableFuture.failedFuture(new IllegalStateException("No password prompt is open."));
+		if (running || !(interaction instanceof SessionInteraction.Password prompt) || passwordContinuation == null) return CompletableFuture.failedFuture(new IllegalStateException("No password prompt is open."));
 		var continuation = passwordContinuation;
 		interaction = null;
 		passwordContinuation = null;
-		return run(() -> continuation.apply(password));
+		return run(() -> {
+			Update update = continuation.apply(password);
+			if (interaction == null && !update.messageBlocks().isEmpty() && update.messageBlocks().getLast().kind() == MessageBlock.Kind.ERROR) {
+				interaction = prompt;
+				passwordContinuation = continuation;
+			}
+			return update;
+		});
 	}
 
 	private void connectProfile(com.datev.dbui.config.Profile profile, String profileName) throws SQLException {
@@ -139,12 +146,14 @@ public final class Session implements AutoCloseable {
 	public synchronized CompletableFuture<Update> saveDialog(boolean save) {
 		if (running || !(interaction instanceof SessionInteraction.Dialog dialog)) return CompletableFuture.failedFuture(new IllegalStateException("No Profile dialog is open."));
 		return run(() -> {
+			SessionInteraction.Dialog retry = dialog;
 			try {
 				dialog.model().validate(save);
 				if (!save && !dialog.connect()) throw new com.datev.dbui.config.ConfigException("Profile edits must be saved.");
 				if (save) {
 					profiles.save(dialog.model(), dialog.editingName());
 					add(MessageBlock.info("Saved Profile '" + dialog.model().savedProfile().name() + "'."));
+					retry = new SessionInteraction.Dialog(dialog.model(), dialog.connect(), dialog.model().savedProfile().name());
 				}
 				interaction = null;
 				if (dialog.connect()) {
@@ -152,7 +161,10 @@ public final class Session implements AutoCloseable {
 					connectProfile(profile, save ? profile.name() : null);
 				}
 			}
-			catch (com.datev.dbui.config.ConfigException | SQLException e) { add(MessageBlock.error(e instanceof SQLException sql ? SqlErrorText.of(sql) : e.getMessage())); }
+			catch (com.datev.dbui.config.ConfigException | SQLException e) {
+				interaction = retry;
+				add(MessageBlock.error(e instanceof SQLException sql ? SqlErrorText.of(sql) : e.getMessage()));
+			}
 			return new Update(messageBlocks(), false);
 		});
 	}
