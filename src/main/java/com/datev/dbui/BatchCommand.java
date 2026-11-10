@@ -132,6 +132,7 @@ class BatchCommand implements Callable<Integer> {
 			if (settings.timeout() != null) {
 				jdbcStatement.setQueryTimeout((int) settings.timeout().toSeconds());
 			}
+			jdbcStatement.setFetchSize(StreamingRead.FETCH_SIZE);
 			if (limit != null) {
 				jdbcStatement.setMaxRows(limit == Integer.MAX_VALUE ? limit : limit + 1);
 			}
@@ -145,20 +146,37 @@ class BatchCommand implements Callable<Integer> {
 			FormatOptions options = formatOptions(settings);
 			boolean first = true;
 			for (String statement : statements) {
-				if (jdbcStatement.execute(statement)) {
-					try (ResultSet resultSet = jdbcStatement.getResultSet()) {
-						PrintWriter out = spec.commandLine().getOut();
-						if (!first) {
-							out.print('\n');
+				boolean streaming = StreamingRead.isQuery(statement);
+				if (streaming) {
+					connection.setAutoCommit(false);
+				}
+				try {
+					if (jdbcStatement.execute(statement)) {
+						try (ResultSet resultSet = jdbcStatement.getResultSet()) {
+							PrintWriter out = spec.commandLine().getOut();
+							if (!first) {
+								out.print('\n');
+							}
+							JdbcRowSource source = new JdbcRowSource(resultSet, limit);
+							effectiveFormat.formatter(options, orientation(settings)).write(source, out);
+							out.flush();
+							if (source.truncated()) {
+								spec.commandLine().getErr().println("truncated at " + limit + " rows");
+								spec.commandLine().getErr().flush();
+							}
+							first = false;
 						}
-						Result result = read(resultSet, limit);
-						out.print(effectiveFormat.formatter(options, orientation(settings)).format(result));
-						out.flush();
-						if (truncated) {
-							spec.commandLine().getErr().println("truncated at " + limit + " rows");
-							spec.commandLine().getErr().flush();
-						}
-						first = false;
+					}
+					if (streaming) {
+						connection.commit();
+					}
+				}
+				catch (JdbcRowSource.RowReadException e) {
+					throw (SQLException) e.getCause();
+				}
+				finally {
+					if (streaming) {
+						StreamingRead.restoreAutoCommit(connection);
 					}
 				}
 			}
@@ -196,48 +214,6 @@ class BatchCommand implements Callable<Integer> {
 
 	private static String readStdin() throws IOException {
 		return new String(System.in.readAllBytes(), StandardCharsets.UTF_8);
-	}
-
-	/** Set by {@link #read}: the last Result had more rows than {@code --limit}. */
-	private boolean truncated;
-
-	/**
-	 * Reads at most {@code maxRows} rows ({@code null}: all). Plain {@code timestamp}, {@code date} and {@code time}
-	 * are read as local values so that no time zone shifts them. {@code timestamptz} is read as an offset value.
-	 */
-	private Result read(ResultSet resultSet, Integer maxRows) throws SQLException {
-		ResultSetMetaData metaData = resultSet.getMetaData();
-		int count = metaData.getColumnCount();
-		List<String> columns = new ArrayList<>();
-		boolean[] jsonColumns = new boolean[count + 1];
-		Class<?>[] temporal = new Class<?>[count + 1];
-		for (int i = 1; i <= count; i++) {
-			columns.add(metaData.getColumnLabel(i));
-			String type = metaData.getColumnTypeName(i);
-			jsonColumns[i] = "json".equals(type) || "jsonb".equals(type);
-			temporal[i] = switch (type) {
-				case "timestamp" -> java.time.LocalDateTime.class;
-				case "timestamptz" -> java.time.OffsetDateTime.class;
-				case "date" -> java.time.LocalDate.class;
-				case "time" -> java.time.LocalTime.class;
-				default -> null;
-			};
-		}
-		List<List<Object>> rows = new ArrayList<>();
-		truncated = false;
-		while (resultSet.next()) {
-			if (maxRows != null && rows.size() >= maxRows) {
-				truncated = true;
-				break;
-			}
-			List<Object> row = new ArrayList<>();
-			for (int i = 1; i <= count; i++) {
-				Object value = temporal[i] == null ? resultSet.getObject(i) : resultSet.getObject(i, temporal[i]);
-				row.add(value != null && jsonColumns[i] ? new JsonValue(value.toString()) : value);
-			}
-			rows.add(row);
-		}
-		return new Result(columns, rows);
 	}
 
 }
