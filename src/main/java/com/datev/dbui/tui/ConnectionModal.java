@@ -50,6 +50,7 @@ final class ConnectionModal {
 			}
 			if (interaction instanceof SessionInteraction.Dialog dialog) {
 				if (key.hasCtrl() && key.isCharIgnoreCase('s')) { save.accept(true); return true; }
+				if (key.hasCtrl() && key.isCharIgnoreCase('g') && dialog.connect()) { save.accept(false); return true; }
 				if (key.isKey(KeyCode.TAB)) { focus = Math.floorMod(focus + (key.hasShift() ? -1 : 1), Field.values().length + 1); return true; }
 				if (key.isKey(KeyCode.ENTER)) {
 					if (key.hasCtrl() && dialog.connect()) save.accept(false);
@@ -62,7 +63,9 @@ final class ConnectionModal {
 		if (interaction instanceof SessionInteraction.Password) TextEditing.handle(passwordInput, singleLine(event), Overflow.CLIP);
 		if (interaction instanceof SessionInteraction.Dialog dialog && focus < Field.values().length) {
 			Field field = Field.values()[focus];
-			if (TextEditing.handle(fields.get(field), singleLine(event), Overflow.CLIP)) dialog.model().set(field, fields.get(field).text());
+			String before = fields.get(field).text();
+			TextEditing.handle(fields.get(field), singleLine(event), Overflow.CLIP);
+			if (!before.equals(fields.get(field).text())) dialog.model().set(field, fields.get(field).text());
 		}
 		return true;
 	}
@@ -90,7 +93,7 @@ final class ConnectionModal {
 			if (error != null) line(frame, x, y + height - 4, width, " " + error, style.bold());
 			line(frame, x, y + height - 3, width, (focus == Field.values().length ? "> " : "  ") + "[ Save ]", style.bold());
 			line(frame, x, y + height - 2, width, " Tab/Shift-Tab fields · Enter next/Save · Ctrl-S Save · Esc cancel", style);
-			line(frame, x, y + height - 1, width, dialog.connect() ? " Ctrl-Enter Connect without saving" : " Profile edits are saved to profiles.yaml", style);
+			line(frame, x, y + height - 1, width, dialog.connect() ? " Ctrl-G / Ctrl-Enter Connect without saving" : " Profile edits are saved to profiles.yaml", style);
 		}
 		else if (interaction instanceof SessionInteraction.Password prompt) {
 			line(frame, x, y, width, " Password for " + prompt.label(), style.bold());

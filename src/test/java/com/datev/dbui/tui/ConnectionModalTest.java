@@ -24,6 +24,20 @@ class ConnectionModalTest {
 	}
 
 	@Test
+	void cursorNavigationDoesNotReplaceTransientCredentialsWithMaskedFieldValues() {
+		var given = new Profile("dev", "jdbc:postgresql://localhost/db?password=url-secret", null, null, null, "alice", "cli-secret", false, null, Map.of());
+		var model = new ProfileDialogModel(given, "${SAVED_PASSWORD}");
+		var screen = new InteractiveScreen("connection", input -> { });
+		screen.interaction(new SessionInteraction.Dialog(model, true, null));
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB));
+		screen.handle(KeyEvent.ofKey(KeyCode.HOME));
+		for (int i = 0; i < 5; i++) screen.handle(KeyEvent.ofKey(KeyCode.TAB));
+		screen.handle(KeyEvent.ofKey(KeyCode.LEFT));
+		assertThat(model.connectionProfile().password()).isEqualTo("cli-secret");
+		assertThat(model.connectionProfile().url()).contains("password=url-secret");
+	}
+
+	@Test
 	void passwordPromptMasksTypedAndPastedInputAndEscapeCancels() {
 		var inputs = new ArrayList<String>();
 		var passwords = new ArrayList<String>();
@@ -60,7 +74,10 @@ class ConnectionModalTest {
 			assertThat(model.value(ProfileDialogModel.Field.NAME)).isEqualTo("dev2");
 			assertThat(saved).containsExactly(true);
 			assertThat(inputs).isEmpty();
-			assertThat(draw(screen, 100, 24)).contains("Edit Connection Profile", "Password", "Ctrl-Enter");
+			terminal.pilot().press('g', KeyModifiers.CTRL);
+			terminal.pilot().pause();
+			assertThat(saved).containsExactly(true, false);
+			assertThat(draw(screen, 100, 24)).contains("Edit Connection Profile", "Password", "Ctrl-G");
 			var blocks = new ArrayList<com.datev.dbui.session.MessageBlock>();
 			for (int i = 0; i < 10; i++) blocks.add(com.datev.dbui.session.MessageBlock.info("earlier event"));
 			blocks.add(com.datev.dbui.session.MessageBlock.error("Name is required to save a Profile."));
