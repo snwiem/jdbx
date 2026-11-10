@@ -15,6 +15,10 @@ public record MessageBlock(Kind kind, String text, Result result) {
 		return new MessageBlock(Kind.RESULT, "", result);
 	}
 
+	public static MessageBlock info(String text) {
+		return new MessageBlock(Kind.INFO, text, null);
+	}
+
 	public static MessageBlock error(String text) {
 		return new MessageBlock(Kind.ERROR, text, null);
 	}
