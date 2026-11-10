@@ -248,6 +248,7 @@ class ProfileDialogScreenTest {
 		assertThat(drawn.row(drawn.rowOf("+- Edit Connection Profile")).substring(4)).startsWith("+- Edit Connection Profile -");
 		assertThat(drawn.text()).contains("Credentials -", "! Host or JDBC URL is required.", "> Name");
 		assertThat(drawn.row(drawn.rowOf("  Schema"))).contains("____");
+		assertThat(drawn.row(drawn.rowOf("  Read-only"))).doesNotContain("_");
 		for (int y = 0; y < 30; y++) for (int x = 0; x < 100; x++) {
 			var style = drawn.buffer().get(x, y).style();
 			assertThat(style.fg()).isEmpty();
@@ -337,6 +338,7 @@ class ProfileDialogScreenTest {
 		tab(screen, 1);
 		press(screen, KeyCode.ENTER);
 		assertThat(saved).containsExactly(true, false);
+		assertThat(draw(screen, 100, 30).text()).contains("[ Save ]  > [ Connect ]    [ Cancel ]");
 		tab(screen, 1);
 		press(screen, KeyCode.ENTER);
 		assertThat(cancelled.get()).isEqualTo(1);

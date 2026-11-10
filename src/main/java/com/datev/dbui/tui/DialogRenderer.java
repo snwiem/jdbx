@@ -55,7 +55,7 @@ final class DialogRenderer {
 					int used = CharWidth.of(row.text()) + 1;
 					put(cx + used, y, cw - used, styles.horizontal().repeat(Math.max(0, cw - used)), styles.border());
 				}
-				case HINT -> put(cx, y, cw, row.text(), styles.hint());
+				case HINT -> { boolean indent = CharWidth.of(row.text()) <= cw - 2; put(cx + (indent ? 2 : 0), y, cw, row.text(), styles.hint()); }
 				case FIELD -> fieldRow(cx, y, cw, row.field(), form, model, states, globalReadOnly);
 				case BLANK -> { }
 			}
@@ -77,7 +77,7 @@ final class DialogRenderer {
 		int fx = cx + LABEL_COLUMN, fw = cw - LABEL_COLUMN;
 		Style style = focused ? styles.focusedField() : DialogForm.dimmed(field, model) ? styles.dimmedField() : styles.field();
 		if (field == Field.READ_ONLY) {
-			paintField(fx, y, fw, DialogForm.readOnlyText(model.value(field), globalReadOnly, fw >= 43), style, focused);
+			paintField(fx, y, fw, DialogForm.readOnlyText(model.value(field), globalReadOnly, fw >= 43), style, true);
 			return;
 		}
 		var state = states.apply(field);
@@ -88,21 +88,22 @@ final class DialogRenderer {
 		if (focused) frame.setCursorPosition(fx + window.cursorColumn(), y);
 	}
 
-	private void paintField(int x, int y, int width, String text, Style style, boolean focused) {
-		String fill = focused ? " " : styles.fieldFill();
+	/** A text field shows its empty cells as underscores without color. A choice or a focused field shows plain spaces. */
+	private void paintField(int x, int y, int width, String text, Style style, boolean plainFill) {
+		String fill = plainFill ? " " : styles.fieldFill();
 		put(x, y, width, fill.repeat(width), style);
 		put(x, y, width, text, style);
 	}
 
 	private void buttons(int cx, int y, int cw, DialogForm form) {
 		int total = 0;
-		for (var button : form.buttons()) total += 2 + label(button).length();
+		for (var button : form.buttons()) total += 4 + label(button).length();
 		int x = cx + Math.max(0, (cw - total) / 2);
 		for (var button : form.buttons()) {
 			boolean focused = form.focusedButton() == button;
-			put(x, y, 2, focused ? "> " : "  ", styles.heading());
-			put(x + 2, y, label(button).length(), label(button), focused ? styles.focusedButton() : styles.button());
-			x += 2 + label(button).length();
+			put(x + 2, y, 2, focused ? "> " : "  ", styles.heading());
+			put(x + 4, y, label(button).length(), label(button), focused ? styles.focusedButton() : styles.button());
+			x += 4 + label(button).length();
 		}
 	}
 
