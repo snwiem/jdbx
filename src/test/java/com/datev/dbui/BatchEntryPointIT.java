@@ -85,4 +85,35 @@ class BatchEntryPointIT {
 		assertThat(outcome.stdout()).isEmpty();
 		assertThat(outcome.stderr()).contains("no_such_table");
 	}
+
+	@Test
+	void connectsThroughProfileAndNeverPromptsForMissingPassword(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir)
+			throws Exception {
+		java.nio.file.Files.writeString(dir.resolve("profiles.yaml"), """
+				profiles:
+				  it:
+				    host: %s
+				    port: %d
+				    database: %s
+				    user: %s
+				    password: %s
+				    schema: pg_catalog
+				  nopass:
+				    host: %s
+				    port: %d
+				    database: %s
+				    user: %s
+				""".formatted(POSTGRES.getHost(), POSTGRES.getMappedPort(5432), POSTGRES.getDatabaseName(),
+				POSTGRES.getUsername(), POSTGRES.getPassword(), POSTGRES.getHost(), POSTGRES.getMappedPort(5432),
+				POSTGRES.getDatabaseName(), POSTGRES.getUsername()));
+
+		Outcome ok = run("--config-dir", dir.toString(), "-p", "it", "-c", "show search_path");
+		assertThat(ok.exitCode()).isZero();
+		assertThat(ok.stdout()).contains("pg_catalog");
+
+		Outcome missing = run("--config-dir", dir.toString(), "-p", "nopass", "-c", "select 1");
+		assertThat(missing.exitCode()).isNotZero();
+		assertThat(missing.stdout()).isEmpty();
+		assertThat(missing.stderr()).contains("password").contains("never prompts");
+	}
 }
