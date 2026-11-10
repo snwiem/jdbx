@@ -17,6 +17,32 @@ class ProfileStoreTest {
 	}
 
 	@Test
+	void atomicReplacementNeverExposesPartialYamlAndLeavesNoTemporaryFiles() throws Exception {
+		var writer = new ProfileStore(directory);
+		var reader = new ProfileStore(directory);
+		writer.save(profile("dev", "before"));
+		var started = new java.util.concurrent.CountDownLatch(1);
+		var finished = new java.util.concurrent.atomic.AtomicBoolean();
+		try (var workers = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+			var reads = workers.submit(() -> {
+				int count = 0;
+				do {
+					assertThat(reader.profile("dev").database()).isEqualTo("db");
+					count++; started.countDown();
+				} while (!finished.get());
+				return count;
+			});
+			started.await();
+			try { for (int i = 0; i < 30; i++) writer.save(profile("dev", "after" + i + "x".repeat(2000))); }
+			finally { finished.set(true); }
+			assertThat(reads.get()).isPositive();
+		}
+		try (var files = Files.list(directory)) {
+			assertThat(files.map(p -> p.getFileName().toString())).containsExactlyInAnyOrder("profiles.yaml", ".profiles.lock");
+		}
+	}
+
+	@Test
 	void warnsForWidePermissionsAndRemovesOnlyTheChosenProfile() throws Exception {
 		var store = new ProfileStore(directory);
 		store.save(profile("keep", "one"));

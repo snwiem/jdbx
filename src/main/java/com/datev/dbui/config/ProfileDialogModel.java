@@ -108,6 +108,7 @@ public final class ProfileDialogModel {
 		String url = !saving && !urlEdited ? transientUrl : blank(value(Field.URL));
 		if (saving && !urlEdited && persistedUrl != null) url = persistedUrl;
 		else if (saving && url != null) url = ConnectionInfo.of(new ConnectionParameters(url, Map.of(), false), null).url();
+		if (passwordEdited && url != null) url = withoutPassword(url);
 		Map<String, String> properties = new LinkedHashMap<>();
 		for (String line : value(Field.PROPERTIES).split("[;\n]")) {
 			if (line.isBlank()) continue;
@@ -120,6 +121,14 @@ public final class ProfileDialogModel {
 		return new Profile(blank(value(Field.NAME)), url, blank(value(Field.HOST)), port == null ? null : Integer.valueOf(port),
 			blank(value(Field.DATABASE)), blank(value(Field.USER)), password, value(Field.READ_ONLY).isBlank() ? null : Boolean.valueOf(value(Field.READ_ONLY)),
 			blank(value(Field.SCHEMA)), properties);
+	}
+
+	private static String withoutPassword(String url) {
+		int query = url.indexOf('?');
+		if (query < 0) return url;
+		String kept = java.util.Arrays.stream(url.substring(query + 1).split("&"))
+			.filter(pair -> !pair.startsWith("password=")).collect(Collectors.joining("&"));
+		return url.substring(0, query) + (kept.isEmpty() ? "" : "?" + kept);
 	}
 
 	private static boolean secret(String key) { return key.equalsIgnoreCase("password") || key.equalsIgnoreCase("user"); }

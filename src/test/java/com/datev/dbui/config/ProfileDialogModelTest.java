@@ -6,6 +6,17 @@ import org.junit.jupiter.api.Test;
 
 class ProfileDialogModelTest {
 	@Test
+	void aTypedPasswordReplacesThePasswordInsideAnExistingProfileUrl() {
+		var given = new Profile("url", "jdbc:postgresql://localhost/db?user=alice&password=${OLD_PASSWORD}&sslmode=require", null, null,
+			null, null, null, null, null, Map.of());
+		var dialog = ProfileDialogModel.edit(given);
+		dialog.set(ProfileDialogModel.Field.PASSWORD, "new-password");
+		assertThat(dialog.savedProfile().url()).isEqualTo("jdbc:postgresql://localhost/db?user=alice&sslmode=require");
+		assertThat(dialog.savedProfile().password()).isEqualTo("new-password");
+		assertThat(dialog.connectionProfile().url()).doesNotContain("password=");
+	}
+
+	@Test
 	void editingAnExistingProfileKeepsItsUrlReferencesAndSslDriverProperties() {
 		var given = new Profile("tls", "jdbc:postgresql://localhost/db?user=app&password=${PG}&sslmode=require", null, null,
 			null, null, null, null, null, Map.of("sslkey", "/tmp/key.pk8", "sslpassword", "${TLS_PASSWORD}"));
