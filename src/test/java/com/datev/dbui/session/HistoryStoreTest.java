@@ -24,11 +24,12 @@ class HistoryStoreTest {
 	}
 
 	@Test
-	void linesThatStartWithASpaceBlankLinesAndResumeAreNotSaved(@TempDir Path dir) throws Exception {
+	void linesThatStartWithASpaceBlankLinesResumeAndQuitAreNotSaved(@TempDir Path dir) throws Exception {
 		var store = HistoryStore.open(dir.resolve("history"), true);
 		store.add(" select secret");
 		store.add("   ");
 		store.add("/resume 3");
+		store.add("/quit");
 		store.add("select 1");
 		assertThat(store.entries()).containsExactly("select 1");
 		assertThat(Files.readAllLines(dir.resolve("history"))).containsExactly("select 1");

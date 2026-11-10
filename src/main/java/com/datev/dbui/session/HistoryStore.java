@@ -50,9 +50,9 @@ public final class HistoryStore {
 		return enabled;
 	}
 
-	/** Adds an entry unless it is blank, starts with a space, is a {@code /resume} line, or repeats the last entry. */
+	/** Adds an entry unless it is blank, starts with a space, is a {@code /resume} or {@code /quit} line, or repeats the last entry. */
 	public synchronized void add(String input) {
-		if (!enabled || input.isBlank() || input.startsWith(" ") || isResume(input)) {
+		if (!enabled || input.isBlank() || input.startsWith(" ") || isLocalOnly(input)) {
 			return;
 		}
 		if (!entries.isEmpty() && entries.getLast().equals(input)) {
@@ -80,9 +80,9 @@ public final class HistoryStore {
 		return failure;
 	}
 
-	private static boolean isResume(String input) {
+	private static boolean isLocalOnly(String input) {
 		String text = input.strip();
-		return text.equals("/resume") || text.startsWith("/resume ");
+		return text.equals("/quit") || text.equals("/resume") || text.startsWith("/resume ");
 	}
 
 	static String escape(String entry) {
