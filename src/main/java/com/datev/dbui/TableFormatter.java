@@ -14,12 +14,23 @@ public class TableFormatter implements ResultFormatter {
 		this(FormatOptions.defaults());
 	}
 
+	private final Orientation orientation;
+
 	public TableFormatter(FormatOptions options) {
+		this(options, Orientation.HORIZONTAL);
+	}
+
+	public TableFormatter(FormatOptions options, Orientation orientation) {
 		this.values = new ValueRenderer(options);
+		this.orientation = orientation;
 	}
 
 	@Override
 	public void write(Result result, Writer out) throws IOException {
+		if (orientation == Orientation.VERTICAL) {
+			writeVertical(result, out);
+			return;
+		}
 		int count = result.columns().size();
 		List<List<String>> cells = new ArrayList<>();
 		for (List<Object> row : result.rows()) {
@@ -40,6 +51,26 @@ public class TableFormatter implements ResultFormatter {
 		out.append(separator).append('\n');
 		for (List<String> row : cells) {
 			line(out, row, widths);
+		}
+	}
+
+	/** One line per column: the name, then one value per Result row. No header, no separator. */
+	private void writeVertical(Result result, Writer out) throws IOException {
+		int rowCount = result.rows().size();
+		int[] widths = new int[rowCount + 1];
+		List<List<String>> lines = new ArrayList<>();
+		for (int c = 0; c < result.columns().size(); c++) {
+			List<String> cells = new ArrayList<>(List.of(result.columns().get(c)));
+			for (List<Object> row : result.rows()) {
+				cells.add(values.forTable(row.get(c)));
+			}
+			for (int i = 0; i < cells.size(); i++) {
+				widths[i] = Math.max(widths[i], cells.get(i).length());
+			}
+			lines.add(cells);
+		}
+		for (List<String> cells : lines) {
+			line(out, cells, widths);
 		}
 	}
 
