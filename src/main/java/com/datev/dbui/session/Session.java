@@ -23,6 +23,7 @@ public final class Session implements AutoCloseable {
 	private final Connection connection;
 	private final ExecutorService executor = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dbui-statement").factory());
 	private final List<MessageBlock> messageBlocks = new ArrayList<>();
+	private boolean ended;
 
 	public Session(Connection connection) throws SQLException {
 		this.connection = connection;
@@ -34,11 +35,15 @@ public final class Session implements AutoCloseable {
 	}
 
 	public synchronized CompletableFuture<Update> submit(String input) {
+		if (ended) {
+			return CompletableFuture.completedFuture(new Update(messageBlocks(), true));
+		}
 		if (input.isBlank()) {
 			return CompletableFuture.completedFuture(new Update(messageBlocks(), false));
 		}
 		messageBlocks.add(MessageBlock.input(input));
 		if (input.strip().equals("/quit")) {
+			ended = true;
 			return CompletableFuture.completedFuture(new Update(messageBlocks(), true));
 		}
 		return CompletableFuture.supplyAsync(() -> execute(input), executor);

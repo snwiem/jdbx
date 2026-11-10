@@ -61,6 +61,9 @@ class SessionIT {
 			assertThat(update.ended()).isTrue();
 			assertThat(update.messageBlocks()).extracting(MessageBlock::kind).containsExactly(MessageBlock.Kind.INPUT);
 			assertThat(update.messageBlocks().getFirst().text()).isEqualTo(" /quit ");
+			var afterQuit = session.submit("select 99 as must_not_run").get(5, TimeUnit.SECONDS);
+			assertThat(afterQuit.ended()).isTrue();
+			assertThat(afterQuit.messageBlocks()).isEqualTo(update.messageBlocks());
 		}
 	}
 
