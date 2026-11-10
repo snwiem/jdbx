@@ -1,2 +1,5 @@
 [env]
 SPRING_PROFILES_ACTIVE = "local"
+
+[tools]
+java = "25"
