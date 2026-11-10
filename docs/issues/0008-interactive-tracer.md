@@ -26,7 +26,7 @@
 
 ## Verification (2026-11-10)
 
-- `./mvnw -q verify` passes: 5 Session integration tests, 4 existing batch integration tests, 4 Message block renderer tests, 6 terminal adapter tests and 3 existing formatter tests. PostgreSQL integration tests use Testcontainers through Podman.
+- `./mvnw -q verify` passes: 5 Session integration tests, 4 existing batch integration tests, 5 Message block renderer tests, 6 terminal adapter tests and 3 existing formatter tests. PostgreSQL integration tests use Testcontainers through Podman.
 - `Frame.forTesting(Buffer)` verifies bands, padding, colors, viewport clipping, fixed editor and Status bar, PageUp/PageDown and wheel scrolling. It covers 60×20, 40×10 and 100×40 layouts, plus very small viewports. Pilot verifies Enter, Ctrl-J, Ctrl-C/Ctrl-D, paste, and navigation across lines and words.
 - The packaged jar ran in a real Python pseudo-terminal with `pyte`, against a disposable PostgreSQL 17 container. Checks passed for SQL Results, recovery after a SQL error, bare LF and Kitty Ctrl-J, Ctrl-C/Ctrl-D, CRLF bracketed paste, PageUp and wheel events, and resizes to 40×10, 30×8, 100×40 and 100×24.
 - `/quit` returned exit code 0. Captured bytes show alternate screen exit, bracketed paste off, mouse capture off and Kitty mode pop. Terminal local flags returned to their original values. Missing connection options returned exit code 2, empty stdout and an error on stderr, without opening Interactive mode.
