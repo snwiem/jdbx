@@ -112,10 +112,10 @@ class SessionStoreTest {
 
 		new SessionStore(base).cleanup(2, ids.get(0));
 
-		// keep = 2 keeps the two newest; the current Session (the oldest here) is protected on top of that.
+		// keep = 2 counts the current Session (the oldest here, always kept) and the newest other one.
 		assertThat(sessions.resolve(ids.get(0))).exists();
 		assertThat(sessions.resolve(ids.get(1))).doesNotExist();
-		assertThat(sessions.resolve(ids.get(2))).exists();
+		assertThat(sessions.resolve(ids.get(2))).doesNotExist();
 		assertThat(sessions.resolve(ids.get(3))).exists();
 		assertThat(sessions.resolve("20250101T000000Z-0000000f")).exists();
 		assertThat(sessions.resolve("notes")).exists();
