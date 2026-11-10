@@ -213,6 +213,25 @@ class FormatterTest {
 	}
 
 	@Test
+	void dateTimeAndPlainTimestampAreShownAsStoredWhateverTheTimeZone() {
+		FormatOptions tokyo = UTC.withTimeZone(ZoneId.of("Asia/Tokyo"));
+
+		assertThat(Format.CSV.formatter(tokyo).format(one(LocalDate.of(2024, 3, 5)))).isEqualTo("v\n2024-03-05\n");
+		assertThat(Format.CSV.formatter(tokyo).format(one(java.time.LocalTime.of(10, 15, 30))))
+				.isEqualTo("v\n10:15:30\n");
+		assertThat(Format.CSV.formatter(tokyo).format(one(java.time.LocalDateTime.of(2024, 3, 5, 23, 15, 30))))
+				.isEqualTo("v\n2024-03-05T23:15:30\n");
+	}
+
+	@Test
+	void timestampWithTimeZoneIsConvertedToConfiguredTimeZone() {
+		FormatOptions tokyo = UTC.withTimeZone(ZoneId.of("Asia/Tokyo"));
+
+		assertThat(Format.CSV.formatter(tokyo).format(one(OffsetDateTime.parse("2024-03-05T23:15:30Z"))))
+				.isEqualTo("v\n2024-03-06T08:15:30+09:00\n");
+	}
+
+	@Test
 	void datesUseJvmDefaultTimeZoneByDefault() {
 		Instant instant = Instant.parse("2024-03-05T10:15:30Z");
 		String expected = instant.atZone(ZoneId.systemDefault()).toOffsetDateTime()

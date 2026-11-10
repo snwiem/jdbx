@@ -51,8 +51,8 @@ class BatchCommand implements Callable<Integer> {
 	@Option(names = { "-f", "--file" }, description = "File with Statements to run ('-' reads stdin)")
 	List<String> files = new ArrayList<>();
 
-	@Option(names = "--format", defaultValue = "table", converter = FormatConverter.class,
-			description = "Output Format: table, markdown, csv, tsv or json (default: ${DEFAULT-VALUE})")
+	@Option(names = "--format", converter = FormatConverter.class,
+			description = "Output Format: table, markdown, csv, tsv or json (default: 'format' in config.yaml, else table)")
 	Format format;
 
 	@Option(names = "--orientation", converter = OrientationConverter.class,
@@ -66,6 +66,10 @@ class BatchCommand implements Callable<Integer> {
 		}
 	}
 
+	@Option(names = "--limit", paramLabel = "N",
+			description = "Batch mode: write at most N rows per Result (default: no limit)")
+	Integer limit;
+
 	static class FormatConverter implements ITypeConverter<Format> {
 		@Override
 		public Format convert(String value) {
@@ -75,6 +79,10 @@ class BatchCommand implements Callable<Integer> {
 
 	@Override
 	public Integer call() {
+		if (limit != null && limit < 1) {
+			spec.commandLine().getErr().println("Error: --limit must be 1 or more, but is " + limit + ".");
+			return 2;
+		}
 		ConnectionParameters parameters;
 		Settings settings;
 		try {
@@ -124,12 +132,17 @@ class BatchCommand implements Callable<Integer> {
 			if (settings.timeout() != null) {
 				jdbcStatement.setQueryTimeout((int) settings.timeout().toSeconds());
 			}
+			if (limit != null) {
+				jdbcStatement.setMaxRows(limit == Integer.MAX_VALUE ? limit : limit + 1);
+			}
 			List<String> statements = statements();
 			if (statements.isEmpty()) {
 				spec.commandLine().getErr()
 						.println("Error: No input. Use -c or -f, pipe Statements to stdin, or run in a terminal for Interactive mode.");
 				return 2;
 			}
+			Format effectiveFormat = format != null ? format : Format.parse(settings.format());
+			FormatOptions options = formatOptions(settings);
 			boolean first = true;
 			for (String statement : statements) {
 				if (jdbcStatement.execute(statement)) {
@@ -138,14 +151,25 @@ class BatchCommand implements Callable<Integer> {
 						if (!first) {
 							out.print('\n');
 						}
-						out.print(format.formatter(FormatOptions.defaults(), orientation(settings)).format(read(resultSet)));
+						Result result = read(resultSet, limit);
+						out.print(effectiveFormat.formatter(options, orientation(settings)).format(result));
 						out.flush();
+						if (truncated) {
+							spec.commandLine().getErr().println("truncated at " + limit + " rows");
+							spec.commandLine().getErr().flush();
+						}
 						first = false;
 					}
 				}
 			}
 			return 0;
 		}
+	}
+
+	private static FormatOptions formatOptions(Settings settings) {
+		FormatOptions options = FormatOptions.defaults().withNullMarker(settings.nullMarker())
+				.withMultiLineMarker(settings.multilineMarker()).withMaxWidth(settings.maxWidth());
+		return settings.timezone() == null ? options : options.withTimeZone(settings.timezone());
 	}
 
 	/** Statements of all inputs: {@code -c} values, then {@code -f} files; stdin if none is given and it is no terminal. */
@@ -174,21 +198,41 @@ class BatchCommand implements Callable<Integer> {
 		return new String(System.in.readAllBytes(), StandardCharsets.UTF_8);
 	}
 
-	private static Result read(ResultSet resultSet) throws SQLException {
+	/** Set by {@link #read}: the last Result had more rows than {@code --limit}. */
+	private boolean truncated;
+
+	/**
+	 * Reads at most {@code maxRows} rows ({@code null}: all). Plain {@code timestamp}, {@code date} and {@code time}
+	 * are read as local values so that no time zone shifts them. {@code timestamptz} is read as an offset value.
+	 */
+	private Result read(ResultSet resultSet, Integer maxRows) throws SQLException {
 		ResultSetMetaData metaData = resultSet.getMetaData();
 		int count = metaData.getColumnCount();
 		List<String> columns = new ArrayList<>();
 		boolean[] jsonColumns = new boolean[count + 1];
+		Class<?>[] temporal = new Class<?>[count + 1];
 		for (int i = 1; i <= count; i++) {
 			columns.add(metaData.getColumnLabel(i));
 			String type = metaData.getColumnTypeName(i);
 			jsonColumns[i] = "json".equals(type) || "jsonb".equals(type);
+			temporal[i] = switch (type) {
+				case "timestamp" -> java.time.LocalDateTime.class;
+				case "timestamptz" -> java.time.OffsetDateTime.class;
+				case "date" -> java.time.LocalDate.class;
+				case "time" -> java.time.LocalTime.class;
+				default -> null;
+			};
 		}
 		List<List<Object>> rows = new ArrayList<>();
+		truncated = false;
 		while (resultSet.next()) {
+			if (maxRows != null && rows.size() >= maxRows) {
+				truncated = true;
+				break;
+			}
 			List<Object> row = new ArrayList<>();
 			for (int i = 1; i <= count; i++) {
-				Object value = resultSet.getObject(i);
+				Object value = temporal[i] == null ? resultSet.getObject(i) : resultSet.getObject(i, temporal[i]);
 				row.add(value != null && jsonColumns[i] ? new JsonValue(value.toString()) : value);
 			}
 			rows.add(row);
