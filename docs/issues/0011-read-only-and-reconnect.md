@@ -13,3 +13,4 @@
 - [ ] Integration test: after the connection is closed, the next Statement triggers one reconnect and a clear info band, or a clear error if the reconnect fails
 - [ ] A failed Statement is never run twice
 - [ ] Status bar shows the mode
+- [ ] Read-only is enforced by the server, not only flagged: with autocommit on, `Connection.setReadOnly(true)` alone does not stop writes in the PostgreSQL driver (finding of issue 0006). Use the driver's read-only mode setting or equivalent, and prove it with a test that a write fails
