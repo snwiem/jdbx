@@ -6,6 +6,18 @@ import org.junit.jupiter.api.Test;
 
 class ProfileDialogModelTest {
 	@Test
+	void savingATransientUrlKeepsItsUserButNotItsPassword() {
+		var given = new Profile(null, "jdbc:postgresql://localhost/db?user=alice&password=url-secret", null, null,
+			null, null, null, null, null, Map.of());
+		var dialog = new ProfileDialogModel(given, null);
+		dialog.set(ProfileDialogModel.Field.NAME, "dev");
+		assertThat(dialog.value(ProfileDialogModel.Field.USER)).isEqualTo("alice");
+		assertThat(dialog.savedProfile().user()).isEqualTo("alice");
+		assertThat(dialog.savedProfile().password()).isNull();
+		assertThat(dialog.savedProfile().url()).doesNotContain("url-secret");
+	}
+
+	@Test
 	void aTypedPasswordReplacesThePasswordInsideAnExistingProfileUrl() {
 		var given = new Profile("url", "jdbc:postgresql://localhost/db?user=alice&password=${OLD_PASSWORD}&sslmode=require", null, null,
 			null, null, null, null, null, Map.of());
@@ -22,7 +34,8 @@ class ProfileDialogModelTest {
 			null, null, null, null, null, Map.of("sslkey", "/tmp/key.pk8", "sslpassword", "${TLS_PASSWORD}"));
 		var dialog = ProfileDialogModel.edit(given);
 		dialog.validate(true);
-		assertThat(dialog.savedProfile()).isEqualTo(given);
+		assertThat(dialog.savedProfile().url()).isEqualTo(given.url());
+		assertThat(dialog.savedProfile().properties()).isEqualTo(given.properties());
 		assertThat(dialog.connectionProfile().properties()).containsEntry("sslkey", "/tmp/key.pk8");
 		assertThat(dialog.value(ProfileDialogModel.Field.URL)).doesNotContain("password=");
 	}

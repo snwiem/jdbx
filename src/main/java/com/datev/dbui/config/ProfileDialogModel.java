@@ -40,7 +40,7 @@ public final class ProfileDialogModel {
 		fields.put(Field.HOST, text(initial.host()));
 		fields.put(Field.PORT, initial.port() == null ? "" : initial.port().toString());
 		fields.put(Field.DATABASE, text(initial.database()));
-		fields.put(Field.USER, text(initial.user()));
+		fields.put(Field.USER, text(first(initial.user(), userFromUrl(initial.url()))));
 		fields.put(Field.PASSWORD, text(savedPassword));
 		fields.put(Field.READ_ONLY, initial.readOnly() == null ? "" : initial.readOnly().toString());
 		fields.put(Field.SCHEMA, text(initial.schema()));
@@ -121,6 +121,17 @@ public final class ProfileDialogModel {
 		return new Profile(blank(value(Field.NAME)), url, blank(value(Field.HOST)), port == null ? null : Integer.valueOf(port),
 			blank(value(Field.DATABASE)), blank(value(Field.USER)), password, value(Field.READ_ONLY).isBlank() ? null : Boolean.valueOf(value(Field.READ_ONLY)),
 			blank(value(Field.SCHEMA)), properties);
+	}
+
+	private static String userFromUrl(String url) {
+		if (url == null || !url.contains("?")) return null;
+		for (String pair : url.substring(url.indexOf('?') + 1).split("&")) {
+			if (pair.startsWith("user=")) {
+				try { return java.net.URLDecoder.decode(pair.substring(5), java.nio.charset.StandardCharsets.UTF_8); }
+				catch (IllegalArgumentException e) { throw new ConfigException("The JDBC URL user has invalid URL encoding."); }
+			}
+		}
+		return null;
 	}
 
 	private static String withoutPassword(String url) {
