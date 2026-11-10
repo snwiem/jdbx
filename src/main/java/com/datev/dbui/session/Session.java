@@ -45,6 +45,7 @@ public final class Session implements AutoCloseable {
 	private final ExecutionControls controls;
 	private SchemaCommands schemaCommands;
 	private boolean ended;
+	private volatile boolean connectionLost;
 	private boolean running;
 	private volatile boolean cancelRequested;
 	private Statement activeStatement;
@@ -125,7 +126,7 @@ public final class Session implements AutoCloseable {
 
 	public synchronized ExecutionStatus status() {
 		return new ExecutionStatus(controls.rowLimit(), running,
-			running ? Duration.ofNanos(System.nanoTime() - startedAt) : Duration.ZERO, lastResult, settings().readOnly(), true);
+			running ? Duration.ofNanos(System.nanoTime() - startedAt) : Duration.ZERO, lastResult, settings().readOnly(), !connectionLost);
 	}
 
 	/** Accepts the next input after the previous submission completes; type-ahead is not supported. */
@@ -144,7 +145,7 @@ public final class Session implements AutoCloseable {
 			state.submitted(input);
 		}
 		if (state != null && isResume(input)) {
-			return run(() -> resume(input.strip().substring("/resume".length()).strip()));
+			return runOnConnection(() -> resume(input.strip().substring("/resume".length()).strip()));
 		}
 		if (input.strip().equals("/quit")) {
 			ended = true;
@@ -162,7 +163,7 @@ public final class Session implements AutoCloseable {
 				return CompletableFuture.completedFuture(new Update(messageBlocks(), false));
 			}
 			case ON, OFF -> {
-				return run(() -> changeReadOnly(readOnlyCommand == ReadOnlyCommand.Kind.ON));
+				return runOnConnection(() -> changeReadOnly(readOnlyCommand == ReadOnlyCommand.Kind.ON));
 			}
 			case NOT_MINE -> { }
 		}
@@ -172,14 +173,19 @@ public final class Session implements AutoCloseable {
 			return CompletableFuture.completedFuture(new Update(messageBlocks(), false));
 		}
 		if (SchemaCommands.handles(input)) {
-			return run(() -> runSchemaCommand(input));
+			return runOnConnection(() -> runSchemaCommand(input));
 		}
 		String stripped = input.stripLeading();
 		if (stripped.startsWith("/") && !stripped.startsWith("/*")) {
 			messageBlocks.add(MessageBlock.error("Unknown Slash command: " + input.strip()));
 			return CompletableFuture.completedFuture(new Update(messageBlocks(), false));
 		}
-		return run(() -> execute(input));
+		return runOnConnection(() -> execute(input));
+	}
+
+	/** Like {@link #run}, but first restores a lost connection (once); when that fails the work does not run. */
+	private CompletableFuture<Update> runOnConnection(Supplier<Update> work) {
+		return run(() -> ensureConnected() ? work.get() : new Update(messageBlocks(), false));
 	}
 
 	private CompletableFuture<Update> run(Supplier<Update> work) {
@@ -275,6 +281,7 @@ public final class Session implements AutoCloseable {
 			catch (SQLException ignored) {
 				// The error below is the one that matters.
 			}
+			connectionLost |= isConnectionLost(e);
 			add(MessageBlock.error("Cannot switch to " + ReadOnlyCommand.describe(readOnly) + ": " + SqlErrorText.of(e)
 				+ ". The Session stays " + ReadOnlyCommand.describe(previous) + "."));
 			return new Update(messageBlocks(), false);
@@ -287,6 +294,10 @@ public final class Session implements AutoCloseable {
 
 	/** Asks the server in the same way as a Statement runs, so that a driver flag without effect is caught. */
 	private void verifyReadOnly(boolean expected) throws SQLException {
+		verifyReadOnly(connection, expected);
+	}
+
+	private static void verifyReadOnly(Connection connection, boolean expected) throws SQLException {
 		boolean guarded = connection.isReadOnly();
 		if (guarded) {
 			connection.setAutoCommit(false);
@@ -299,7 +310,7 @@ public final class Session implements AutoCloseable {
 		}
 		finally {
 			if (guarded) {
-				endReadOnlyTransaction();
+				endReadOnlyTransaction(connection);
 			}
 		}
 	}
@@ -322,7 +333,7 @@ public final class Session implements AutoCloseable {
 			schemaCommands.run(input).forEach(this::add);
 		}
 		catch (SQLException e) {
-			add(MessageBlock.error(SqlErrorText.of(e)));
+			add(sqlError(e));
 		}
 		catch (RuntimeException | Error e) {
 			add(MessageBlock.error("Unexpected error: " + e.getMessage() + (logFile() == null ? "" : ". Details: " + logFile())));
@@ -360,7 +371,7 @@ public final class Session implements AutoCloseable {
 			return new Update(messageBlocks(), false);
 		}
 		catch (SQLException e) {
-			add(MessageBlock.error(SqlErrorText.of(e)));
+			add(sqlError(e));
 			return new Update(messageBlocks(), false);
 		}
 		catch (RuntimeException | Error e) {
@@ -372,6 +383,10 @@ public final class Session implements AutoCloseable {
 	}
 
 	private void endReadOnlyTransaction() throws SQLException {
+		endReadOnlyTransaction(connection);
+	}
+
+	private static void endReadOnlyTransaction(Connection connection) throws SQLException {
 		try {
 			connection.rollback();
 		}
@@ -379,6 +394,76 @@ public final class Session implements AutoCloseable {
 			// the connection may be broken; setAutoCommit below reports it if it matters
 		}
 		connection.setAutoCommit(true);
+	}
+
+	/** An error band for a failed Statement. A lost connection is also remembered, so that the next input reconnects. */
+	private MessageBlock sqlError(SQLException e) {
+		if (!isConnectionLost(e)) {
+			return MessageBlock.error(SqlErrorText.of(e));
+		}
+		connectionLost = true;
+		return MessageBlock.error("Connection lost: " + SqlErrorText.of(e) + ". The Statement failed and is not run again. "
+			+ "The next input reconnects once.");
+	}
+
+	private boolean isConnectionLost(SQLException e) {
+		String state = e.getSQLState();
+		if (state != null && (state.startsWith("08") || state.equals("57P01") || state.equals("57P02") || state.equals("57P03"))) {
+			return true;
+		}
+		try {
+			return connection.isClosed();
+		}
+		catch (SQLException ignored) {
+			return true;
+		}
+	}
+
+	/** Restores a lost connection once with the parameters of the Session. Returns false and adds an error band on failure. */
+	private boolean ensureConnected() {
+		if (!connectionLost) {
+			return true;
+		}
+		if (state == null) {
+			add(MessageBlock.error("Cannot reconnect: this Session has no connection parameters."));
+			return false;
+		}
+		var current = settings();
+		var parameters = state.parameters();
+		Connection fresh = null;
+		try {
+			fresh = new com.datev.dbui.config.ConnectionParameters(parameters.url(), parameters.properties(), current.readOnly()).open();
+			fresh.setAutoCommit(true);
+			fresh.setReadOnly(current.readOnly());
+			verifyReadOnly(fresh, current.readOnly());
+		}
+		catch (SQLException | RuntimeException e) {
+			add(MessageBlock.error("Cannot reconnect to " + state.connectionLabel() + ": " + e.getMessage()));
+			if (fresh != null) {
+				try {
+					fresh.close();
+				}
+				catch (SQLException ignored) {
+					// Nothing is left to do with this connection.
+				}
+			}
+			return false;
+		}
+		var dead = connection;
+		synchronized (this) {
+			connection = fresh;
+		}
+		try {
+			dead.close();
+		}
+		catch (SQLException ignored) {
+			// The old connection is dead; closing it is only tidiness.
+		}
+		schemaCommands = new SchemaCommands(new SchemaProvider(connection)); // the schema cache belongs to the connection
+		connectionLost = false;
+		lastResult = null;
+		add(MessageBlock.info("Reconnected to " + state.connectionLabel() + " (connection was lost)."));
+		return true;
 	}
 
 	private void runStatement(Statement statement, String sql, int rowLimit, long statementStartedAt) throws SQLException {
