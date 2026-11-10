@@ -220,6 +220,75 @@ class BatchEntryPointIT {
 	}
 
 	@Test
+	void showsDateTimeTimestampAsStoredAndTimestamptzInConfiguredTimeZone(@org.junit.jupiter.api.io.TempDir Path dir)
+			throws Exception {
+		java.nio.file.Files.writeString(dir.resolve("config.yaml"), "timezone: Asia/Tokyo\n");
+
+		Outcome outcome = run(connection("--config-dir", dir.toString(), "--format", "csv", "-c", """
+				select date '2024-03-05' as d, time '23:15:30' as t, timestamp '2024-03-05 23:15:30' as ts,
+				timestamptz '2024-03-05 23:15:30+00' as tstz"""));
+
+		assertThat(outcome.stderr()).isEmpty();
+		assertThat(outcome.stdout())
+				.isEqualTo("d,t,ts,tstz\n2024-03-05,23:15:30,2024-03-05T23:15:30,2024-03-06T08:15:30+09:00\n");
+	}
+
+	@Test
+	void formatComesFromSettingsAndOptionWins(@org.junit.jupiter.api.io.TempDir Path dir) throws Exception {
+		java.nio.file.Files.writeString(dir.resolve("config.yaml"), "format: csv\n");
+
+		Outcome fromSettings = run(connection("--config-dir", dir.toString(), "-c", "select 1 as id"));
+		Outcome fromOption = run(connection("--config-dir", dir.toString(), "--format", "tsv", "-c", "select 1 as id, 2 as b"));
+
+		assertThat(fromSettings.stdout()).isEqualTo("id\n1\n");
+		assertThat(fromOption.stdout()).isEqualTo("id\tb\n1\t2\n");
+	}
+
+	@Test
+	void markersAndMaxWidthComeFromSettings(@org.junit.jupiter.api.io.TempDir Path dir) throws Exception {
+		java.nio.file.Files.writeString(dir.resolve("config.yaml"), """
+				null-marker: "<null>"
+				multiline-marker: "<nl>"
+				max-width: 5
+				""");
+
+		Outcome outcome = run(connection("--config-dir", dir.toString(), "-c",
+				"select null as a, E'x\\ny' as b, 'abcdefgh' as c"));
+
+		assertThat(outcome.stdout()).contains("<null>").contains("x<nl…").contains("abcd…").doesNotContain("abcde");
+	}
+
+	@Test
+	void batchModeHasNoRowLimitByDefaultEvenWithRowLimitInSettings(@org.junit.jupiter.api.io.TempDir Path dir)
+			throws Exception {
+		java.nio.file.Files.writeString(dir.resolve("config.yaml"), "row-limit: 3\n");
+
+		Outcome outcome = run(connection("--config-dir", dir.toString(), "--format", "csv", "-c",
+				"select * from generate_series(1, 10) as n"));
+
+		assertThat(outcome.stdout().lines().count()).isEqualTo(11);
+		assertThat(outcome.stderr()).isEmpty();
+	}
+
+	@Test
+	void limitCutsEachResultAndNotesTruncationOnStderr() {
+		Outcome outcome = run(connection("--limit", "3", "--format", "csv", "-c",
+				"select * from generate_series(1, 10) as n; select * from generate_series(1, 3) as m"));
+
+		assertThat(outcome.stdout()).isEqualTo("n\n1\n2\n3\n\nm\n1\n2\n3\n");
+		assertThat(outcome.stderr()).isEqualTo("truncated at 3 rows\n");
+		assertThat(outcome.exitCode()).isZero();
+	}
+
+	@Test
+	void limitMustBePositive() {
+		Outcome outcome = run(connection("--limit", "0", "-c", "select 1"));
+
+		assertThat(outcome.exitCode()).isNotZero();
+		assertThat(outcome.stdout()).isEmpty();
+	}
+
+	@Test
 	void writesJsonWithJsonbEmbeddedAsRealJson() {
 		Outcome outcome = run(connection("--format", "json", "-c",
 				"select 1 as id, null as nothing, '{\"a\": [1, 2]}'::jsonb as doc, true as ok, 'x'::bytea as bin"));
