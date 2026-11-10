@@ -11,13 +11,15 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 
+import com.datev.dbui.tui.InteractiveMode;
+
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
 
-/** Batch mode: connect, run one Statement, write the Result to stdout. Never prompts. */
-@Command(name = "dbui", mixinStandardHelpOptions = true, description = "Runs a SQL Statement in Batch mode.")
+/** Connects with shared options, then selects Batch mode or Interactive mode. */
+@Command(name = "dbui", mixinStandardHelpOptions = true, description = "Runs SQL in Interactive mode, or in Batch mode with -c.")
 class BatchCommand implements Callable<Integer> {
 
 	@Spec
@@ -38,7 +40,7 @@ class BatchCommand implements Callable<Integer> {
 	@Option(names = "--password", required = true, description = "Database password")
 	String password;
 
-	@Option(names = { "-c", "--command" }, required = true, description = "Statement to run")
+	@Option(names = { "-c", "--command" }, description = "Statement to run in Batch mode")
 	String statement;
 
 	@Override
@@ -48,17 +50,21 @@ class BatchCommand implements Callable<Integer> {
 		properties.setProperty("password", password);
 		properties.setProperty("ApplicationName", "dbui");
 		String url = "jdbc:postgresql://" + host + ":" + port + "/" + db;
-		try (Connection connection = DriverManager.getConnection(url, properties);
-				Statement jdbcStatement = connection.createStatement()) {
-			if (jdbcStatement.execute(statement)) {
-				try (ResultSet resultSet = jdbcStatement.getResultSet()) {
-					spec.commandLine().getOut().print(new TableFormatter().format(read(resultSet)));
-					spec.commandLine().getOut().flush();
+		try (Connection connection = DriverManager.getConnection(url, properties)) {
+			if (statement == null) {
+				return InteractiveMode.run(connection, user + "@" + host + ":" + port + "/" + db);
+			}
+			try (Statement jdbcStatement = connection.createStatement()) {
+				if (jdbcStatement.execute(statement)) {
+					try (ResultSet resultSet = jdbcStatement.getResultSet()) {
+						spec.commandLine().getOut().print(new TableFormatter().format(read(resultSet)));
+						spec.commandLine().getOut().flush();
+					}
 				}
 			}
 			return 0;
 		}
-		catch (SQLException e) {
+		catch (Exception e) {
 			spec.commandLine().getErr().println("Error: " + e.getMessage());
 			return 1;
 		}
