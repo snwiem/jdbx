@@ -14,3 +14,5 @@ Interactive mode renders into the normal terminal scrollback, with a multi-line 
 ## Consequences
 
 Features that need panes (a result viewer, a schema tree) cannot be added inline. A temporary full-screen pager may come later. JLine behavior must be confirmed with a spike before the main build.
+
+Spike result (issue 0001): JLine 4.6.0 delivers the inline editor. All nine capabilities work or work with caveats; none fails. The caveats (prompt rule on resize, pushing the editor to the bottom at start, unbinding old default keys, native-access flag) are listed in `docs/issues/0001-jline-spike.md`. The decision stands.
