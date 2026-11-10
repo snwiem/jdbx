@@ -26,6 +26,7 @@ public final class ProfileCommands {
 	}
 
 	public String warning() { return store.warning(); }
+	public boolean defaultReadOnly() { return loader.settings().readOnly(); }
 	public static boolean handles(String input) {
 		return input.strip().matches("/(connect|profile)(\\s.*)?");
 	}

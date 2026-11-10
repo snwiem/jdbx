@@ -34,6 +34,21 @@ class ProfileCommandsIT {
 	}
 
 	@Test
+	void connectUsesTheGlobalReadOnlyDefaultNotThePreviousProfilesOverride() throws Exception {
+		java.nio.file.Files.writeString(directory.resolve("config.yaml"), "read-only: true\n");
+		var dev = profile("dev", false);
+		var prod = new Profile("prod", dev.url(), null, null, null, dev.user(), dev.password(), null, null, dev.properties());
+		var store = new ProfileStore(directory); store.save(dev); store.save(prod);
+		try (Session current = session(parameters().open())) {
+			submit(current, "/connect dev");
+			assertThat(submit(current, "show default_transaction_read_only").messageBlocks().getLast().result().rows()).containsExactly(List.of("off"));
+			submit(current, "/connect prod");
+			assertThat(submit(current, "show default_transaction_read_only").messageBlocks().getLast().result().rows()).containsExactly(List.of("on"));
+			assertThat(current.settings().readOnly()).isTrue();
+		}
+	}
+
+	@Test
 	void failedDialogConnectionsKeepTheEnteredValuesForCorrection() throws Exception {
 		var stateBase = directory.resolve("failed-startup");
 		try (Session current = new Session(SessionDirectory.create(stateBase), Settings.defaults())) {

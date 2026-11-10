@@ -46,6 +46,7 @@ public final class Session implements AutoCloseable {
 	private final ExecutionControls controls;
 	private SchemaCommands schemaCommands;
 	private com.datev.dbui.profile.ProfileCommands profiles;
+	private boolean profileDefaultReadOnly;
 	private volatile SessionInteraction interaction;
 	private java.util.function.Function<String, Update> passwordContinuation;
 	private boolean ended;
@@ -80,6 +81,7 @@ public final class Session implements AutoCloseable {
 		this.state = context == null ? null : new SessionState(directory, context);
 		this.plainDirectory = directory;
 		this.plainSettings = settings;
+		this.profileDefaultReadOnly = settings.readOnly();
 		this.controls = new ExecutionControls(this::settings, this::updateSettings);
 		if (connection != null) {
 			this.schemaCommands = new SchemaCommands(new SchemaProvider(connection));
@@ -94,6 +96,7 @@ public final class Session implements AutoCloseable {
 	/** Enables the Profile commands without changing the persistent Session context. */
 	public void configureProfiles(Path directory, java.util.Map<String, String> environment) {
 		profiles = new com.datev.dbui.profile.ProfileCommands(directory, environment);
+		profileDefaultReadOnly = profiles.defaultReadOnly();
 		String warning = profiles.warning();
 		if (warning != null) add(MessageBlock.info(warning));
 	}
@@ -133,14 +136,19 @@ public final class Session implements AutoCloseable {
 				try {
 					var withPassword = new com.datev.dbui.config.Profile(supplied.name(), supplied.url(), supplied.host(), supplied.port(), supplied.database(), supplied.user(), password,
 						supplied.readOnly(), supplied.schema(), supplied.properties());
-					switchConnection(com.datev.dbui.config.ConnectionParameters.resolve(new com.datev.dbui.config.ConnectionOptions(), withPassword, settings()), profileName);
+					switchConnection(com.datev.dbui.config.ConnectionParameters.resolve(new com.datev.dbui.config.ConnectionOptions(), withPassword, connectionDefaults()), profileName);
 				}
 				catch (com.datev.dbui.config.ConfigException | SQLException e) { add(MessageBlock.error(e instanceof SQLException sql ? SqlErrorText.of(sql) : e.getMessage())); }
 				return new Update(messageBlocks(), false);
 			};
 			return;
 		}
-		switchConnection(com.datev.dbui.config.ConnectionParameters.resolve(new com.datev.dbui.config.ConnectionOptions(), supplied, settings()), profileName);
+		switchConnection(com.datev.dbui.config.ConnectionParameters.resolve(new com.datev.dbui.config.ConnectionOptions(), supplied, connectionDefaults()), profileName);
+	}
+
+	private Settings connectionDefaults() {
+		// An unset Profile Read-only value inherits config.yaml, never the previous connection's override.
+		return settings().withExecution(settings().rowLimit(), settings().timeout(), profileDefaultReadOnly);
 	}
 
 	public synchronized CompletableFuture<Update> saveDialog(boolean save) {
