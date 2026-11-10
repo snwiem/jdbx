@@ -29,8 +29,43 @@
 	<properties>
 		<java.version>25</java.version>
 		<picocli.version>4.7.7</picocli.version>
+		<tamboui.version>0.7.0</tamboui.version>
 	</properties>
 	<dependencies>
+		<dependency>
+			<groupId>dev.tamboui</groupId>
+			<artifactId>tamboui-core</artifactId>
+			<version>${tamboui.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>dev.tamboui</groupId>
+			<artifactId>tamboui-widgets</artifactId>
+			<version>${tamboui.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>dev.tamboui</groupId>
+			<artifactId>tamboui-tui</artifactId>
+			<version>${tamboui.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>dev.tamboui</groupId>
+			<artifactId>tamboui-jline3-backend</artifactId>
+			<version>${tamboui.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>dev.tamboui</groupId>
+			<artifactId>tamboui-tui</artifactId>
+			<version>${tamboui.version}</version>
+			<classifier>test-fixtures</classifier>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>dev.tamboui</groupId>
+			<artifactId>tamboui-core</artifactId>
+			<version>${tamboui.version}</version>
+			<classifier>test-fixtures</classifier>
+			<scope>test</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter</artifactId>
