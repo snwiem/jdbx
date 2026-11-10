@@ -44,6 +44,7 @@ public final class InteractiveScreen {
 	private boolean busy;
 	private com.datev.dbui.session.SessionInteraction interaction;
 	private ConnectionModal modal;
+	private final boolean dialogColor;
 	private Consumer<Boolean> saveDialog = ignored -> { };
 	private Consumer<String> answerPassword = ignored -> { };
 	private Runnable cancelDialog = () -> { };
@@ -94,6 +95,7 @@ public final class InteractiveScreen {
 
 	private InteractiveScreen(String connection, Consumer<String> send, EditorKeys keys, boolean color, Runnable cancel, Settings settings,
 			Runnable cycleOrientation) {
+		this.dialogColor = color;
 		this.cancel = cancel;
 		this.cycleOrientation = cycleOrientation;
 		this.settings = settings;
@@ -448,6 +450,6 @@ public final class InteractiveScreen {
 				buffer.setString(1, y, CharWidth.substringByWidth(StatusBarText.mode(this.status), width - 1), warningStyle);
 			}
 		}
-		if (modal != null) modal.render(frame, statusStyle);
+		if (modal != null) modal.render(frame, dialogColor, settings.readOnly());
 	}
 }

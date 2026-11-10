@@ -25,12 +25,13 @@ final class ConnectionModal {
 	private final Runnable cancel;
 	private final Map<Field, TextAreaState> fields = new EnumMap<>(Field.class);
 	private final TextAreaState passwordInput = new TextAreaState();
-	private int focus;
+	private final DialogForm form;
 	private String error;
 	void error(String error) { this.error = error; }
 
 	ConnectionModal(SessionInteraction interaction, Consumer<Boolean> save, Consumer<String> password, Runnable cancel) {
 		this.interaction = interaction; this.save = save; this.password = password; this.cancel = cancel;
+		this.form = interaction instanceof SessionInteraction.Dialog dialog ? new DialogForm(dialog.connect()) : null;
 		if (interaction instanceof SessionInteraction.Dialog dialog) {
 			for (Field field : Field.values()) {
 				var state = new TextAreaState(); state.setText(dialog.model().value(field)); state.moveCursorToEnd(); fields.put(field, state);
@@ -51,18 +52,27 @@ final class ConnectionModal {
 			if (interaction instanceof SessionInteraction.Dialog dialog) {
 				if (key.hasCtrl() && key.isCharIgnoreCase('s')) { save.accept(true); return true; }
 				if (key.hasCtrl() && key.isCharIgnoreCase('g') && dialog.connect()) { save.accept(false); return true; }
-				if (key.isKey(KeyCode.TAB)) { focus = Math.floorMod(focus + (key.hasShift() ? -1 : 1), Field.values().length + 1); return true; }
+				if (key.isKey(KeyCode.TAB)) { if (key.hasShift()) form.previous(); else form.next(); return true; }
 				if (key.isKey(KeyCode.ENTER)) {
+					var button = form.focusedButton();
 					if (key.hasCtrl() && dialog.connect()) save.accept(false);
-					else if (focus >= Field.values().length - 1) save.accept(true);
-					else focus++;
+					else if (button == DialogForm.Button.SAVE) save.accept(true);
+					else if (button == DialogForm.Button.CONNECT) save.accept(false);
+					else if (button == DialogForm.Button.CANCEL) cancel.run();
+					else form.next();
+					return true;
+				}
+				if (form.focusedField() == Field.READ_ONLY) {
+					int step = key.isKey(KeyCode.RIGHT) || key.code() == KeyCode.CHAR && key.character() == ' ' && !key.hasCtrl() ? 1 : key.isKey(KeyCode.LEFT) ? -1 : 0;
+					if (step != 0) dialog.model().set(Field.READ_ONLY, DialogForm.cycleReadOnly(dialog.model().value(Field.READ_ONLY), step));
 					return true;
 				}
 			}
 		}
+		if (interaction instanceof SessionInteraction.Dialog && event instanceof PasteEvent && form.focusedField() == Field.READ_ONLY) return true;
 		if (interaction instanceof SessionInteraction.Password) TextEditing.handle(passwordInput, singleLine(event), Overflow.CLIP);
-		if (interaction instanceof SessionInteraction.Dialog dialog && focus < Field.values().length) {
-			Field field = Field.values()[focus];
+		if (interaction instanceof SessionInteraction.Dialog dialog && form.focusedField() != null && form.focusedField() != Field.READ_ONLY) {
+			Field field = form.focusedField();
 			String before = fields.get(field).text();
 			TextEditing.handle(fields.get(field), singleLine(event), Overflow.CLIP);
 			if (!before.equals(fields.get(field).text())) dialog.model().set(field, fields.get(field).text());
@@ -74,42 +84,16 @@ final class ConnectionModal {
 		return event instanceof PasteEvent paste ? new PasteEvent(paste.text().replace('\r', ' ').replace('\n', ' ')) : event;
 	}
 
-	void render(Frame frame, Style style) {
-		int width = Math.min(110, frame.width());
-		int wanted = interaction instanceof SessionInteraction.Dialog ? Field.values().length + 6 : 6;
-		int height = Math.min(wanted, frame.height());
-		int x = Math.max(0, (frame.width() - width) / 2), y = Math.max(0, (frame.height() - height) / 2);
-		frame.buffer().fill(new Rect(x, y, width, height), new Cell(" ", style));
+	void render(Frame frame, boolean color, boolean globalReadOnly) {
+		var renderer = new DialogRenderer(frame, DialogStyles.of(color));
 		if (interaction instanceof SessionInteraction.Dialog dialog) {
-			line(frame, x, y, width, " Edit Connection Profile", style.bold());
-			int visible = Math.max(0, height - 5);
-			int first = Math.max(0, Math.min(focus, Field.values().length - 1) - visible + 1);
-			for (int row = 0; row < visible && first + row < Field.values().length; row++) {
-				Field field = Field.values()[first + row];
-				String value = field == Field.PASSWORD ? "*".repeat(fields.get(field).text().length()) : fields.get(field).text();
-				String prefix = (focus == first + row ? "> " : "  ") + field.label() + ": ";
-				line(frame, x, y + row + 1, width, prefix + value, focus == first + row ? style.reversed() : style);
-			}
-			if (error != null) line(frame, x, y + height - 4, width, " " + error, style.bold());
-			line(frame, x, y + height - 3, width, (focus == Field.values().length ? "> " : "  ") + "[ Save ]", style.bold());
-			line(frame, x, y + height - 2, width, " Tab/Shift-Tab fields · Enter next/Save · Ctrl-S Save · Esc cancel", style);
-			line(frame, x, y + height - 1, width, dialog.connect() ? " Ctrl-G / Ctrl-Enter Connect without saving" : " Profile edits are saved to profiles.yaml", style);
+			renderer.form(title(dialog), form, dialog.model(), fields::get, globalReadOnly, error);
 		}
-		else if (interaction instanceof SessionInteraction.Password prompt) {
-			line(frame, x, y, width, " Password for " + prompt.label(), style.bold());
-			line(frame, x, y + 2, width, " > " + "*".repeat(passwordInput.text().length()), style.reversed());
-			if (error != null) line(frame, x, y + height - 2, width, " " + error, style.bold());
-			line(frame, x, y + height - 1, width, " Enter connects · Esc cancels · password is never saved", style);
-		}
-		else if (interaction instanceof SessionInteraction.Confirmation confirmation) {
-			line(frame, x, y, width, " Remove Profile '" + confirmation.profileName() + "'?", style.bold());
-			line(frame, x, y + height - 1, width, " y confirms · any other letter or Esc cancels", style);
-		}
+		else if (interaction instanceof SessionInteraction.Password prompt) renderer.password(prompt.label(), passwordInput, error);
+		else if (interaction instanceof SessionInteraction.Confirmation confirmation) renderer.confirmation(confirmation.profileName());
 	}
 
-	private void line(Frame frame, int x, int y, int width, String text, Style style) {
-		if (y < 0 || y >= frame.height() || width < 1) return;
-		String safe = text.replaceAll("[\\p{Cntrl}]", "?");
-		frame.buffer().setString(x, y, CharWidth.substringByWidth(safe, width), style);
+	private static String title(SessionInteraction.Dialog dialog) {
+		return dialog.editingName() != null ? "Edit Connection Profile" : dialog.connect() ? "Connect" : "New Connection Profile";
 	}
 }

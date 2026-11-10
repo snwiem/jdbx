@@ -107,9 +107,18 @@ final class DialogForm {
 
 	private static String radio(boolean selected) { return selected ? "(•)" : "( )"; }
 
-	/** First visible row so that the focused row is in a viewport of the given height. */
+	static String hint(boolean canConnect, int width) {
+		var variants = canConnect
+			? List.of("Tab/Shift-Tab move · Enter next · Ctrl-S Save · Ctrl-G Connect · Esc cancel", "Tab move · Ctrl-S Save · Ctrl-G Connect · Esc cancel",
+				"Ctrl-S Save · Ctrl-G Connect · Esc cancel", "Ctrl-S Save · Esc cancel")
+			: List.of("Tab/Shift-Tab move · Enter next · Ctrl-S Save · Esc cancel", "Tab move · Ctrl-S Save · Esc cancel", "Ctrl-S Save · Esc cancel");
+		for (String variant : variants) if (variant.length() <= width) return variant;
+		return variants.getLast();
+	}
+
+	/** First visible row so that the focused row and the row below it are in a viewport of the given height. */
 	static int scrollOffset(int rows, int viewport, int focusedRow) {
 		if (focusedRow < 0) return 0;
-		return Math.max(0, Math.min(rows - viewport, focusedRow - viewport + 1));
+		return Math.max(0, Math.min(rows - viewport, focusedRow - viewport + 2));
 	}
 }

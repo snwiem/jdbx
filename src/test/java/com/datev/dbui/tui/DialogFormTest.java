@@ -110,12 +110,22 @@ class DialogFormTest {
 	}
 
 	@Test
-	void scrollOffsetKeepsTheFocusedRowVisible() {
+	void scrollOffsetKeepsTheFocusedRowAndOneRowBelowItVisible() {
 		assertThat(DialogForm.scrollOffset(16, 13, 0)).isZero();
-		assertThat(DialogForm.scrollOffset(16, 13, 12)).isZero();
-		assertThat(DialogForm.scrollOffset(16, 13, 13)).isEqualTo(1);
+		assertThat(DialogForm.scrollOffset(16, 13, 11)).isZero();
+		assertThat(DialogForm.scrollOffset(16, 13, 12)).isEqualTo(1);
+		assertThat(DialogForm.scrollOffset(16, 13, 14)).isEqualTo(3);
 		assertThat(DialogForm.scrollOffset(16, 13, 15)).isEqualTo(3);
 		assertThat(DialogForm.scrollOffset(16, 13, -1)).isZero();
 		assertThat(DialogForm.scrollOffset(10, 13, 9)).isZero();
+	}
+
+	@Test
+	void keyHintShrinksToFitTheWidthAndKeepsSaveAndCancel() {
+		assertThat(DialogForm.hint(true, 90)).isEqualTo("Tab/Shift-Tab move · Enter next · Ctrl-S Save · Ctrl-G Connect · Esc cancel");
+		assertThat(DialogForm.hint(false, 90)).isEqualTo("Tab/Shift-Tab move · Enter next · Ctrl-S Save · Esc cancel");
+		assertThat(DialogForm.hint(true, 52)).isEqualTo("Tab move · Ctrl-S Save · Ctrl-G Connect · Esc cancel");
+		assertThat(DialogForm.hint(true, 46)).isEqualTo("Ctrl-S Save · Ctrl-G Connect · Esc cancel");
+		assertThat(DialogForm.hint(true, 40)).isEqualTo("Ctrl-S Save · Esc cancel");
 	}
 }
