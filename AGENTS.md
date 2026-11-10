@@ -21,5 +21,5 @@
 
 - `docs/prd/`: product requirement documents, one file per PRD (for example `mvp-1.0.md`).
 - `docs/adr/`: architecture decision records, numbered `0001-slug.md`.
-- `docs/issue/`: local issue files sliced from a PRD, before or instead of publishing them to GitHub.
+- `docs/issues/`: local issue files sliced from a PRD, named `NNNN-slug.md` (four digits, dependency order). They exist before or instead of publishing to GitHub.
 - Put new requirements, decisions and issues in the matching directory. Do not add files directly under `docs/`.
