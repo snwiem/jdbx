@@ -4,12 +4,12 @@
 
 **Blocked by:** 0002 Batch tracer
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md`
 
-- [ ] Unit tests for the splitter: `;` inside strings, quoted identifiers, line and block comments, and `$$` blocks does not split
-- [ ] Results of several Statements are written one after another on stdout
-- [ ] An error is written to stderr, later Statements do not run, and the exit code is non-zero
-- [ ] Stdin is read as input when it is not a terminal and no other input is given
-- [ ] `-f -` reads stdin
+- [x] Unit tests for the splitter: `;` inside strings, quoted identifiers, line and block comments, and `$$` blocks does not split
+- [x] Results of several Statements are written one after another on stdout
+- [x] An error is written to stderr, later Statements do not run, and the exit code is non-zero
+- [x] Stdin is read as input when it is not a terminal and no other input is given
+- [x] `-f -` reads stdin

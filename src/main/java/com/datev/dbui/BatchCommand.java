@@ -1,5 +1,11 @@
 package com.datev.dbui;
 
+import java.io.Console;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -16,7 +22,7 @@ import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
 
-/** Batch mode: connect, run one Statement, write the Result to stdout. Never prompts. */
+/** Batch mode: connect, run Statements, write the Results to stdout. Never prompts. */
 @Command(name = "dbui", mixinStandardHelpOptions = true, description = "Runs a SQL Statement in Batch mode.")
 class BatchCommand implements Callable<Integer> {
 
@@ -38,8 +44,11 @@ class BatchCommand implements Callable<Integer> {
 	@Option(names = "--password", required = true, description = "Database password")
 	String password;
 
-	@Option(names = { "-c", "--command" }, required = true, description = "Statement to run")
-	String statement;
+	@Option(names = { "-c", "--command" }, description = "Statements to run (repeatable)")
+	List<String> commands = new ArrayList<>();
+
+	@Option(names = { "-f", "--file" }, description = "File with Statements to run ('-' reads stdin)")
+	List<String> files = new ArrayList<>();
 
 	@Override
 	public Integer call() {
@@ -50,18 +59,56 @@ class BatchCommand implements Callable<Integer> {
 		String url = "jdbc:postgresql://" + host + ":" + port + "/" + db;
 		try (Connection connection = DriverManager.getConnection(url, properties);
 				Statement jdbcStatement = connection.createStatement()) {
-			if (jdbcStatement.execute(statement)) {
-				try (ResultSet resultSet = jdbcStatement.getResultSet()) {
-					spec.commandLine().getOut().print(new TableFormatter().format(read(resultSet)));
-					spec.commandLine().getOut().flush();
+			boolean first = true;
+			for (String statement : statements()) {
+				if (jdbcStatement.execute(statement)) {
+					try (ResultSet resultSet = jdbcStatement.getResultSet()) {
+						PrintWriter out = spec.commandLine().getOut();
+						if (!first) {
+							out.print('\n');
+						}
+						out.print(new TableFormatter().format(read(resultSet)));
+						out.flush();
+						first = false;
+					}
 				}
 			}
 			return 0;
+		}
+		catch (IOException e) {
+			spec.commandLine().getErr().println("Error: " + e.getMessage());
+			return 1;
 		}
 		catch (SQLException e) {
 			spec.commandLine().getErr().println("Error: " + e.getMessage());
 			return 1;
 		}
+	}
+
+	/** Statements of all inputs: {@code -c} values, then {@code -f} files; stdin if none is given and it is no terminal. */
+	private List<String> statements() throws IOException {
+		StatementSplitter splitter = new StatementSplitter();
+		List<String> statements = new ArrayList<>();
+		for (String command : commands) {
+			statements.addAll(splitter.split(command));
+		}
+		for (String file : files) {
+			String text = file.equals("-") ? readStdin() : Files.readString(Path.of(file));
+			statements.addAll(splitter.split(text));
+		}
+		if (commands.isEmpty() && files.isEmpty() && !stdinIsTerminal()) {
+			statements.addAll(splitter.split(readStdin()));
+		}
+		return statements;
+	}
+
+	private static boolean stdinIsTerminal() {
+		Console console = System.console();
+		return console != null && console.isTerminal();
+	}
+
+	private static String readStdin() throws IOException {
+		return new String(System.in.readAllBytes(), StandardCharsets.UTF_8);
 	}
 
 	private static Result read(ResultSet resultSet) throws SQLException {
