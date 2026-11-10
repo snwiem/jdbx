@@ -16,6 +16,12 @@ public record FormatOptions(String nullMarker, String multiLineMarker, int maxWi
 		return new FormatOptions(DEFAULT_NULL_MARKER, DEFAULT_MULTI_LINE_MARKER, DEFAULT_MAX_WIDTH, ZoneId.systemDefault());
 	}
 
+	public static FormatOptions from(com.datev.dbui.config.Settings settings) {
+		FormatOptions options = defaults().withNullMarker(settings.nullMarker())
+			.withMultiLineMarker(settings.multilineMarker()).withMaxWidth(settings.maxWidth());
+		return settings.timezone() == null ? options : options.withTimeZone(settings.timezone());
+	}
+
 	public FormatOptions withNullMarker(String value) {
 		return new FormatOptions(value, multiLineMarker, maxWidth, timeZone);
 	}

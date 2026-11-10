@@ -18,6 +18,19 @@ class MessageBlockRendererTest {
 	private final MessageBlockRenderer renderer = new MessageBlockRenderer();
 
 	@Test
+	void transcriptUsesConfiguredValueMarkersWidthAndTimeZoneWithoutShiftingPlainTimestamp() {
+		var options = com.datev.dbui.FormatOptions.defaults().withNullMarker("∅").withMultiLineMarker("↵")
+			.withMaxWidth(25).withTimeZone(java.time.ZoneId.of("America/New_York"));
+		var configured = new MessageBlockRenderer(true, options);
+		var result = new Result(List.of("plain", "zoned", "nothing", "lines", "long"),
+			List.of(java.util.Arrays.asList(java.time.LocalDateTime.parse("2024-01-15T12:34:56"),
+				java.time.OffsetDateTime.parse("2024-01-15T12:34:56Z"), null, "a\nb", "abcdefghijklmnopqrstuvwxyz")));
+		assertThat(configured.rows(List.of(MessageBlock.result(result)), 160))
+			.extracting(MessageBlockRenderer.Row::text)
+			.contains("2024-01-15T12:34:56 | 2024-01-15T07:34:56-05:00 | ∅       | a↵b   | abcdefghijklmnopqrstuvwx…");
+	}
+
+	@Test
 	void inputEchoIsAFullWidthGrayBandWithPaddingAndNoBorder() {
 		var rows = renderer.rows(List.of(MessageBlock.input("select 1")), 12);
 		assertThat(rows).extracting(MessageBlockRenderer.Row::text).containsExactly("", "select 1", "");

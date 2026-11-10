@@ -3,7 +3,10 @@ package com.datev.dbui.tui;
 import java.util.List;
 import java.util.function.Consumer;
 
+import com.datev.dbui.FormatOptions;
+import com.datev.dbui.session.ExecutionStatus;
 import com.datev.dbui.session.MessageBlock;
+import com.datev.dbui.config.Settings;
 
 import dev.tamboui.buffer.Cell;
 import dev.tamboui.layout.Rect;
@@ -18,6 +21,7 @@ import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import dev.tamboui.tui.event.TextEditing;
+import dev.tamboui.tui.event.TickEvent;
 import dev.tamboui.widgets.input.TextArea;
 import dev.tamboui.widgets.input.TextAreaState;
 import dev.tamboui.widgets.scrollbar.Scrollbar;
@@ -33,8 +37,10 @@ public final class InteractiveScreen {
 	private final ScrollbarState scrollbar = new ScrollbarState();
 	private int transcriptHeight;
 	private boolean busy;
+	private ExecutionStatus status;
 	private final String connection;
 	private final Consumer<String> send;
+	private final Runnable cancel;
 	private final EditorKeys keys;
 	private final TextAreaState editor = new TextAreaState();
 	private final TextArea editorWidget = TextArea.builder().overflow(Overflow.WRAP_WORD).build();
@@ -49,7 +55,17 @@ public final class InteractiveScreen {
 
 	/** With {@code color == false} (NO_COLOR) the screen uses no color codes; the Status bar is reversed instead. */
 	InteractiveScreen(String connection, Consumer<String> send, EditorKeys keys, boolean color) {
-		this.renderer = new MessageBlockRenderer(color);
+		this(connection, send, keys, color, () -> { }, Settings.defaults());
+	}
+
+	public InteractiveScreen(String connection, Consumer<String> send, Runnable cancel, Settings settings) {
+		this(connection, send, EditorKeys.defaults(), MessageBlockRenderer.colorEnabled(System.getenv()), cancel, settings);
+	}
+
+	private InteractiveScreen(String connection, Consumer<String> send, EditorKeys keys, boolean color, Runnable cancel, Settings settings) {
+		this.cancel = cancel;
+		this.status = new ExecutionStatus(settings.rowLimit(), false, java.time.Duration.ZERO, null);
+		this.renderer = new MessageBlockRenderer(color, FormatOptions.from(settings));
 		this.transcript = new Transcript(renderer);
 		this.rule = color ? Style.EMPTY.fg(Color.indexed(244)) : Style.EMPTY;
 		this.statusStyle = color ? Style.EMPTY.fg(Color.indexed(252)).bg(Color.indexed(236)) : Style.EMPTY.reversed();
@@ -66,7 +82,14 @@ public final class InteractiveScreen {
 		this.busy = busy;
 	}
 
+	public void status(ExecutionStatus status) {
+		this.status = status;
+	}
+
 	public boolean handle(Event event) {
+		if (event instanceof TickEvent && busy) {
+			return true;
+		}
 		if (event instanceof MouseEvent mouse && mouse.y() < transcriptHeight) {
 			if (mouse.kind() == MouseEventKind.SCROLL_UP) {
 				transcript.scroll(3);
@@ -84,11 +107,16 @@ public final class InteractiveScreen {
 				transcript.page(key.isKey(KeyCode.PAGE_UP) ? 1 : -1);
 				return true;
 			}
-			if (busy) {
+			if (key.hasCtrl() && key.isCharIgnoreCase('c')) {
+				if (busy) {
+					cancel.run();
+				}
+				else {
+					editor.clear();
+				}
 				return true;
 			}
-			if (key.hasCtrl() && key.isCharIgnoreCase('c')) {
-				editor.clear();
+			if (busy) {
 				return true;
 			}
 			if (key.hasCtrl() && key.isCharIgnoreCase('d')) {
@@ -136,7 +164,7 @@ public final class InteractiveScreen {
 			editorWidget.renderWithCursor(new Rect(0, transcriptHeight + 1, width, editorHeight), buffer, editor, frame);
 			buffer.setString(0, transcriptHeight + editorHeight + 1, "─".repeat(width), rule);
 		}
-		String[] status = { " " + connection, busy ? " Running Statement…" : " Enter sends · Ctrl-J newline · /quit exits" };
+		String[] status = { " " + connection, " " + StatusBarText.of(this.status) };
 		for (int row = 0; row < statusHeight; row++) {
 			int y = height - statusHeight + row;
 			buffer.fill(new Rect(0, y, width, 1), new Cell(" ", statusStyle));

@@ -98,7 +98,7 @@ class BatchCommand implements Callable<Integer> {
 		}
 		try (Connection connection = parameters.open()) {
 			if (commands.isEmpty() && files.isEmpty() && stdinIsTerminal()) {
-				return InteractiveMode.run(connection, label(parameters));
+				return InteractiveMode.run(connection, label(parameters), settings);
 			}
 			return runBatch(connection, settings);
 		}
@@ -166,9 +166,7 @@ class BatchCommand implements Callable<Integer> {
 	}
 
 	private static FormatOptions formatOptions(Settings settings) {
-		FormatOptions options = FormatOptions.defaults().withNullMarker(settings.nullMarker())
-				.withMultiLineMarker(settings.multilineMarker()).withMaxWidth(settings.maxWidth());
-		return settings.timezone() == null ? options : options.withTimeZone(settings.timezone());
+		return FormatOptions.from(settings);
 	}
 
 	/** Statements of all inputs: {@code -c} values, then {@code -f} files; stdin if none is given and it is no terminal. */
