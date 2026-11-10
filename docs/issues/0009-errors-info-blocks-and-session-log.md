@@ -13,3 +13,4 @@
 - [ ] An unexpected error shows a short message with the log file path
 - [ ] Each Session writes its own log, and two parallel Sessions never share a log file
 - [ ] With `NO_COLOR` set, no color codes are written
+- [ ] A Statement without a Result (for example `create table`) shows an info band with the command tag and update count, and not only the input echo (finding of issue 0008)

@@ -22,6 +22,7 @@ import com.datev.dbui.config.ConnectionOptions;
 import com.datev.dbui.config.ConnectionParameters;
 import com.datev.dbui.config.Profile;
 import com.datev.dbui.config.Settings;
+import com.datev.dbui.tui.InteractiveMode;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ITypeConverter;
@@ -30,8 +31,12 @@ import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
 
-/** Batch mode: connect, run Statements, write the Results to stdout. Never prompts. */
-@Command(name = "dbui", mixinStandardHelpOptions = true, description = "Runs a SQL Statement in Batch mode.")
+/**
+ * Connects, then selects Interactive mode (no -c, no -f, stdin is a terminal) or Batch mode (Statements to stdout,
+ * never prompts).
+ */
+@Command(name = "dbui", mixinStandardHelpOptions = true,
+		description = "Runs SQL in Interactive mode, or in Batch mode with -c, -f or stdin.")
 class BatchCommand implements Callable<Integer> {
 
 	@Spec
@@ -73,12 +78,45 @@ class BatchCommand implements Callable<Integer> {
 			spec.commandLine().getErr().println("Error: " + e.getMessage());
 			return 1;
 		}
-		try (Connection connection = parameters.open(); Statement jdbcStatement = connection.createStatement()) {
+		try (Connection connection = parameters.open()) {
+			if (commands.isEmpty() && files.isEmpty() && stdinIsTerminal()) {
+				return InteractiveMode.run(connection, label(parameters));
+			}
+			return runBatch(connection, settings);
+		}
+		catch (IOException e) {
+			spec.commandLine().getErr().println("Error: " + e.getMessage());
+			return 1;
+		}
+		catch (SQLException e) {
+			spec.commandLine().getErr().println("Error: " + e.getMessage());
+			return 1;
+		}
+		catch (Exception e) {
+			spec.commandLine().getErr().println("Error: " + e.getMessage());
+			return 1;
+		}
+	}
+
+	private static String label(ConnectionParameters parameters) {
+		String target = parameters.url().replaceFirst("^jdbc:postgresql://", "").replaceFirst("\\?.*$", "");
+		String user = parameters.properties().get("user");
+		return user == null ? target : user + "@" + target;
+	}
+
+	private Integer runBatch(Connection connection, Settings settings) throws IOException, SQLException {
+		try (Statement jdbcStatement = connection.createStatement()) {
 			if (settings.timeout() != null) {
 				jdbcStatement.setQueryTimeout((int) settings.timeout().toSeconds());
 			}
+			List<String> statements = statements();
+			if (statements.isEmpty()) {
+				spec.commandLine().getErr()
+						.println("Error: No input. Use -c or -f, pipe Statements to stdin, or run in a terminal for Interactive mode.");
+				return 2;
+			}
 			boolean first = true;
-			for (String statement : statements()) {
+			for (String statement : statements) {
 				if (jdbcStatement.execute(statement)) {
 					try (ResultSet resultSet = jdbcStatement.getResultSet()) {
 						PrintWriter out = spec.commandLine().getOut();
@@ -92,14 +130,6 @@ class BatchCommand implements Callable<Integer> {
 				}
 			}
 			return 0;
-		}
-		catch (IOException e) {
-			spec.commandLine().getErr().println("Error: " + e.getMessage());
-			return 1;
-		}
-		catch (SQLException e) {
-			spec.commandLine().getErr().println("Error: " + e.getMessage());
-			return 1;
 		}
 	}
 
