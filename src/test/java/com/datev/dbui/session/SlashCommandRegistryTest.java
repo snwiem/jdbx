@@ -20,6 +20,15 @@ class SlashCommandRegistryTest {
 	}
 
 	@Test
+	void commandsWithoutArgumentsRejectExtraTextWithoutExposingInternalArgumentIndexes() {
+		var registry = new SlashCommandRegistry(List.of(new SlashCommand("quit", "End the Session.", null, false,
+			argument -> List.of(MessageBlock.info("ended")))));
+		var error = registry.parse("/quit now").execute().getFirst();
+		assertThat(error.kind()).isEqualTo(MessageBlock.Kind.ERROR);
+		assertThat(error.text()).isEqualTo("Usage: /quit\nUnexpected argument: now");
+	}
+
+	@Test
 	void aRequiredArgumentCannotBeOmittedOrReusedFromAnEarlierInvocation() {
 		var registry = new SlashCommandRegistry(List.of(new SlashCommand("format", "Change Format.",
 			SlashCommand.argument("<table|json>", "1", List.of("table", "json")), false,
@@ -37,7 +46,9 @@ class SlashCommandRegistryTest {
 			argument -> List.of(MessageBlock.info("Changed to " + argument)))));
 		var invalid = registry.parse("/orientation diagonal").execute().getFirst();
 		assertThat(invalid.kind()).isEqualTo(MessageBlock.Kind.ERROR);
-		assertThat(invalid.text()).startsWith("Usage: /orientation").contains("horizontal", "vertical", "diagonal");
+		assertThat(invalid.text()).startsWith("Usage: /orientation").contains("horizontal", "vertical", "diagonal")
+			.doesNotContain("java.lang", "cannot convert")
+			.contains("\nUnknown orientation 'diagonal'. Use one of: horizontal, vertical");
 		assertThat(registry.parse("/orientation VERTICAL").execute().getFirst().text()).isEqualTo("Changed to vertical");
 	}
 
@@ -49,8 +60,10 @@ class SlashCommandRegistryTest {
 		for (var command : registry.commands()) {
 			assertThat(registry.help()).contains("/" + command.name(), command.help());
 		}
+		assertThat(registry.help()).contains("/future <name> — A newly registered command.");
 		assertThat(registry.help()).contains("<name>", "Enter", "Ctrl-J", "Up", "Down", "Ctrl-R", "Ctrl-C", "Ctrl-D",
-			"Shift-Tab", "Ctrl-O", "Page Up", "Page Down", "Mouse wheel", "Esc", "Left", "Right", "Home", "End");
+			"Shift-Tab", "Ctrl-O", "Page Up", "Page Down", "Mouse wheel", "Esc", "Left", "Right", "Home", "End",
+			"Ctrl-W", "Ctrl-Backspace", "Ctrl-Delete");
 	}
 
 	@Test

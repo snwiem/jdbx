@@ -55,18 +55,11 @@ final class ExecutionControls {
 		throw new picocli.CommandLine.TypeConversionException("Use an integer from 1 to 2147483647");
 	}
 
+	/** The registry has already validated the argument through picocli. */
 	MessageBlock limit(String argument) {
-		try {
-			if (Integer.parseInt(argument) < 1) {
-				return MessageBlock.error("Usage: /limit N (1 to 2147483647)");
-			}
-			var current = settings.get();
-			update.accept(current.withExecution(Integer.parseInt(argument), current.timeout(), current.readOnly()));
-			return MessageBlock.info("Row limit: " + rowLimit());
-		}
-		catch (NumberFormatException e) {
-			return MessageBlock.error("Usage: /limit N (1 to 2147483647)");
-		}
+		var current = settings.get();
+		update.accept(current.withExecution(Integer.parseInt(argument), current.timeout(), current.readOnly()));
+		return MessageBlock.info("Row limit: " + rowLimit());
 	}
 
 	MessageBlock timeout(String argument) {
@@ -75,16 +68,8 @@ final class ExecutionControls {
 			update.accept(current.withExecution(current.rowLimit(), null, current.readOnly()));
 			return MessageBlock.info("Timeout: off");
 		}
-		try {
-			if (Integer.parseInt(argument) < 1) {
-				return MessageBlock.error("Usage: /timeout <seconds|off> (seconds: 1 to 2147483647)");
-			}
-			var current = settings.get();
-			update.accept(current.withExecution(current.rowLimit(), Duration.ofSeconds(Integer.parseInt(argument)), current.readOnly()));
-			return MessageBlock.info("Timeout: " + timeoutSeconds() + " s");
-		}
-		catch (NumberFormatException e) {
-			return MessageBlock.error("Usage: /timeout <seconds|off> (seconds: 1 to 2147483647)");
-		}
+		var current = settings.get();
+		update.accept(current.withExecution(current.rowLimit(), Duration.ofSeconds(Integer.parseInt(argument)), current.readOnly()));
+		return MessageBlock.info("Timeout: " + timeoutSeconds() + " s");
 	}
 }

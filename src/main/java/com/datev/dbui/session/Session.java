@@ -157,6 +157,17 @@ public final class Session implements AutoCloseable {
 		return run(() -> execute(input));
 	}
 
+	/** Key action, not an input: persist and confirm it without changing input history or echoing a Slash command. */
+	public synchronized Update cycleOrientation() {
+		if (!ended && !running) {
+			String orientation = com.datev.dbui.Orientation.parse(settings().orientation()) == com.datev.dbui.Orientation.HORIZONTAL
+				? "vertical" : "horizontal";
+			updateSettings(settings().withOutput(settings().format(), orientation));
+			add(MessageBlock.info("Orientation: " + orientation));
+		}
+		return new Update(messageBlocks(), ended);
+	}
+
 	private CompletableFuture<Update> run(Supplier<Update> work) {
 		running = true;
 		startedAt = System.nanoTime();
@@ -218,12 +229,12 @@ public final class Session implements AutoCloseable {
 			SlashCommand.argument("<seconds|off>", "1", List.of("off"),
 				value -> value.equals("off") ? value : ExecutionControls.positiveInteger(value)), false,
 			argument -> List.of(controls.timeout(argument))));
-		commands.add(schemaCommand("schema", "List schemas; all includes system schemas.", "[all]", "0..1", List.of("all")));
-		commands.add(schemaCommand("tables", "List tables in the current or named schema.", "[schema]", "0..1", List.of()));
+		commands.add(schemaCommand("schema", "List schemas; all includes system schemas.", "all", "0..1", List.of("all")));
+		commands.add(schemaCommand("tables", "List tables in the current or named schema.", "schema", "0..1", List.of()));
 		commands.add(schemaCommand("describe", "Describe a table, its columns and keys.", "<table>", "1", List.of()));
 		commands.add(schemaCommand("refresh", "Clear the schema cache.", null, "0", List.of()));
 		commands.add(new SlashCommand("resume", "List earlier Sessions, or fork one by number or id.",
-			SlashCommand.argument("[number|id]", "0..1", List.of()), true, argument -> {
+			SlashCommand.argument("number|id", "0..1", List.of()), true, argument -> {
 				if (state == null) {
 					return List.of(MessageBlock.error("/resume is not available without a Session context."));
 				}

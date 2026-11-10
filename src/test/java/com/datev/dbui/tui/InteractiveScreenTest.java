@@ -27,23 +27,30 @@ class InteractiveScreenTest {
 	@Test
 	void shiftTabAndCtrlOCycleOrientationWithoutSendingOrClearingTheEditorDraft() throws Exception {
 		var inputs = new CopyOnWriteArrayList<String>();
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add);
+		var cycles = new java.util.concurrent.atomic.AtomicInteger();
+		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add, () -> { },
+			com.datev.dbui.config.Settings.defaults(), cycles::incrementAndGet);
+		screen.history(List.of("select 1"));
 		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(120, 20))) {
 			terminal.runner().dispatch(new PasteEvent("draft"));
+			terminal.pilot().press(KeyCode.UP);
 			terminal.pilot().press(KeyCode.TAB, KeyModifiers.SHIFT);
 			terminal.pilot().pause();
-			assertThat(inputs).containsExactly("/orientation vertical");
+			assertThat(cycles.get()).isEqualTo(1);
+			assertThat(inputs).isEmpty();
 			screen.settings(com.datev.dbui.config.Settings.defaults().withOutput("table", "vertical"));
 			assertThat(line(draw(screen, new Size(120, 20)), 18)).contains("Orientation: vertical");
 			terminal.pilot().press('o', KeyModifiers.CTRL);
 			terminal.pilot().pause();
-			assertThat(inputs).containsExactly("/orientation vertical", "/orientation horizontal");
+			assertThat(cycles.get()).isEqualTo(2);
+			assertThat(inputs).isEmpty();
 			screen.busy(true);
 			terminal.pilot().press(KeyCode.TAB, KeyModifiers.SHIFT);
 			terminal.pilot().press('o', KeyModifiers.CTRL);
 			terminal.pilot().pause();
-			assertThat(inputs).hasSize(2);
+			assertThat(cycles.get()).isEqualTo(2);
 			screen.busy(false);
+			terminal.pilot().press(KeyCode.DOWN);
 			terminal.pilot().press(KeyCode.ENTER);
 			terminal.pilot().pause();
 			assertThat(inputs).endsWith("draft");
@@ -57,6 +64,16 @@ class InteractiveScreenTest {
 			com.datev.dbui.config.Settings.defaults().withOutput("csv", "vertical"));
 		assertThat(line(draw(screen, new Size(140, 20)), 18)).contains("Format: csv", "Orientation: vertical");
 		assertThat(line(draw(screen, new Size(140, 20)), 19)).contains("Row limit: 1000");
+	}
+
+	@Test
+	void anEmptyFrozenCsvResultDoesNotFallBackToTable() {
+		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { });
+		var result = new Result(List.of(), List.of(List.of()));
+		var block = MessageBlock.result(result, com.datev.dbui.config.Settings.defaults().withOutput("csv", "vertical"));
+		assertThat(block.text()).isEmpty();
+		screen.update(List.of(MessageBlock.info("before"), block, MessageBlock.info("after")));
+		assertThat(line(draw(screen, new Size(100, 20)), 7)).contains("after");
 	}
 
 	@Test

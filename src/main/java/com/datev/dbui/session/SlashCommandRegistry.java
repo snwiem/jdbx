@@ -16,7 +16,7 @@ public final class SlashCommandRegistry {
 		}
 	}
 
-	private final CommandLine line = new CommandLine(CommandSpec.create().name(""));
+	private final CommandLine line = new CommandLine(CommandSpec.create().name("")).setExpandAtFiles(false);
 	private final List<SlashCommand> commands;
 
 	public SlashCommandRegistry(List<SlashCommand> commands) {
@@ -45,14 +45,16 @@ public final class SlashCommandRegistry {
 		}
 		String argument = text.substring(end).strip();
 		try {
-			var parsed = line.setExpandAtFiles(false).parseArgs(argument.isEmpty() ? new String[] { name } : new String[] { name, "--", argument });
+			var parsed = line.parseArgs(argument.isEmpty() ? new String[] { name } : new String[] { name, "--", argument });
 			var command = commands.stream().filter(c -> name.equals("/" + c.name())).findFirst().orElseThrow();
 			String value = parsed.subcommand().matchedPositionalValue(0, "");
 			return new Invocation(command.background(), () -> command.action().apply(value));
 		}
 		catch (CommandLine.ParameterException e) {
 			String usage = usage(commandLine).lines().findFirst().orElseThrow();
-			return new Invocation(false, () -> List.of(MessageBlock.error(usage + (argument.isEmpty() ? "" : "\n" + e.getMessage()))));
+			String message = e instanceof CommandLine.UnmatchedArgumentException ? "Unexpected argument: " + argument
+				: e.getCause() instanceof CommandLine.TypeConversionException conversion ? conversion.getMessage() : e.getMessage();
+			return new Invocation(false, () -> List.of(MessageBlock.error(usage + (argument.isEmpty() ? "" : "\n" + message))));
 		}
 	}
 
@@ -81,9 +83,11 @@ public final class SlashCommandRegistry {
 	public String help() {
 		var text = new StringBuilder("Slash commands\n");
 		for (var command : commands) {
-			text.append(usage(line.getSubcommands().get("/" + command.name()))).append('\n');
+			var subcommand = line.getSubcommands().get("/" + command.name());
+			String synopsis = usage(subcommand).lines().findFirst().orElseThrow().substring("Usage: ".length());
+			text.append(synopsis).append(" — ").append(subcommand.getCommandSpec().usageMessage().description()[0]).append('\n');
 		}
-		text.append("""
+		text.append('\n').append("""
 			Key bindings
 			Enter                     Send input; accept a Ctrl-R match without sending
 			Ctrl-J                    Insert a newline (Kitty); use bracketed paste on legacy terminals
@@ -92,12 +96,16 @@ public final class SlashCommandRegistry {
 			Esc                       Cancel history search and restore the draft
 			Ctrl-C                    Cancel a running Statement, cancel search, or clear idle input; never exit
 			Ctrl-D                    Ignore; never exit (use /quit)
-			Shift-Tab / Ctrl-O         Cycle Orientation; Ctrl-O is the legacy terminal fallback
-			Page Up / Page Down        Scroll the Transcript
+			Shift-Tab / Ctrl-O        Cycle Orientation; Ctrl-O is the legacy terminal fallback
+			Page Up / Page Down       Scroll the Transcript
 			Mouse wheel               Scroll the Transcript
-			Left / Right               Move the cursor; Ctrl-Left / Ctrl-Right move by word
-			Home / End                 Move to the start / end of a line
-			Backspace / Delete         Delete before / after the cursor
+			Left / Right              Move the cursor; Ctrl-Left / Ctrl-Right move by word
+			Home / End                Move to the start / end of a line
+			Backspace / Delete        Delete before / after the cursor
+			Ctrl-W / Ctrl-Backspace   Delete the previous word
+			Ctrl-Delete               Delete the next word
+			Shift-Enter               Insert a newline when the terminal distinguishes it from Enter
+			Keypad navigation keys    Same cursor actions as the main navigation keys
 			""");
 		return text.toString().stripTrailing();
 	}

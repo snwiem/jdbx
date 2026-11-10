@@ -81,8 +81,8 @@ public final class HistoryStore {
 	}
 
 	private static boolean isLocalOnly(String input) {
-		String text = input.strip();
-		return text.equals("/quit") || text.equals("/resume") || text.startsWith("/resume ");
+		String name = input.strip().split("\\s+", 2)[0];
+		return name.equals("/quit") || name.equals("/resume");
 	}
 
 	static String escape(String entry) {

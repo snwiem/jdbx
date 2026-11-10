@@ -204,6 +204,36 @@ class SessionResumeIT {
 	}
 
 	@Test
+	void theOrientationCyclePersistsTheSettingWithoutAddingInputEchoOrHistory() throws Exception {
+		try (Session current = session()) {
+			var changed = current.cycleOrientation();
+			assertThat(changed.messageBlocks()).extracting(MessageBlock::kind).containsExactly(MessageBlock.Kind.INFO);
+			assertThat(changed.messageBlocks().getLast().text()).isEqualTo("Orientation: vertical");
+			assertThat(current.history()).isEmpty();
+			assertThat(SessionMetadata.read(current.directory().metadataFile()).orientation()).isEqualTo("vertical");
+			assertThat(submit(current, "select 7 as id").messageBlocks().getLast().text()).isEqualTo("id | 7\n");
+			current.cycleOrientation();
+			assertThat(current.settings().orientation()).isEqualTo("horizontal");
+			assertThat(current.history()).containsExactly("select 7 as id");
+		}
+	}
+
+	@Test
+	void legacyMetadataWithoutOutputSettingsResumesAsTableHorizontalLikeTheEarlierTranscript() throws Exception {
+		String earlier;
+		try (Session first = session()) {
+			earlier = first.directory().id();
+			Path metadata = first.directory().metadataFile();
+			Files.writeString(metadata, Files.readString(metadata).replace("  format: table\n", "").replace("  orientation: horizontal\n", ""));
+		}
+		try (Session current = session(Settings.defaults().withOutput("json", "vertical"), null, parameters(), name -> null)) {
+			assertThat(submit(current, "/resume " + earlier).messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.INFO);
+			assertThat(current.settings().format()).isEqualTo("table");
+			assertThat(current.settings().orientation()).isEqualTo("horizontal");
+		}
+	}
+
+	@Test
 	void outputChangesPersistImmediatelyAndResumeRestoresTheFormatAndOrientation() throws Exception {
 		String earlier;
 		try (Session first = session()) {
@@ -352,6 +382,16 @@ class SessionResumeIT {
 			var timedOut = current.submit("select pg_sleep(10)").get(4, TimeUnit.SECONDS).messageBlocks().getLast();
 			assertThat(timedOut.kind()).isEqualTo(MessageBlock.Kind.ERROR);
 			assertThat(timedOut.text()).contains("57014");
+		}
+	}
+
+	@Test
+	void quitAndResumeStayOutOfHistoryWithAnyCommandWhitespaceOrInvalidArguments() throws Exception {
+		try (Session current = session()) {
+			for (String input : List.of("/resume\tmissing", "/resume\nmissing", "/quit now")) {
+				assertThat(submit(current, input).messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			}
+			assertThat(current.history()).isEmpty();
 		}
 	}
 
