@@ -13,8 +13,25 @@ final class StatusBarText {
 		return "Format: " + settings.format() + " · Orientation: " + settings.orientation();
 	}
 
+	/** The mode segment at the start of the Status bar: {@code read-only}, {@code read-write} or {@code not connected}. */
+	static String mode(ExecutionStatus status) {
+		return !status.connected() ? "not connected" : status.readOnly() ? "read-only" : "read-write";
+	}
+
+	/** A one-line terminal keeps the mode first, even during Completion loading. */
+	static java.util.List<String> lines(ExecutionStatus status, com.datev.dbui.config.Settings settings,
+			String connection, String note, int height) {
+		String mode = mode(status);
+		String detail = of(status).substring(mode.length() + " · ".length());
+		String prefix = mode + (note == null ? "" : " · " + note);
+		if (height == 1) {
+			return java.util.List.of(prefix + " · " + output(settings) + " · " + detail + " · " + connection);
+		}
+		return java.util.List.of(connection + " · " + output(settings), prefix + " · " + detail);
+	}
+
 	static String of(ExecutionStatus status) {
-		String text = "Row limit: " + status.rowLimit();
+		String text = mode(status) + " · Row limit: " + status.rowLimit();
 		if (status.running()) {
 			text += " · running… " + status.elapsed().toSeconds() + " s";
 		}

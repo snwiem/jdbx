@@ -382,6 +382,20 @@ class ConfigTest {
 	}
 
 	@Test
+	void readOnlyOptionOverridesProfileAndSettingsInBothDirections() {
+		Settings readOnlySettings = new Settings(1000, null, "table", "horizontal", true);
+		Profile readOnlyProfile = new Profile("p", null, "h", 5432, "d", "u", "pw", true, null, Map.of());
+		ConnectionOptions off = options();
+		off.readOnly = false;
+		ConnectionOptions on = options();
+		on.readOnly = true;
+
+		assertThat(ConnectionParameters.resolve(off, readOnlyProfile, readOnlySettings).readOnly()).isFalse();
+		assertThat(ConnectionParameters.resolve(on, new Profile("p", null, "h", 5432, "d", "u", "pw", false, null, Map.of()),
+			Settings.defaults()).readOnly()).isTrue();
+	}
+
+	@Test
 	void withoutProfileOptionsAloneAreEnoughAndPortDefaultsTo5432() {
 		ConnectionOptions options = options();
 		options.host = "h";

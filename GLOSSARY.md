@@ -43,7 +43,7 @@ An input that starts with `/` and controls dbui itself (for example `/format`, `
 _Avoid_: meta command, backslash command
 
 **Completion**:
-A list of suggested keywords and schema names that opens only when the user asks for it.
+A list of suggested keywords, schema names, table names, column names, Slash commands and their arguments. It opens only when the user asks for it.
 _Avoid_: autocomplete, suggestions
 
 ## Output

@@ -103,6 +103,16 @@ class InteractiveScreenTest {
 	}
 
 	@Test
+	void statusBarShowsModeAlsoWithoutColor() {
+		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { }, EditorKeys.defaults(), false);
+		assertThat(line(draw(screen, new Size(100, 20)), 19)).contains("read-write · Row limit");
+		screen.status(new com.datev.dbui.session.ExecutionStatus(5, false, java.time.Duration.ZERO, null, true, true));
+		assertThat(line(draw(screen, new Size(100, 20)), 19)).contains("read-only · Row limit");
+		screen.status(new com.datev.dbui.session.ExecutionStatus(5, false, java.time.Duration.ZERO, null, true, false));
+		assertThat(line(draw(screen, new Size(100, 20)), 19)).contains("not connected · Row limit");
+	}
+
+	@Test
 	void ctrlCCancelsWhileLockedAndOtherKeysAndPasteAreIgnored() throws Exception {
 		var inputs = new CopyOnWriteArrayList<String>();
 		var cancellations = new java.util.concurrent.atomic.AtomicInteger();

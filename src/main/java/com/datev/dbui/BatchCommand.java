@@ -15,14 +15,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
-import com.datev.dbui.config.ConfigException;
 import com.datev.dbui.config.ConfigLoader;
 import com.datev.dbui.config.ConnectionOptions;
 import com.datev.dbui.config.ConnectionParameters;
 import com.datev.dbui.config.Profile;
 import com.datev.dbui.config.Settings;
-import com.datev.dbui.session.SessionContext;
-import com.datev.dbui.session.SessionDirectory;
 import com.datev.dbui.tui.InteractiveMode;
 
 import picocli.CommandLine.Command;
@@ -92,21 +89,19 @@ class BatchCommand implements Callable<Integer> {
 			loader = new ConfigLoader(ConfigLoader.directory(connectionOptions.configDir, environment,
 					Path.of(System.getProperty("user.home"))), environment);
 			settings = loader.settings();
+			// Issue 0013: only Interactive mode may collect missing connection fields or a password.
+			if (commands.isEmpty() && files.isEmpty() && stdinIsTerminal()) {
+				return InteractiveMode.start(connectionOptions, settings.withOutput(
+					(format == null ? Format.parse(settings.format()) : format).id(), orientation(settings).id()));
+			}
 			Profile profile = connectionOptions.profile == null ? null : loader.profile(connectionOptions.profile);
 			parameters = ConnectionParameters.resolve(connectionOptions, profile, settings);
 		}
-		catch (ConfigException e) {
+		catch (Exception e) {
 			spec.commandLine().getErr().println("Error: " + e.getMessage());
 			return 1;
 		}
 		try (Connection connection = parameters.open()) {
-			if (commands.isEmpty() && files.isEmpty() && stdinIsTerminal()) {
-				Settings interactiveSettings = settings.withExecution(settings.rowLimit(), settings.timeout(), parameters.readOnly())
-					.withOutput((format == null ? Format.parse(settings.format()) : format).id(), orientation(settings).id());
-				return InteractiveMode.run(connection, label(parameters), new SessionContext(SessionDirectory.defaultStateBase(),
-						interactiveSettings, parameters,
-						connectionOptions.profile, loader::profile));
-			}
 			return runBatch(connection, settings);
 		}
 		catch (IOException e) {
@@ -125,12 +120,6 @@ class BatchCommand implements Callable<Integer> {
 
 	private Orientation orientation(Settings settings) {
 		return orientation != null ? orientation : Orientation.parse(settings.orientation());
-	}
-
-	private static String label(ConnectionParameters parameters) {
-		String target = parameters.url().replaceFirst("^jdbc:postgresql://", "").replaceFirst("\\?.*$", "");
-		String user = parameters.properties().get("user");
-		return user == null ? target : user + "@" + target;
 	}
 
 	private Integer runBatch(Connection connection, Settings settings) throws IOException, SQLException {
@@ -152,7 +141,8 @@ class BatchCommand implements Callable<Integer> {
 			FormatOptions options = formatOptions(settings);
 			boolean first = true;
 			for (String statement : statements) {
-				boolean streaming = StreamingRead.isQuery(statement);
+				// Read-only: every Statement gets its own explicit READ ONLY transaction (see ReadOnlyIT).
+				boolean streaming = connection.isReadOnly() || StreamingRead.isQuery(statement);
 				try {
 					if (streaming) {
 						StreamingRead.begin(connection, settings.timeout());
