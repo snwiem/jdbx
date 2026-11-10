@@ -8,7 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -103,7 +102,8 @@ class BatchCommand implements Callable<Integer> {
 		try (Connection connection = parameters.open()) {
 			if (commands.isEmpty() && files.isEmpty() && stdinIsTerminal()) {
 				return InteractiveMode.run(connection, label(parameters), new SessionContext(SessionDirectory.defaultStateBase(),
-						settings, parameters, connectionOptions.profile, loader::profile));
+						settings.withExecution(settings.rowLimit(), settings.timeout(), parameters.readOnly()), parameters,
+						connectionOptions.profile, loader::profile));
 			}
 			return runBatch(connection, settings);
 		}
@@ -151,10 +151,10 @@ class BatchCommand implements Callable<Integer> {
 			boolean first = true;
 			for (String statement : statements) {
 				boolean streaming = StreamingRead.isQuery(statement);
-				if (streaming) {
-					connection.setAutoCommit(false);
-				}
 				try {
+					if (streaming) {
+						StreamingRead.begin(connection, settings.timeout());
+					}
 					if (jdbcStatement.execute(statement)) {
 						try (ResultSet resultSet = jdbcStatement.getResultSet()) {
 							PrintWriter out = spec.commandLine().getOut();
@@ -189,9 +189,7 @@ class BatchCommand implements Callable<Integer> {
 	}
 
 	private static FormatOptions formatOptions(Settings settings) {
-		FormatOptions options = FormatOptions.defaults().withNullMarker(settings.nullMarker())
-				.withMultiLineMarker(settings.multilineMarker()).withMaxWidth(settings.maxWidth());
-		return settings.timezone() == null ? options : options.withTimeZone(settings.timezone());
+		return FormatOptions.from(settings);
 	}
 
 	/** Statements of all inputs: {@code -c} values, then {@code -f} files; stdin if none is given and it is no terminal. */

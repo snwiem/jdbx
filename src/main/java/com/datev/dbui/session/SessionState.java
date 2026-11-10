@@ -75,6 +75,15 @@ final class SessionState {
 		return settings;
 	}
 
+	/** Updates the same settings that execution uses, and persists them immediately, including Slash commands. */
+	void settings(Settings settings) {
+		this.settings = settings;
+		metadata = new SessionMetadata(metadata.started(), metadata.connection(), settings.rowLimit(),
+			settings.timeout() == null ? null : settings.timeout().toSeconds(), settings.readOnly(),
+			metadata.lastStatement(), metadata.resumedFrom());
+		writeMetadata();
+	}
+
 	String connectionLabel() {
 		return info.label();
 	}
@@ -127,6 +136,15 @@ final class SessionState {
 		requireDirectory();
 		var chosen = choose(argument);
 		var stored = chosen.metadata();
+		Settings restored;
+		try {
+			restored = settings.withExecution(stored.rowLimit(), stored.timeoutSeconds() == null ? null
+				: Duration.ofSeconds(stored.timeoutSeconds()), stored.readOnly());
+			ExecutionControls.validate(restored);
+		}
+		catch (IllegalArgumentException | ArithmeticException e) {
+			throw new ResumeException("Invalid execution settings in Session " + chosen.id() + ": " + e.getMessage());
+		}
 		var plan = ResumeConnection.plan(chosen.id(), stored.connection(), stored.readOnly(), info, parameters, context.profiles(),
 			settings);
 		Connection reconnected = null;
@@ -135,17 +153,36 @@ final class SessionState {
 		if (plan instanceof ResumeConnection.Unavailable unavailable) {
 			throw new ResumeException(unavailable.message());
 		}
+		boolean previousReadOnly = false;
+		boolean restoreReadOnly = false;
 		try {
 			if (plan instanceof ResumeConnection.Reconnect reconnect) {
 				newParameters = reconnect.parameters();
 				reconnected = newParameters.open();
 				reconnected.setAutoCommit(true);
+				reconnected.setReadOnly(restored.readOnly());
+			}
+			else {
+				previousReadOnly = current.isReadOnly();
+				if (previousReadOnly != restored.readOnly()) {
+					// pgjdbc rejects this during an open transaction. Do not fork or change Settings first.
+					current.setReadOnly(restored.readOnly());
+					restoreReadOnly = true;
+				}
 			}
 			var fork = store.fork(chosen.id(), stored.withConnection(newInfo));
 			metadata = SessionMetadata.read(fork.metadataFile());
 			directory = fork;
 		}
 		catch (SQLException | IOException e) {
+			if (restoreReadOnly) {
+				try {
+					current.setReadOnly(previousReadOnly);
+				}
+				catch (SQLException restoreFailure) {
+					e.addSuppressed(restoreFailure);
+				}
+			}
 			if (reconnected != null) {
 				try {
 					reconnected.close();
@@ -158,8 +195,7 @@ final class SessionState {
 		}
 		parameters = newParameters;
 		info = newInfo;
-		settings = settings.withExecution(stored.rowLimit(), stored.timeoutSeconds() == null ? null
-			: Duration.ofSeconds(stored.timeoutSeconds()), stored.readOnly());
+		settings = restored;
 		history = HistoryStore.open(directory.historyFile(), settings.historyEnabled());
 		listing = null;
 		store.cleanup(settings.sessionsKeep(), directory.id());

@@ -25,6 +25,80 @@ import dev.tamboui.tui.pilot.TuiTestRunner;
 class InteractiveScreenTest {
 
 	@Test
+	void screenDrawsConfiguredFormatterOptionsAndCurrentExecutionStatus() {
+		var settings = new com.datev.dbui.config.Settings(5, null, "table", "horizontal", false,
+			"∅", "↵", 5, java.time.ZoneId.of("UTC"));
+		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { }, () -> { }, settings);
+		screen.update(List.of(MessageBlock.result(new Result(List.of("null", "lines", "long"),
+			List.of(java.util.Arrays.asList(null, "a\nb", "abcdefgh"))))));
+		assertThat(line(draw(screen, new Size(100, 20)), 19)).contains("Row limit: 5");
+		screen.status(new com.datev.dbui.session.ExecutionStatus(5, true, java.time.Duration.ofSeconds(12),
+			new com.datev.dbui.session.ExecutionStatus.ResultSummary(5, java.time.Duration.ofMillis(123), true)));
+		var buffer = draw(screen, new Size(100, 20));
+		assertThat(line(buffer, 19)).contains("Row limit: 5 · running… 12 s · 5 rows · 0.123 s · truncated");
+		var all = IntStream.range(0, 15).mapToObj(y -> line(buffer, y)).collect(java.util.stream.Collectors.joining("\n"));
+		assertThat(all).contains("∅", "a↵b", "abcd…").doesNotContain("abcdefgh");
+	}
+
+	@Test
+	void ctrlCCancelsWhileLockedAndOtherKeysAndPasteAreIgnored() throws Exception {
+		var inputs = new CopyOnWriteArrayList<String>();
+		var cancellations = new java.util.concurrent.atomic.AtomicInteger();
+		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add, cancellations::incrementAndGet,
+			com.datev.dbui.config.Settings.defaults());
+		screen.busy(true);
+		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(80, 20))) {
+			terminal.pilot().press("x");
+			terminal.runner().dispatch(new PasteEvent("must not run"));
+			terminal.pilot().press(KeyCode.ENTER);
+			terminal.pilot().press('d', KeyModifiers.CTRL);
+			terminal.pilot().press('j', KeyModifiers.CTRL);
+			terminal.pilot().press('c', KeyModifiers.CTRL);
+			terminal.pilot().pause();
+			assertThat(cancellations.get()).isEqualTo(1);
+			screen.busy(false);
+			terminal.pilot().press(KeyCode.ENTER);
+			terminal.pilot().pause();
+			assertThat(inputs).isEmpty();
+			terminal.pilot().press('c', KeyModifiers.CTRL);
+			terminal.pilot().pause();
+			assertThat(cancellations.get()).isEqualTo(1);
+			terminal.pilot().quit();
+		}
+	}
+
+	@Test
+	void resultControlStringsNeverReachRenderedCellsOrTerminalOutput() throws Exception {
+		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { });
+		var controls = List.of("\u001b[2J", "\u001b]0;title\u0007", "\u001b[31m", "\u001b[201~", "\u001b]52;c;aGVsbG8=\u0007");
+		screen.update(List.of(MessageBlock.result(new Result(List.of("control"),
+			controls.stream().map(value -> List.<Object>of(value)).toList()))));
+		var buffer = draw(screen, new Size(100, 24));
+		for (int y = 0; y < 24; y++) {
+			assertThat(line(buffer, y)).doesNotContain("\u001b", "\u0007");
+		}
+		// Disable the legitimate Kitty negotiation ESC, so raw output here can only be application data.
+		var terminalCells = new StringBuilder();
+		var backend = new dev.tamboui.terminal.TestBackend(100, 24) {
+			@Override
+			public void draw(dev.tamboui.buffer.DiffResult diff) throws java.io.IOException {
+				for (int i = 0; i < diff.size(); i++) {
+					terminalCells.append(diff.getCell(i).symbol());
+				}
+				super.draw(diff);
+			}
+		};
+		var config = dev.tamboui.tui.TuiConfig.builder().backend(backend)
+			.keyboardProtocol(dev.tamboui.terminal.KeyboardProtocol.LEGACY).build();
+		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(100, 24), config)) {
+			terminal.pilot().pause();
+			assertThat(terminalCells.toString()).contains("control", "title").doesNotContain("\u001b", "\u0007");
+			assertThat(terminal.backend().rawOutput()).doesNotContain("\u001b", "\u0007");
+			terminal.pilot().quit();
+		}
+	}
+
+	@Test
 	void editorIgnoresInputWhileAStatementRuns() {
 		var inputs = new CopyOnWriteArrayList<String>();
 		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add);
@@ -223,6 +297,42 @@ class InteractiveScreenTest {
 		assertThat(line(draw(screen, new Size(60, 20)), 17)).doesNotContain("reverse-search");
 		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
 		assertThat(inputs).containsExactly("insert into t values (1)");
+	}
+
+	@Test
+	void ctrlCCancelsTheStatementOrSearchOrClearsIdleInputWithoutColliding() {
+		var inputs = new CopyOnWriteArrayList<String>();
+		var cancellations = new java.util.concurrent.atomic.AtomicInteger();
+		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add, cancellations::incrementAndGet,
+			com.datev.dbui.config.Settings.defaults());
+		screen.history(List.of("select 1"));
+		type(screen, "draft");
+		screen.handle(KeyEvent.ofChar('r', KeyModifiers.CTRL));
+		type(screen, "sel");
+		screen.handle(KeyEvent.ofChar('c', KeyModifiers.CTRL));
+		var buffer = draw(screen, new Size(60, 20));
+		assertThat(line(buffer, 17)).doesNotContain("reverse-search");
+		assertThat(line(buffer, 16)).startsWith("draft");
+		assertThat(cancellations.get()).isZero();
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(inputs).containsExactly("draft");
+
+		screen.busy(true);
+		screen.handle(KeyEvent.ofChar('r', KeyModifiers.CTRL));
+		screen.handle(KeyEvent.ofKey(KeyCode.UP));
+		screen.handle(new PasteEvent("ignored"));
+		screen.handle(KeyEvent.ofChar('c', KeyModifiers.CTRL));
+		assertThat(cancellations.get()).isEqualTo(1);
+		assertThat(line(draw(screen, new Size(60, 20)), 17)).doesNotContain("reverse-search");
+		screen.busy(false);
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(inputs).containsExactly("draft");
+
+		type(screen, "discard");
+		screen.handle(KeyEvent.ofChar('c', KeyModifiers.CTRL));
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(inputs).containsExactly("draft");
+		assertThat(cancellations.get()).isEqualTo(1);
 	}
 
 	@Test

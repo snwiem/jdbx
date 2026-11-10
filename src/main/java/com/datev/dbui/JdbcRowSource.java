@@ -11,7 +11,7 @@ import java.util.NoSuchElementException;
 /**
  * A {@link RowSource} over a JDBC {@link ResultSet}, read one row at a time. Plain {@code timestamp}, {@code date} and
  * {@code time} are read as local values so that no time zone shifts them. {@code timestamptz} is read as an offset
- * value. {@code json} and {@code jsonb} become {@link JsonValue}. JDBC types stay in this class.
+ * value. {@code json} and {@code jsonb} become {@link JsonValue}. {@link JdbcResultReader} shares the value conversion.
  */
 final class JdbcRowSource implements RowSource {
 
@@ -30,9 +30,7 @@ final class JdbcRowSource implements RowSource {
 
 	private final List<String> columns = new ArrayList<>();
 
-	private final boolean[] jsonColumns;
-
-	private final Class<?>[] temporal;
+	private final String[] types;
 
 	private boolean truncated;
 
@@ -42,19 +40,10 @@ final class JdbcRowSource implements RowSource {
 		this.maxRows = maxRows;
 		ResultSetMetaData metaData = resultSet.getMetaData();
 		count = metaData.getColumnCount();
-		jsonColumns = new boolean[count + 1];
-		temporal = new Class<?>[count + 1];
+		types = new String[count + 1];
 		for (int i = 1; i <= count; i++) {
 			columns.add(metaData.getColumnLabel(i));
-			String type = metaData.getColumnTypeName(i);
-			jsonColumns[i] = "json".equals(type) || "jsonb".equals(type);
-			temporal[i] = switch (type) {
-				case "timestamp" -> java.time.LocalDateTime.class;
-				case "timestamptz" -> java.time.OffsetDateTime.class;
-				case "date" -> java.time.LocalDate.class;
-				case "time" -> java.time.LocalTime.class;
-				default -> null;
-			};
+			types[i] = metaData.getColumnTypeName(i);
 		}
 	}
 
@@ -106,8 +95,7 @@ final class JdbcRowSource implements RowSource {
 				try {
 					List<Object> row = new ArrayList<>(count);
 					for (int i = 1; i <= count; i++) {
-						Object value = temporal[i] == null ? resultSet.getObject(i) : resultSet.getObject(i, temporal[i]);
-						row.add(value != null && jsonColumns[i] ? new JsonValue(value.toString()) : value);
+						row.add(JdbcResultReader.readValue(resultSet, i, types[i]));
 					}
 					return row;
 				}

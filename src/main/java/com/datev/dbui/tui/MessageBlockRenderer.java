@@ -3,6 +3,7 @@ package com.datev.dbui.tui;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.datev.dbui.FormatOptions;
 import com.datev.dbui.TableFormatter;
 import com.datev.dbui.session.MessageBlock;
 
@@ -17,6 +18,7 @@ import dev.tamboui.text.CharWidth;
 public final class MessageBlockRenderer {
 
 	private final boolean color;
+	private final TableFormatter formatter;
 
 	public MessageBlockRenderer() {
 		this(colorEnabled(System.getenv()));
@@ -24,7 +26,12 @@ public final class MessageBlockRenderer {
 
 	/** With {@code color == false} no color codes are written; bands differ by text label and by bold, dim or reverse style. */
 	public MessageBlockRenderer(boolean color) {
+		this(color, FormatOptions.defaults());
+	}
+
+	public MessageBlockRenderer(boolean color, FormatOptions options) {
 		this.color = color;
+		this.formatter = new TableFormatter(options);
 	}
 
 	/** NO_COLOR (https://no-color.org): colors are off when the variable is set and not empty. */
@@ -57,7 +64,7 @@ public final class MessageBlockRenderer {
 			rows.add(new Row(block.kind(), ""));
 			String text = label(block.kind()) + block.text();
 			if (block.kind() == MessageBlock.Kind.RESULT) {
-				String table = new TableFormatter().format(block.result());
+				String table = formatter.format(block.result());
 				// Remove only the formatter's line terminator, not an empty row or trailing cell whitespace.
 				text = table.endsWith("\n") ? table.substring(0, table.length() - 1) : table;
 			}

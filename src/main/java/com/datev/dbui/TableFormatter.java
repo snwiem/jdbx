@@ -36,6 +36,16 @@ public class TableFormatter implements ResultFormatter {
 	 */
 	@Override
 	public void write(RowSource source, Writer out) throws IOException {
+		write(source, out, SAMPLE_ROWS);
+	}
+
+	/** In-memory Results (including the Transcript) use all their rows for aligned column widths. */
+	@Override
+	public void write(Result result, Writer out) throws IOException {
+		write(RowSource.of(result), out, result.rows().size());
+	}
+
+	private void write(RowSource source, Writer out, int sampleRows) throws IOException {
 		if (orientation == Orientation.VERTICAL) {
 			writeVertical(source, out);
 			return;
@@ -44,7 +54,7 @@ public class TableFormatter implements ResultFormatter {
 		int count = columns.size();
 		Iterator<List<Object>> rows = source.rows();
 		List<List<String>> sample = new ArrayList<>();
-		while (sample.size() < SAMPLE_ROWS && rows.hasNext()) {
+		while (sample.size() < sampleRows && rows.hasNext()) {
 			sample.add(rows.next().stream().map(values::forTable).toList());
 		}
 		int[] widths = new int[count];

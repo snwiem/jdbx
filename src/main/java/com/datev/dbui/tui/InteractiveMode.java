@@ -5,10 +5,12 @@ import java.sql.Connection;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.datev.dbui.config.Settings;
 import com.datev.dbui.session.Session;
 import com.datev.dbui.session.SessionContext;
 import com.datev.dbui.session.SessionDirectory;
 
+import dev.tamboui.terminal.Frame;
 import dev.tamboui.terminal.KeyboardProtocol;
 import dev.tamboui.tui.TuiConfig;
 import dev.tamboui.tui.TuiRunner;
@@ -22,11 +24,11 @@ public final class InteractiveMode {
 	private final InteractiveScreen screen;
 	private final AtomicReference<Throwable> failure;
 
-	private InteractiveMode(Session session, TuiRunner runner, String connection, AtomicReference<Throwable> failure) {
+	private InteractiveMode(Session session, TuiRunner runner, String connection, Settings settings, AtomicReference<Throwable> failure) {
 		this.session = session;
 		this.runner = runner;
 		this.failure = failure;
-		this.screen = new InteractiveScreen(connection, this::submit);
+		this.screen = new InteractiveScreen(connection, this::submit, session::cancel, settings);
 	}
 
 	public static int run(Connection connection, String label, SessionContext sessionContext) throws Exception {
@@ -51,23 +53,27 @@ public final class InteractiveMode {
 					return ErrorAction.QUIT_IMMEDIATELY;
 				}).build();
 			try (var runner = TuiRunner.create(config)) {
-				var mode = new InteractiveMode(session, runner, label, failure);
+				var mode = new InteractiveMode(session, runner, label, session.settings(), failure);
 				mode.screen.update(session.messageBlocks());
-				try {
-					runner.run((event, ignored) -> mode.screen.handle(event), mode.screen::render);
-				}
-				finally {
-					var last = logging.getAndSet(null);
-					if (last != null) {
-						last.close();
-					}
-				}
+				mode.screen.history(session.history());
+				runner.run((event, ignored) -> mode.screen.handle(event), mode::render);
+			}
+		}
+		finally {
+			var last = logging.getAndSet(null);
+			if (last != null) {
+				last.close();
 			}
 		}
 		if (failure.get() != null) {
 			throw new IOException("Interactive mode failed: " + failure.get().getMessage(), failure.get());
 		}
 		return 0;
+	}
+
+	private void render(Frame frame) {
+		screen.status(session.status());
+		screen.render(frame);
 	}
 
 	private void submit(String input) {
@@ -92,7 +98,7 @@ public final class InteractiveMode {
 				}
 				else {
 					// TamboUI 0.7.0 does not redraw after a runLater callback.
-					runner.draw(screen::render);
+					runner.draw(this::render);
 				}
 			}
 		}));

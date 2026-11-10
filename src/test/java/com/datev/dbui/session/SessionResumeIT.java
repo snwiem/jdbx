@@ -114,6 +114,17 @@ class SessionResumeIT {
 	}
 
 	@Test
+	void successfulResumeDoesNotKeepThePreviousSessionsLastResultSummary() throws Exception {
+		String earlier = earlierSession();
+		try (Session current = session()) {
+			submit(current, "select generate_series(1,1500)");
+			assertThat(current.status().lastResult().truncated()).isTrue();
+			submit(current, "/resume " + earlier);
+			assertThat(current.status().lastResult()).isNull();
+		}
+	}
+
+	@Test
 	void resumeAlsoAcceptsTheSessionId() throws Exception {
 		String earlier = earlierSession();
 		try (Session session = session()) {
@@ -139,6 +150,38 @@ class SessionResumeIT {
 	}
 
 	@Test
+	void executionControlChangesArePersistedAndResumeRestoresTheirBehaviorAndHistory() throws Exception {
+		String earlier;
+		String sql = "select * from generate_series(1,10)";
+		try (Session first = session()) {
+			earlier = first.directory().id();
+			submit(first, "/limit 3");
+			assertThat(SessionMetadata.read(first.directory().metadataFile()).rowLimit()).isEqualTo(3);
+			var blocks = submit(first, sql).messageBlocks();
+			assertThat(blocks.get(blocks.size() - 2).result().rows()).containsExactly(List.of(1), List.of(2), List.of(3));
+			assertThat(blocks.getLast().text()).isEqualTo("truncated at 3 rows");
+			submit(first, "/timeout 7");
+			assertThat(SessionMetadata.read(first.directory().metadataFile()).timeoutSeconds()).isEqualTo(7L);
+			assertThat(submit(first, "/quit").ended()).isTrue();
+		}
+		String before = tree(stateDir.resolve("sessions").resolve(earlier));
+		try (Session resumed = session()) {
+			submit(resumed, "/resume 1");
+			assertThat(resumed.settings().rowLimit()).isEqualTo(3);
+			assertThat(resumed.settings().timeout()).isEqualTo(java.time.Duration.ofSeconds(7));
+			assertThat(resumed.status().rowLimit()).isEqualTo(3);
+			assertThat(resumed.history()).containsExactly("/limit 3", sql, "/timeout 7");
+			var blocks = submit(resumed, sql).messageBlocks();
+			assertThat(blocks.get(blocks.size() - 2).result().rows()).hasSize(3);
+			assertThat(blocks.getLast().text()).isEqualTo("truncated at 3 rows");
+			submit(resumed, "/timeout off");
+			assertThat(resumed.settings().timeout()).isNull();
+			assertThat(SessionMetadata.read(resumed.directory().metadataFile()).timeoutSeconds()).isNull();
+		}
+		assertThat(tree(stateDir.resolve("sessions").resolve(earlier))).isEqualTo(before);
+	}
+
+	@Test
 	void resumeRestoresRowLimitTimeoutAndReadOnly() throws Exception {
 		String earlier;
 		try (Session first = session(Settings.defaults().withExecution(5, java.time.Duration.ofSeconds(9), true), null, parameters(), name -> null)) {
@@ -149,6 +192,54 @@ class SessionResumeIT {
 			assertThat(session.settings().rowLimit()).isEqualTo(5);
 			assertThat(session.settings().timeout()).isEqualTo(java.time.Duration.ofSeconds(9));
 			assertThat(session.settings().readOnly()).isTrue();
+		}
+	}
+
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.CsvSource({ "0,7", "3,-1", "3,2147483648" })
+	void invalidStoredExecutionSettingsLeaveTheCurrentSessionUnchanged(int rowLimit, long timeout) throws Exception {
+		String earlier;
+		try (Session first = session()) {
+			earlier = first.directory().id();
+			var stored = SessionMetadata.read(first.directory().metadataFile());
+			new SessionMetadata(stored.started(), stored.connection(), rowLimit, timeout, stored.readOnly(), null, null)
+				.write(first.directory().metadataFile());
+		}
+		try (Session current = session()) {
+			String directory = current.directory().id();
+			var band = submit(current, "/resume " + earlier).messageBlocks().getLast();
+			assertThat(band.kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(band.text()).contains("Invalid execution settings");
+			assertThat(current.directory().id()).isEqualTo(directory);
+			assertThat(current.settings().rowLimit()).isEqualTo(1000);
+			assertThat(current.settings().timeout()).isNull();
+			assertThat(submit(current, "select 42").messageBlocks().getLast().result().rows()).containsExactly(List.of(42));
+		}
+	}
+
+	@Test
+	void readOnlyResumeDuringATransactionFailsWithoutChangingSettingsOrForking() throws Exception {
+		String earlier;
+		try (Session first = session(Settings.defaults().withExecution(3, null, true), null, parameters(), name -> null)) {
+			earlier = first.directory().id();
+		}
+		Connection connection = DriverManager.getConnection(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+		var context = new SessionContext(stateDir, Settings.defaults(), parameters(), null, name -> null);
+		try (Session current = new Session(connection, SessionDirectory.create(stateDir), context)) {
+			String directory = current.directory().id();
+			submit(current, "begin");
+			var band = submit(current, "/resume " + earlier).messageBlocks().getLast();
+			assertThat(band.kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(band.text()).contains("read-only");
+			assertThat(current.directory().id()).isEqualTo(directory);
+			assertThat(current.settings().readOnly()).isFalse().isEqualTo(connection.isReadOnly());
+			assertThat(SessionMetadata.read(current.directory().metadataFile()).readOnly()).isFalse();
+			try (var directories = Files.list(stateDir.resolve("sessions"))) {
+				assertThat(directories.count()).isEqualTo(2);
+			}
+			submit(current, "rollback");
+			assertThat(submit(current, "/resume " + earlier).messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.INFO);
+			assertThat(current.settings().readOnly()).isTrue().isEqualTo(connection.isReadOnly());
 		}
 	}
 
@@ -184,6 +275,55 @@ class SessionResumeIT {
 			assertThat(result.messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.INFO);
 			assertThat(submit(session, "select 1 as one").messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.RESULT);
 			assertThat(session.connectionLabel()).startsWith(POSTGRES.getUsername() + "@");
+		}
+	}
+
+	@Test
+	void reconnectOnResumeRebindsSchemaCacheAndAppliesExecutionSettingsToTheNewConnection() throws Exception {
+		String earlier;
+		var restored = Settings.defaults().withExecution(2, java.time.Duration.ofSeconds(1), true);
+		try (Session first = session(restored, "pg", parameters(), name -> null)) {
+			earlier = first.directory().id();
+		}
+		var elsewhere = new ConnectionParameters("jdbc:postgresql://elsewhere.example:5432/other",
+			Map.of("user", "carol", "password", "x"), false);
+		// With readOnlyMode=always the server exposes the JDBC read-only flag even with autocommit on.
+		var profile = new Profile("pg", POSTGRES.getJdbcUrl(), null, null, null, POSTGRES.getUsername(), POSTGRES.getPassword(),
+			null, null, Map.of("readOnlyMode", "always"));
+		try (Session current = session(Settings.defaults(), null, elsewhere, name -> profile)) {
+			Object oldPid = submit(current, "select pg_backend_pid()").messageBlocks().getLast().result().rows().getFirst().getFirst();
+			submit(current, "/tables public");
+			submit(current, "create table resume_cache_rebound (id int)");
+			assertThat(submit(current, "/tables public").messageBlocks().getLast().result().rows())
+				.extracting(row -> row.getFirst()).doesNotContain("resume_cache_rebound");
+			assertThat(submit(current, "/resume " + earlier).messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.INFO);
+			assertThat(submit(current, "select pg_backend_pid()").messageBlocks().getLast().result().rows().getFirst().getFirst())
+				.isNotEqualTo(oldPid);
+			assertThat(submit(current, "/tables public").messageBlocks().getLast().result().rows())
+				.extracting(row -> row.getFirst()).contains("resume_cache_rebound");
+			assertThat(submit(current, "show default_transaction_read_only").messageBlocks().getLast().result().rows())
+				.containsExactly(List.of("on"));
+			var limited = submit(current, "select generate_series(1,5)").messageBlocks();
+			assertThat(limited.get(limited.size() - 2).result().rows()).hasSize(2);
+			assertThat(limited.getLast().text()).isEqualTo("truncated at 2 rows");
+			var timedOut = current.submit("select pg_sleep(10)").get(4, TimeUnit.SECONDS).messageBlocks().getLast();
+			assertThat(timedOut.kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(timedOut.text()).contains("57014");
+		}
+	}
+
+	@Test
+	void schemaAndExecutionSlashCommandsShareHistoryButQuitAndResumeAreExcluded() throws Exception {
+		try (Session current = session()) {
+			submit(current, "create table resume_command_history (id int)");
+			for (String command : List.of("/limit 3", "/timeout 7", "/schema", "/tables", "/describe resume_command_history", "/refresh")) {
+				assertThat(submit(current, command).messageBlocks().getLast().kind()).isNotEqualTo(MessageBlock.Kind.ERROR);
+			}
+			assertThat(submit(current, "/unknown").messageBlocks().getLast().text()).isEqualTo("Unknown Slash command: /unknown");
+			assertThat(submit(current, "/resume").messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(submit(current, "/quit").ended()).isTrue();
+			assertThat(current.history()).containsExactly("create table resume_command_history (id int)", "/limit 3", "/timeout 7",
+				"/schema", "/tables", "/describe resume_command_history", "/refresh", "/unknown");
 		}
 	}
 

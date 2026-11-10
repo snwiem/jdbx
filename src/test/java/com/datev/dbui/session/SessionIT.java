@@ -36,6 +36,271 @@ class SessionIT {
 	}
 
 	@Test
+	void invalidConfiguredTimeoutIsRejectedBeforeExecutingStatements() throws Exception {
+		var settings = new com.datev.dbui.config.Settings(1000, java.time.Duration.ofSeconds(-1), "table", "horizontal", false);
+		try (Connection connection = connection()) {
+			assertThatThrownBy(() -> new Session(connection, SessionDirectory.create(stateDir), settings))
+				.isInstanceOf(IllegalArgumentException.class).hasMessage("Timeout must be 0 or more seconds");
+		}
+	}
+
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(ints = { 0, -1, -2 })
+	void invalidConfiguredRowLimitCannotDisableTheJdbcRowLimit(int rowLimit) throws Exception {
+		var settings = new com.datev.dbui.config.Settings(rowLimit, null, "table", "horizontal", false);
+		try (Connection connection = connection()) {
+			assertThatThrownBy(() -> new Session(connection, SessionDirectory.create(stateDir), settings))
+				.isInstanceOf(IllegalArgumentException.class).hasMessage("Row limit must be 1 or more");
+		}
+	}
+
+	@Test
+	void closingTheSessionCancelsAnActiveStatementInsteadOfWaitingForIt() throws Exception {
+		Session session = session();
+		try {
+			var pending = session.submit("select pg_sleep(10)");
+			Thread.sleep(200);
+			java.util.concurrent.CompletableFuture.runAsync(() -> {
+				try {
+					session.close();
+				}
+				catch (java.sql.SQLException e) {
+					throw new java.util.concurrent.CompletionException(e);
+				}
+			}).get(4, TimeUnit.SECONDS);
+			assertThat(pending).isDone();
+		}
+		finally {
+			session.close();
+		}
+	}
+
+	@Test
+	void cancelJustBeforeJdbcExecutionIsNotLost() throws Exception {
+		var beforeExecute = new java.util.concurrent.CountDownLatch(1);
+		var allowExecute = new java.util.concurrent.CountDownLatch(1);
+		var cancelSent = new java.util.concurrent.CountDownLatch(1);
+		Connection real = connection();
+		// Pause at the JDBC boundary to reproduce pgjdbc's idle-to-executing cancellation window.
+		Connection delayed = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] { Connection.class },
+			(proxy, method, args) -> {
+				try {
+					Object value = method.invoke(real, args);
+					if (method.getName().equals("createStatement")) {
+						return Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] { java.sql.Statement.class },
+							(statementProxy, statementMethod, statementArgs) -> {
+								if (statementMethod.getName().equals("execute")) {
+									beforeExecute.countDown();
+									allowExecute.await(5, TimeUnit.SECONDS);
+								}
+								try {
+									Object result = statementMethod.invoke(value, statementArgs);
+									if (statementMethod.getName().equals("cancel")) {
+										cancelSent.countDown();
+									}
+									return result;
+								}
+								catch (InvocationTargetException e) {
+									throw e.getCause();
+								}
+							});
+					}
+					return value;
+				}
+				catch (InvocationTargetException e) {
+					throw e.getCause();
+				}
+			});
+		try (Session session = new Session(delayed, SessionDirectory.create(stateDir))) {
+			var pending = session.submit("select pg_sleep(10)");
+			assertThat(beforeExecute.await(2, TimeUnit.SECONDS)).isTrue();
+			var cancellation = session.cancel();
+			try {
+				assertThat(cancelSent.await(2, TimeUnit.SECONDS)).isTrue();
+			}
+			finally {
+				allowExecute.countDown();
+			}
+			assertThat(pending.get(4, TimeUnit.SECONDS).messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			cancellation.get(2, TimeUnit.SECONDS);
+			assertThat(session.submit("select 42").get(5, TimeUnit.SECONDS).messageBlocks().getLast().result().rows().getFirst())
+				.containsExactly(42);
+		}
+	}
+
+	@Test
+	void firstErrorStopsTheInputAndDoesNotUndoEarlierStatements() throws Exception {
+		try (Session session = session()) {
+			var blocks = session.submit("create temporary table stop_values (v int); insert into stop_values values (1); "
+				+ "select 1/0; insert into stop_values values (99); select 99 as must_not_run")
+				.get(5, TimeUnit.SECONDS).messageBlocks();
+			assertThat(blocks).extracting(MessageBlock::kind).containsExactly(MessageBlock.Kind.INPUT,
+				MessageBlock.Kind.INFO, MessageBlock.Kind.INFO, MessageBlock.Kind.ERROR);
+			assertThat(blocks.getLast().text()).contains("division by zero");
+			assertThat(session.submit("select v from stop_values").get(5, TimeUnit.SECONDS).messageBlocks().getLast()
+				.result().rows()).containsExactly(java.util.List.of(1));
+		}
+	}
+
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(strings = { "/limit", "/limit 0", "/limit -1", "/limit nope",
+		"/limit 1.5", "/limit 2147483648", "/limit 1 extra", "/timeout", "/timeout 0", "/timeout -1",
+		"/timeout nope", "/timeout 1.5", "/timeout 2147483648", "/timeout off extra" })
+	void invalidExecutionControlShowsAnErrorAndLeavesThePreviousSettingsUnchanged(String input) throws Exception {
+		var settings = new com.datev.dbui.config.Settings(5, java.time.Duration.ofSeconds(1), "table", "horizontal", false);
+		try (Session session = new Session(connection(), SessionDirectory.create(stateDir), settings)) {
+			var block = session.submit(input).get(5, TimeUnit.SECONDS).messageBlocks().getLast();
+			assertThat(block.kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(block.text()).startsWith("Usage: " + input.split(" ")[0]);
+			assertThat(session.status().rowLimit()).isEqualTo(5);
+			assertThat(session.submit("select pg_sleep(10)").get(4, TimeUnit.SECONDS).messageBlocks().getLast().kind())
+				.isEqualTo(MessageBlock.Kind.ERROR);
+		}
+	}
+
+	@Test
+	void immediateCancelAndIdleCancelLeaveTheSessionUsable() throws Exception {
+		try (Session session = session()) {
+			session.cancel().get(1, TimeUnit.SECONDS);
+			for (int attempt = 0; attempt < 10; attempt++) {
+				var pending = session.submit("select pg_sleep(10)");
+				session.cancel().get(2, TimeUnit.SECONDS);
+				var update = pending.get(3, TimeUnit.SECONDS);
+				assertThat(update.messageBlocks().getLast().kind()).isIn(MessageBlock.Kind.INFO, MessageBlock.Kind.ERROR);
+			}
+			assertThat(session.submit("select 42").get(5, TimeUnit.SECONDS).messageBlocks().getLast().result().rows().getFirst())
+				.containsExactly(42);
+		}
+	}
+
+	@Test
+	void statusTracksTheRunningTimerAndLastResultRowsDurationAndTruncation() throws Exception {
+		try (Session session = session()) {
+			session.submit("/limit 5").get(5, TimeUnit.SECONDS);
+			assertThat(session.status().rowLimit()).isEqualTo(5);
+			assertThat(session.status().lastResult()).isNull();
+			var pending = session.submit("select pg_sleep(0.2), generate_series(1,6)");
+			Thread.sleep(100);
+			assertThat(session.status().running()).isTrue();
+			assertThat(session.status().elapsed()).isGreaterThan(java.time.Duration.ZERO);
+			pending.get(5, TimeUnit.SECONDS);
+			var status = session.status();
+			assertThat(status.running()).isFalse();
+			assertThat(status.lastResult().rows()).isEqualTo(5);
+			assertThat(status.lastResult().duration()).isGreaterThanOrEqualTo(java.time.Duration.ofMillis(200));
+			assertThat(status.lastResult().truncated()).isTrue();
+			session.submit("select 1/0").get(5, TimeUnit.SECONDS);
+			assertThat(session.status().lastResult()).isEqualTo(status.lastResult());
+		}
+	}
+
+	@Test
+	void cancelStopsALongStatementAndRemainingStatementsWithoutEndingTheSession() throws Exception {
+		try (Session session = session()) {
+			var pending = session.submit("select pg_sleep(10); select 99 as must_not_run");
+			Thread.sleep(200);
+			session.cancel();
+			var update = pending.get(4, TimeUnit.SECONDS);
+			assertThat(update.ended()).isFalse();
+			assertThat(update.messageBlocks()).extracting(MessageBlock::kind)
+				.containsExactly(MessageBlock.Kind.INPUT, MessageBlock.Kind.ERROR);
+			assertThat(update.messageBlocks().getLast().text()).contains("canceling statement", "57014");
+			assertThat(session.submit("select 42").get(5, TimeUnit.SECONDS).messageBlocks().getLast().result().rows().getFirst())
+				.containsExactly(42);
+		}
+	}
+
+	@Test
+	void timeoutSlashCommandCanEnableAndDisableTheSessionTimeout() throws Exception {
+		try (Session session = session()) {
+			var enabled = session.submit("/timeout 1").get(5, TimeUnit.SECONDS).messageBlocks().getLast();
+			assertThat(enabled.kind()).isEqualTo(MessageBlock.Kind.INFO);
+			assertThat(enabled.text()).isEqualTo("Timeout: 1 s");
+			assertThat(session.submit("select pg_sleep(10)").get(4, TimeUnit.SECONDS).messageBlocks().getLast().kind())
+				.isEqualTo(MessageBlock.Kind.ERROR);
+			var disabled = session.submit("/timeout off").get(5, TimeUnit.SECONDS).messageBlocks().getLast();
+			assertThat(disabled.kind()).isEqualTo(MessageBlock.Kind.INFO);
+			assertThat(disabled.text()).isEqualTo("Timeout: off");
+			assertThat(session.submit("select pg_sleep(1.2), 7 as ok").get(5, TimeUnit.SECONDS).messageBlocks().getLast()
+				.result().rows().getFirst().get(1)).isEqualTo(7);
+		}
+	}
+
+	@Test
+	void configuredTimeoutStopsAStatementWithAnErrorAndLeavesSessionUsable() throws Exception {
+		var settings = new com.datev.dbui.config.Settings(1000, java.time.Duration.ofSeconds(1), "table", "horizontal", false);
+		try (Session session = new Session(connection(), SessionDirectory.create(stateDir), settings)) {
+			var block = session.submit("select pg_sleep(10)").get(4, TimeUnit.SECONDS).messageBlocks().getLast();
+			assertThat(block.kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(block.text()).contains("canceling statement", "57014").doesNotContain("Exception");
+			assertThat(session.submit("select 42").get(5, TimeUnit.SECONDS).messageBlocks().getLast().result().rows().getFirst())
+				.containsExactly(42);
+		}
+	}
+
+	@Test
+	void statementsOfOneInputRunInOrderWithSeparateResults() throws Exception {
+		try (Session session = session()) {
+			var blocks = session.submit("create temporary table script_values (v text); "
+				+ "do $$ begin insert into script_values values ('a;b'); end $$; "
+				+ "select v from script_values; /* ; */ select 'last;value' as v")
+				.get(5, TimeUnit.SECONDS).messageBlocks();
+			assertThat(blocks).extracting(MessageBlock::kind).containsExactly(MessageBlock.Kind.INPUT,
+				MessageBlock.Kind.INFO, MessageBlock.Kind.INFO, MessageBlock.Kind.RESULT, MessageBlock.Kind.RESULT);
+			assertThat(blocks.get(3).result().rows().getFirst()).containsExactly("a;b");
+			assertThat(blocks.get(4).result().rows().getFirst()).containsExactly("last;value");
+		}
+	}
+
+	@Test
+	void limitSlashCommandOverridesTheConfiguredRowLimitForThisSession() throws Exception {
+		var settings = new com.datev.dbui.config.Settings(3, null, "table", "horizontal", false);
+		try (Session session = new Session(connection(), SessionDirectory.create(stateDir), settings)) {
+			var configured = session.submit("select generate_series(1,4)").get(5, TimeUnit.SECONDS).messageBlocks();
+			assertThat(configured.get(1).result().rows()).hasSize(3);
+			assertThat(configured.getLast().text()).isEqualTo("truncated at 3 rows");
+			var changed = session.submit("/limit 5").get(5, TimeUnit.SECONDS).messageBlocks().getLast();
+			assertThat(changed.kind()).isEqualTo(MessageBlock.Kind.INFO);
+			assertThat(changed.text()).isEqualTo("Row limit: 5");
+			var exact = session.submit("select generate_series(1,5)").get(5, TimeUnit.SECONDS).messageBlocks().getLast();
+			assertThat(exact.kind()).isEqualTo(MessageBlock.Kind.RESULT);
+			assertThat(exact.result().rows()).hasSize(5);
+			var truncated = session.submit("select generate_series(1,6)").get(5, TimeUnit.SECONDS).messageBlocks();
+			assertThat(truncated.get(truncated.size() - 2).result().rows()).hasSize(5);
+			assertThat(truncated.getLast().text()).isEqualTo("truncated at 5 rows");
+		}
+	}
+
+	@Test
+	void defaultRowLimitTruncatesAt1000WithoutRewritingTheStatement() throws Exception {
+		String sql = "select n, current_query() as sql from generate_series(1,1500) n";
+		try (Session session = session()) {
+			var blocks = session.submit(sql).get(5, TimeUnit.SECONDS).messageBlocks();
+			assertThat(blocks).extracting(MessageBlock::kind)
+				.containsExactly(MessageBlock.Kind.INPUT, MessageBlock.Kind.RESULT, MessageBlock.Kind.INFO);
+			var result = blocks.get(1).result();
+			assertThat(result.rows()).hasSize(1000);
+			assertThat(result.rows().getLast()).containsExactly(1000, sql);
+			assertThat(blocks.getLast().text()).isEqualTo("truncated at 1000 rows");
+		}
+	}
+
+	@Test
+	void resultPreservesLocalTemporalValuesAndStructuredJson() throws Exception {
+		try (Session session = session()) {
+			var update = session.submit("select timestamp '2024-01-15 12:34:56' as plain, "
+				+ "timestamptz '2024-01-15 12:34:56+00' as zoned, date '2024-01-15' as day, "
+				+ "time '12:34:56' as clock, '{\"id\":7}'::json as j, '{\"id\":8}'::jsonb as jb")
+				.get(5, TimeUnit.SECONDS);
+			assertThat(update.messageBlocks().getLast().result().rows().getFirst()).containsExactly(
+				java.time.LocalDateTime.of(2024, 1, 15, 12, 34, 56),
+				java.time.OffsetDateTime.parse("2024-01-15T12:34:56Z"), java.time.LocalDate.of(2024, 1, 15),
+				java.time.LocalTime.of(12, 34, 56), new com.datev.dbui.JsonValue("{\"id\":7}"),
+				new com.datev.dbui.JsonValue("{\"id\": 8}"));
+		}
+	}
+
+	@Test
 	void sqlErrorShowsServerMessageSqlStateAndPositionAndKeepsTheSessionUsable() throws Exception {
 		try (Session session = session()) {
 			var failed = session.submit("select nme from (select 1 as name) t").get(5, TimeUnit.SECONDS);
