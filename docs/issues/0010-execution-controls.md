@@ -14,3 +14,4 @@
 - [ ] Status bar shows the Row limit and the last Result summary (rows, duration, truncated)
 - [ ] Editor input is ignored while a Statement runs, except `Ctrl-C`
 - [ ] Statement execution runs off the input thread so type-ahead can be added later
+- [ ] Interactive mode reads column values the same way as Batch mode (a shared reader): a plain `timestamp` is shown as stored and never shifted, `timestamptz` uses the configured time zone, and the formatter options from `config.yaml` (NULL marker, multi-line marker, maximum width, time zone) apply (finding of issue 0020)
