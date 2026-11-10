@@ -36,6 +36,21 @@ class SessionIT {
 	}
 
 	@Test
+	void resultPreservesLocalTemporalValuesAndStructuredJson() throws Exception {
+		try (Session session = session()) {
+			var update = session.submit("select timestamp '2024-01-15 12:34:56' as plain, "
+				+ "timestamptz '2024-01-15 12:34:56+00' as zoned, date '2024-01-15' as day, "
+				+ "time '12:34:56' as clock, '{\"id\":7}'::json as j, '{\"id\":8}'::jsonb as jb")
+				.get(5, TimeUnit.SECONDS);
+			assertThat(update.messageBlocks().getLast().result().rows().getFirst()).containsExactly(
+				java.time.LocalDateTime.of(2024, 1, 15, 12, 34, 56),
+				java.time.OffsetDateTime.parse("2024-01-15T12:34:56Z"), java.time.LocalDate.of(2024, 1, 15),
+				java.time.LocalTime.of(12, 34, 56), new com.datev.dbui.JsonValue("{\"id\":7}"),
+				new com.datev.dbui.JsonValue("{\"id\": 8}"));
+		}
+	}
+
+	@Test
 	void sqlErrorShowsServerMessageSqlStateAndPositionAndKeepsTheSessionUsable() throws Exception {
 		try (Session session = session()) {
 			var failed = session.submit("select nme from (select 1 as name) t").get(5, TimeUnit.SECONDS);

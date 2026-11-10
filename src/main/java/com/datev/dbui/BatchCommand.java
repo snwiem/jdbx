@@ -8,7 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -151,10 +150,10 @@ class BatchCommand implements Callable<Integer> {
 						if (!first) {
 							out.print('\n');
 						}
-						Result result = read(resultSet, limit);
-						out.print(effectiveFormat.formatter(options, orientation(settings)).format(result));
+						var read = JdbcResultReader.read(resultSet, limit);
+						out.print(effectiveFormat.formatter(options, orientation(settings)).format(read.result()));
 						out.flush();
-						if (truncated) {
+						if (read.truncated()) {
 							spec.commandLine().getErr().println("truncated at " + limit + " rows");
 							spec.commandLine().getErr().flush();
 						}
@@ -196,48 +195,6 @@ class BatchCommand implements Callable<Integer> {
 
 	private static String readStdin() throws IOException {
 		return new String(System.in.readAllBytes(), StandardCharsets.UTF_8);
-	}
-
-	/** Set by {@link #read}: the last Result had more rows than {@code --limit}. */
-	private boolean truncated;
-
-	/**
-	 * Reads at most {@code maxRows} rows ({@code null}: all). Plain {@code timestamp}, {@code date} and {@code time}
-	 * are read as local values so that no time zone shifts them. {@code timestamptz} is read as an offset value.
-	 */
-	private Result read(ResultSet resultSet, Integer maxRows) throws SQLException {
-		ResultSetMetaData metaData = resultSet.getMetaData();
-		int count = metaData.getColumnCount();
-		List<String> columns = new ArrayList<>();
-		boolean[] jsonColumns = new boolean[count + 1];
-		Class<?>[] temporal = new Class<?>[count + 1];
-		for (int i = 1; i <= count; i++) {
-			columns.add(metaData.getColumnLabel(i));
-			String type = metaData.getColumnTypeName(i);
-			jsonColumns[i] = "json".equals(type) || "jsonb".equals(type);
-			temporal[i] = switch (type) {
-				case "timestamp" -> java.time.LocalDateTime.class;
-				case "timestamptz" -> java.time.OffsetDateTime.class;
-				case "date" -> java.time.LocalDate.class;
-				case "time" -> java.time.LocalTime.class;
-				default -> null;
-			};
-		}
-		List<List<Object>> rows = new ArrayList<>();
-		truncated = false;
-		while (resultSet.next()) {
-			if (maxRows != null && rows.size() >= maxRows) {
-				truncated = true;
-				break;
-			}
-			List<Object> row = new ArrayList<>();
-			for (int i = 1; i <= count; i++) {
-				Object value = temporal[i] == null ? resultSet.getObject(i) : resultSet.getObject(i, temporal[i]);
-				row.add(value != null && jsonColumns[i] ? new JsonValue(value.toString()) : value);
-			}
-			rows.add(row);
-		}
-		return new Result(columns, rows);
 	}
 
 }

@@ -7,7 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -16,7 +15,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import com.datev.dbui.Result;
+import com.datev.dbui.JdbcResultReader;
 
 /** Owns one JDBC connection. Statement execution never runs on the input thread. */
 public final class Session implements AutoCloseable {
@@ -89,7 +88,7 @@ public final class Session implements AutoCloseable {
 		try (var statement = connection.createStatement()) {
 			if (statement.execute(input)) {
 				try (var rows = statement.getResultSet()) {
-					add(MessageBlock.result(read(rows)));
+					add(MessageBlock.result(JdbcResultReader.read(rows, null).result()));
 				}
 			}
 			else {
@@ -122,24 +121,6 @@ public final class Session implements AutoCloseable {
 
 	private synchronized void add(MessageBlock block) {
 		messageBlocks.add(block);
-	}
-
-	private static Result read(ResultSet rows) throws SQLException {
-		var metadata = rows.getMetaData();
-		int count = metadata.getColumnCount();
-		List<String> columns = new ArrayList<>();
-		for (int column = 1; column <= count; column++) {
-			columns.add(metadata.getColumnLabel(column));
-		}
-		List<List<Object>> values = new ArrayList<>();
-		while (rows.next()) {
-			List<Object> row = new ArrayList<>();
-			for (int column = 1; column <= count; column++) {
-				row.add(rows.getObject(column));
-			}
-			values.add(row);
-		}
-		return new Result(columns, values);
 	}
 
 	@Override
