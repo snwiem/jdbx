@@ -29,6 +29,7 @@ public final class InteractiveMode {
 		this.runner = runner;
 		this.failure = failure;
 		this.screen = new InteractiveScreen(connection, this::submit, session::cancel, settings, this::cycleOrientation);
+		this.screen.completion(session::complete);
 	}
 
 	public static int run(Connection connection, String label, SessionContext sessionContext) throws Exception {

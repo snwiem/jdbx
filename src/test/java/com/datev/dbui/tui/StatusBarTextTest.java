@@ -25,6 +25,21 @@ class StatusBarTextTest {
 	}
 
 	@Test
+	void combinedStatusKeepsSettingsSummaryAndLoadingNoteWithoutHidingMode() {
+		var status = new ExecutionStatus(2, true, Duration.ofSeconds(3),
+			new ExecutionStatus.ResultSummary(2, Duration.ofMillis(15), true), true, true);
+		var settings = com.datev.dbui.config.Settings.defaults().withOutput("csv", "vertical");
+		assertThat(StatusBarText.lines(status, settings, "alice@host:5432/db", "loading schema…", 2))
+			.containsExactly("alice@host:5432/db · Format: csv · Orientation: vertical",
+				"read-only · loading schema… · Row limit: 2 · running… 3 s · 2 rows · 0.015 s · truncated");
+		assertThat(StatusBarText.lines(status, settings, "alice@host:5432/db", "loading schema…", 1).getFirst())
+			.startsWith("read-only · loading schema… · Format: csv · Orientation: vertical · Row limit: 2")
+			.contains("running… 3 s", "2 rows", "0.015 s", "truncated", "alice@host:5432/db");
+		assertThat(StatusBarText.lines(new ExecutionStatus(5, false, Duration.ZERO, null, false, false),
+			settings, "old target", null, 1).getFirst()).startsWith("not connected · Format:");
+	}
+
+	@Test
 	void statusShowsReadOnlyReadWriteOrNotConnected() {
 		assertThat(StatusBarText.of(new ExecutionStatus(5, false, Duration.ZERO, null, true, true)))
 			.startsWith("read-only · Row limit: 5");

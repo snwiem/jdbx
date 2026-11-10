@@ -97,6 +97,10 @@ public final class SlashCommandRegistry {
 			Ctrl-C                    Cancel a running Statement, cancel search, or clear idle input; never exit
 			Ctrl-D                    Ignore; never exit (use /quit)
 			Shift-Tab / Ctrl-O        Cycle Orientation; Ctrl-O is the legacy terminal fallback
+			Ctrl-Space / Alt-/        Request Completion; Alt-/ is the legacy terminal fallback
+			Completion Up / Down      Select a candidate
+			Completion Tab / Enter    Accept a candidate without sending input
+			Completion Esc            Close Completion
 			Page Up / Page Down       Scroll the Transcript
 			Mouse wheel               Scroll the Transcript
 			Left / Right              Move the cursor; Ctrl-Left / Ctrl-Right move by word

@@ -22,8 +22,11 @@ import java.util.function.Supplier;
 import com.datev.dbui.JdbcResultReader;
 import com.datev.dbui.StatementSplitter;
 import com.datev.dbui.config.Settings;
+import com.datev.dbui.completion.Completion;
+import com.datev.dbui.completion.CompletionEngine;
 import com.datev.dbui.schema.SchemaCommands;
 import com.datev.dbui.schema.SchemaProvider;
+import com.datev.dbui.schema.SchemaProviderModel;
 
 /** Owns one JDBC connection. Statement execution never runs on the input thread. */
 public final class Session implements AutoCloseable {
@@ -45,6 +48,8 @@ public final class Session implements AutoCloseable {
 	private final ExecutionControls controls;
 	private SchemaCommands schemaCommands;
 	private final SlashCommandRegistry slashCommands;
+	private SchemaProvider schemaProvider;
+	private final CompletionEngine completionEngine;
 	private boolean ended;
 	private volatile boolean connectionLost;
 	private boolean running;
@@ -74,8 +79,11 @@ public final class Session implements AutoCloseable {
 		this.plainDirectory = directory;
 		this.plainSettings = settings;
 		this.controls = new ExecutionControls(this::settings, this::updateSettings);
-		this.schemaCommands = new SchemaCommands(new SchemaProvider(connection));
+		this.schemaProvider = new SchemaProvider(connection);
+		this.schemaCommands = new SchemaCommands(schemaProvider);
 		this.slashCommands = new SlashCommandRegistry(commands());
+		this.completionEngine = new CompletionEngine(List.of(new com.datev.dbui.completion.SlashCommandSource(slashCommands),
+			new com.datev.dbui.completion.SchemaSource(), new com.datev.dbui.completion.KeywordSource()));
 		connection.setAutoCommit(true);
 		connection.setReadOnly(settings.readOnly());
 		if (directory.disabledReason() != null) {
@@ -188,6 +196,15 @@ public final class Session implements AutoCloseable {
 		}, executor);
 	}
 
+	/**
+	 * Completion for the editor text with the cursor at {@code cursor}. It runs on the Statement thread, so it never
+	 * overlaps a running Statement or schema command, and it reads the schema cache. The first request loads the
+	 * cache (a few metadata queries) and takes longer; the future completes when the candidates are ready.
+	 */
+	public CompletableFuture<Completion> complete(String text, int cursor) {
+		return CompletableFuture.supplyAsync(() -> completionEngine.complete(text, cursor, new SchemaProviderModel(schemaProvider)), executor);
+	}
+
 	/** Requests JDBC cancellation without blocking the input thread. The Session remains open. */
 	public synchronized CompletableFuture<Void> cancel() {
 		if (!running) {
@@ -296,20 +313,7 @@ public final class Session implements AutoCloseable {
 				return new Update(messageBlocks(), false);
 			}
 			var resumed = state.resume(argument, connection);
-			synchronized (this) {
-				if (resumed.connection() != null) {
-					var old = connection;
-					connection = resumed.connection();
-					try {
-						old.close();
-					}
-					catch (SQLException ignored) {
-						// The new connection is open; the old one is gone either way.
-					}
-				}
-				lastResult = null;
-			}
-			schemaCommands = new SchemaCommands(new SchemaProvider(connection)); // the schema cache belongs to the connection
+			replaceConnection(resumed.connection() == null ? connection : resumed.connection());
 			directoryListener.accept(state.directory());
 			add(MessageBlock.info(resumed.message()));
 		}
@@ -501,21 +505,27 @@ public final class Session implements AutoCloseable {
 			}
 			return false;
 		}
-		var dead = connection;
-		synchronized (this) {
-			connection = fresh;
-		}
-		try {
-			dead.close();
-		}
-		catch (SQLException ignored) {
-			// The old connection is dead; closing it is only tidiness.
-		}
-		schemaCommands = new SchemaCommands(new SchemaProvider(connection)); // the schema cache belongs to the connection
-		connectionLost = false;
-		lastResult = null;
+		replaceConnection(fresh);
 		add(MessageBlock.info("Reconnected to " + state.connectionLabel() + " (connection was lost)."));
 		return true;
+	}
+
+	/** Every replacement invalidates both schema commands and Completion together. Runs on the Statement thread. */
+	private synchronized void replaceConnection(Connection next) {
+		var old = connection;
+		connection = next;
+		schemaProvider = new SchemaProvider(next);
+		schemaCommands = new SchemaCommands(schemaProvider);
+		connectionLost = false;
+		lastResult = null;
+		if (old != next && old != null) {
+			try {
+				old.close();
+			}
+			catch (SQLException ignored) {
+				// The replacement is ready; closing the old connection is best effort.
+			}
+		}
 	}
 
 	private void runStatement(Statement statement, String sql, int rowLimit, long statementStartedAt) throws SQLException {

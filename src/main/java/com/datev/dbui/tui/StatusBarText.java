@@ -18,6 +18,18 @@ final class StatusBarText {
 		return !status.connected() ? "not connected" : status.readOnly() ? "read-only" : "read-write";
 	}
 
+	/** A one-line terminal keeps the mode first, even during Completion loading. */
+	static java.util.List<String> lines(ExecutionStatus status, com.datev.dbui.config.Settings settings,
+			String connection, String note, int height) {
+		String mode = mode(status);
+		String detail = of(status).substring(mode.length() + " · ".length());
+		String prefix = mode + (note == null ? "" : " · " + note);
+		if (height == 1) {
+			return java.util.List.of(prefix + " · " + output(settings) + " · " + detail + " · " + connection);
+		}
+		return java.util.List.of(connection + " · " + output(settings), prefix + " · " + detail);
+	}
+
 	static String of(ExecutionStatus status) {
 		String text = mode(status) + " · Row limit: " + status.rowLimit();
 		if (status.running()) {

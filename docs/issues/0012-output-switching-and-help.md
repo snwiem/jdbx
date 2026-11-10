@@ -12,7 +12,7 @@
 - [x] The cycle key toggles Orientation and updates the Status bar
 - [x] Invalid values give an error band that lists the valid values
 - [x] `/help` lists every Slash command and every key binding
-- [x] Slash commands are picocli subcommands and expose argument Completion candidates for on-request Completion. Issue 0016 connects these candidates to the Completion popup, as agreed in the implementation scope
+- [x] Slash commands are picocli subcommands and expose argument Completion candidates for on-request Completion. Issue 0016 now connects these candidates to the Completion popup
 - [x] Interactive mode starts with the Format and Orientation from the command-line options (`--format`, `--orientation`), then from `config.yaml`, then the defaults
 - [x] New Results use the current Format, Orientation and formatter options from `config.yaml`; earlier Results keep their rendered text
 - [x] Format and Orientation persist immediately in Session metadata and Resume restores them
@@ -33,7 +33,7 @@
 3. For an argument, use `SlashCommand.argument(label, arity, candidates, converter)`; the converter is optional.
 4. Set `background` to true for work that can block; the Session runs it on its existing executor.
 5. The action receives validated argument text and returns Message blocks, or calls a Session state action.
-6. Help and usage come from picocli; `session.slashCommands().completionCandidates(name)` exposes candidates to issue 0016.
+6. Help and usage come from picocli; `session.slashCommands().completionCandidates(name)` supplies the Completion source.
 
 ## Verification
 
@@ -54,7 +54,7 @@
 
 ## Scope and remaining checks
 
-- The Completion popup and Ctrl-Space wiring remain in issue 0016. Configurable keys remain in issue 0018.
+- The Completion popup, Ctrl-Space and Alt-/ wiring are integrated from issue 0016, including registry-based Slash command names and arguments. Configurable keys remain in issue 0018.
 - The existing public `SchemaCommandLine` compatibility adapter and its unchanged tests remain. Session dispatch no longer uses that parser.
 - Automated pseudo-terminal checks do not replace human judgment of colors, flicker, resizing or how Herdr forwards keys. No unrelated Herdr pane was accessed.
 - Non-blocking review notes: one-time Result formatting holds the Session lock, so unusually large Row limits may delay status/cancel calls. Long connection labels may clip output settings in a narrow Status bar. The latter was a review expectation, not a reproduced failure.
