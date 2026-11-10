@@ -74,6 +74,54 @@ class ConfigTest {
 	}
 
 	@Test
+	void formatOptionsHavePrdDefaults() {
+		Settings settings = loader(Map.of()).settings();
+
+		assertThat(settings.nullMarker()).isEqualTo("NULL");
+		assertThat(settings.multilineMarker()).isEqualTo("⏎");
+		assertThat(settings.maxWidth()).isEqualTo(60);
+		assertThat(settings.timezone()).isNull();
+	}
+
+	@Test
+	void formatOptionsComeFromConfigFile() throws Exception {
+		write("config.yaml", """
+				null-marker: "∅"
+				multiline-marker: "<nl>"
+				max-width: 20
+				timezone: Europe/Berlin
+				""");
+
+		Settings settings = loader(Map.of()).settings();
+
+		assertThat(settings.nullMarker()).isEqualTo("∅");
+		assertThat(settings.multilineMarker()).isEqualTo("<nl>");
+		assertThat(settings.maxWidth()).isEqualTo(20);
+		assertThat(settings.timezone()).isEqualTo(java.time.ZoneId.of("Europe/Berlin"));
+	}
+
+	@Test
+	void invalidFormatOptionsGiveClearErrors() throws Exception {
+		write("config.yaml", "timezone: Mars/Base\n");
+		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
+			.hasMessageContaining("config.yaml")
+			.hasMessageContaining("timezone")
+			.hasMessageContaining("Mars/Base");
+
+		write("config.yaml", "max-width: wide\n");
+		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
+			.hasMessageContaining("max-width");
+
+		write("config.yaml", "max-width: -3\n");
+		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
+			.hasMessageContaining("max-width");
+
+		write("config.yaml", "null-marker: [a]\n");
+		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
+			.hasMessageContaining("null-marker");
+	}
+
+	@Test
 	void invalidSettingsGiveClearErrors() throws Exception {
 		write("config.yaml", "format: pdf\n");
 		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)

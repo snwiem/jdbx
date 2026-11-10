@@ -67,7 +67,15 @@ public class ConfigLoader {
 		String orientation = choice("orientation", root.get("orientation"), ORIENTATIONS, defaults.orientation());
 		boolean readOnly = root.containsKey("read-only") ? bool("config.yaml", "read-only", root.get("read-only"))
 				: defaults.readOnly();
-		return new Settings(rowLimit, timeout, format, orientation, readOnly);
+		String nullMarker = marker("null-marker", root.get("null-marker"), defaults.nullMarker());
+		String multilineMarker = marker("multiline-marker", root.get("multiline-marker"), defaults.multilineMarker());
+		int maxWidth = root.containsKey("max-width") ? integer("config.yaml", "max-width", root.get("max-width"))
+				: defaults.maxWidth();
+		if (maxWidth < 0) {
+			throw new ConfigException("config.yaml: 'max-width' must be 0 or more, but is '" + maxWidth + "'.");
+		}
+		return new Settings(rowLimit, timeout, format, orientation, readOnly, nullMarker, multilineMarker, maxWidth,
+				timezone(root.get("timezone")));
 	}
 
 	public List<String> profileNames() {
@@ -172,6 +180,29 @@ public class ConfigLoader {
 		}
 		catch (YAMLException e) {
 			throw new ConfigException("Invalid YAML in " + path + ": " + e.getMessage());
+		}
+	}
+
+	private static String marker(String key, Object value, String fallback) {
+		if (value == null) {
+			return fallback;
+		}
+		if (value instanceof Map<?, ?> || value instanceof List<?>) {
+			throw new ConfigException("config.yaml: '" + key + "' must be text, but is '" + value + "'.");
+		}
+		return String.valueOf(value);
+	}
+
+	private static java.time.ZoneId timezone(Object value) {
+		if (value == null) {
+			return null;
+		}
+		try {
+			return java.time.ZoneId.of(String.valueOf(value));
+		}
+		catch (java.time.DateTimeException e) {
+			throw new ConfigException("config.yaml: 'timezone' is '" + value
+					+ "'. Use a time zone id such as 'Europe/Berlin' or 'UTC'.");
 		}
 	}
 
