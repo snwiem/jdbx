@@ -303,6 +303,14 @@ class InteractiveScreenTest {
 	}
 
 	@Test
+	void statusBarShowsTheConfiguredNewlineKey(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+		java.nio.file.Files.writeString(dir.resolve("config.yaml"), "key-bindings:\n  newline: alt-n\n");
+		var screen = new InteractiveScreen("connection", input -> { }, () -> { },
+			new com.datev.dbui.config.ConfigLoader(dir, java.util.Map.of()).settings());
+		assertThat(line(draw(screen, new Size(140, 20)), 19)).contains("Alt-N newline").doesNotContain("Ctrl-J");
+	}
+
+	@Test
 	void configuredNewlineKeyWorksThroughThePilot(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
 		java.nio.file.Files.writeString(dir.resolve("config.yaml"), "key-bindings:\n  newline: alt-n\n");
 		var settings = new com.datev.dbui.config.ConfigLoader(dir, java.util.Map.of()).settings();
