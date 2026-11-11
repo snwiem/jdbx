@@ -122,6 +122,140 @@ class SessionStoreTest {
 		assertThat(outside.resolve("keep.txt")).exists();
 	}
 
+	private static final List<String> OLD_IDS = List.of("20260101T000000Z-00000001", "20260102T000000Z-00000002",
+		"20260103T000000Z-00000003");
+
+	private Path oldSession(String id) throws Exception {
+		Path dir = Files.createDirectories(base.resolve("sessions").resolve(id));
+		metadata("x").write(dir.resolve("session.yaml"));
+		return dir;
+	}
+
+	private SessionDirectory currentSession() throws Exception {
+		var current = SessionDirectory.create(base);
+		metadata("current").write(current.metadataFile());
+		return current;
+	}
+
+	/** A Session directory that a Session of this JVM holds: created by the same code that a running Session uses. */
+	private SessionDirectory liveSession() throws Exception {
+		var live = SessionDirectory.create(base);
+		metadata("live").write(live.metadataFile());
+		return live;
+	}
+
+	@Test
+	void cleanupKeepsALiveSessionOfThisProcessEvenWhenTheCountIsExceededAndWhenCleanupRunsAgain() throws Exception {
+		var live = liveSession();
+		for (String id : OLD_IDS) {
+			oldSession(id);
+		}
+		var current = currentSession();
+		metadata("current").write(current.metadataFile());
+		var store = new SessionStore(base);
+
+		store.cleanup(1, current.id());
+		store.cleanup(1, current.id()); // a probe that closes its own channel must not drop the lock of the live Session
+
+		assertThat(live.path()).exists();
+		assertThat(live.path().resolve("session.yaml")).exists();
+		for (String id : OLD_IDS) {
+			assertThat(base.resolve("sessions").resolve(id)).doesNotExist();
+		}
+		assertThat(current.path()).exists();
+		// The lock still holds: a third Session of another process could not take it.
+		assertThat(SessionDirectory.isLocked(live.path())).isTrue();
+	}
+
+	@Test
+	void cleanupRemovesASessionWithAStaleLockFileThatNobodyHolds() throws Exception {
+		Path stale = oldSession(OLD_IDS.get(0));
+		Files.createFile(stale.resolve("session.lock")); // left by a crashed process: the OS released its lock
+		oldSession(OLD_IDS.get(1));
+		var current = currentSession();
+
+		new SessionStore(base).cleanup(1, current.id());
+
+		assertThat(stale).doesNotExist();
+		assertThat(base.resolve("sessions").resolve(OLD_IDS.get(1))).doesNotExist();
+		assertThat(current.path()).exists();
+	}
+
+	@Test
+	void aSessionBecomesRemovableWhenItsDirectoryIsReleased() throws Exception {
+		var ended = liveSession();
+		var current = currentSession();
+		var store = new SessionStore(base);
+
+		store.cleanup(1, current.id());
+		assertThat(ended.path()).exists();
+
+		ended.release();
+		ended.release(); // idempotent
+		store.cleanup(1, current.id());
+		assertThat(ended.path()).doesNotExist();
+	}
+
+	@Test
+	void liveSessionsDoNotCountAgainstTheRetentionCountOfInactiveSessions() throws Exception {
+		var live = liveSession();
+		for (String id : OLD_IDS) {
+			oldSession(id);
+		}
+		var current = currentSession();
+
+		new SessionStore(base).cleanup(3, current.id()); // current + the two newest inactive
+
+		assertThat(live.path()).exists();
+		assertThat(base.resolve("sessions").resolve(OLD_IDS.get(0))).doesNotExist();
+		assertThat(base.resolve("sessions").resolve(OLD_IDS.get(1))).exists();
+		assertThat(base.resolve("sessions").resolve(OLD_IDS.get(2))).exists();
+	}
+
+	@Test
+	void aSessionHeldByAnotherProcessIsKeptAndRemovedAfterThatProcessEnds() throws Exception {
+		Path held = oldSession(OLD_IDS.get(0));
+		Path holder = base.resolve("LockHolder.java");
+		Files.writeString(holder, """
+			import java.nio.channels.FileChannel;
+			import java.nio.file.*;
+			public class LockHolder {
+				public static void main(String[] args) throws Exception {
+					var channel = FileChannel.open(Path.of(args[0]), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+					if (channel.tryLock() == null) { System.exit(2); }
+					System.out.println("locked");
+					System.out.flush();
+					Thread.sleep(600_000);
+				}
+			}
+			""");
+		String java = ProcessHandle.current().info().command().orElseThrow();
+		Process process = new ProcessBuilder(java, holder.toString(), held.resolve("session.lock").toString())
+			.redirectErrorStream(true).start();
+		try {
+			var out = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()));
+			String line;
+			do {
+				line = out.readLine();
+			} while (line != null && !line.equals("locked"));
+			assertThat(line).as("the child process holds the lock").isEqualTo("locked");
+			oldSession(OLD_IDS.get(1));
+			var current = currentSession();
+
+			new SessionStore(base).cleanup(1, current.id());
+			assertThat(held).exists();
+			assertThat(base.resolve("sessions").resolve(OLD_IDS.get(1))).doesNotExist();
+
+			process.destroyForcibly(); // a crash: the OS releases the lock
+			process.waitFor();
+			new SessionStore(base).cleanup(1, current.id());
+			assertThat(held).doesNotExist();
+		}
+		finally {
+			process.destroyForcibly();
+		}
+	}
+
 	@Test
 	void anUnwritableStateDirectoryGivesADisabledDirectoryWithAReasonInsteadOfAnException() throws Exception {
 		Path file = Files.writeString(base.resolve("not-a-directory"), "x");

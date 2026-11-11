@@ -762,6 +762,11 @@ public final class Session implements AutoCloseable {
 		cancel();
 		executor.close();
 		cancellations.close();
-		if (connection != null) connection.close();
+		try {
+			if (connection != null) connection.close();
+		}
+		finally {
+			directory().release(); // the Session ends: other processes may clean up its directory
+		}
 	}
 }
