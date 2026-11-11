@@ -36,7 +36,8 @@ public final class ResumeConnection {
 	 */
 	public static Plan plan(String sessionId, ConnectionInfo stored, boolean storedReadOnly, ConnectionInfo currentInfo,
 			ConnectionParameters current, Function<String, Profile> profiles, Settings settings) {
-		if (sameTarget(stored, currentInfo)) {
+		if (sameTarget(stored, currentInfo) && Objects.equals(stored.profile(), currentInfo.profile())
+			&& Objects.equals(stored.url(), currentInfo.url()) && sameProperties(stored, current, profiles, settings)) {
 			return new Keep();
 		}
 		String profileProblem = null;
@@ -72,6 +73,29 @@ public final class ResumeConnection {
 		if (stored.user() != null) properties.put("user", stored.user());
 		return new Prompt("Session " + sessionId + ": password for " + stored.label()
 			+ (profileProblem == null ? "" : ". " + profileProblem), new ConnectionParameters(stored.url(), properties, storedReadOnly));
+	}
+
+	/** The open connection has the non-secret properties (for example currentSchema) that the saved Profile gives now. */
+	private static boolean sameProperties(ConnectionInfo stored, ConnectionParameters current, Function<String, Profile> profiles,
+			Settings settings) {
+		if (stored.profile() == null) {
+			return true;
+		}
+		try {
+			Profile profile = profiles.apply(stored.profile());
+			if (profile == null) {
+				return true;
+			}
+			var options = new ConnectionOptions(); options.password = "";
+			var wanted = new LinkedHashMap<>(ConnectionParameters.resolve(options, profile, settings).properties());
+			var open = new LinkedHashMap<>(current.properties());
+			wanted.remove("password");
+			open.remove("password");
+			return wanted.equals(open);
+		}
+		catch (ConfigException e) {
+			return true;
+		}
 	}
 
 	private static boolean sameTarget(ConnectionInfo stored, ConnectionInfo current) {

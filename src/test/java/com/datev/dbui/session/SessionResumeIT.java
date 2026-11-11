@@ -335,6 +335,32 @@ class SessionResumeIT {
 	}
 
 	@Test
+	void resumeOfAnotherProfileReconnectsSoSearchPathAndSchemaCompletionMatchTheSavedProfile() throws Exception {
+		try (var admin = parameters().open(); var sql = admin.createStatement()) {
+			sql.execute("create schema resume_a; create table resume_a.only_in_a(id int); create schema resume_b; create table resume_b.only_in_b(id int)");
+		}
+		var a = new Profile("pa", POSTGRES.getJdbcUrl(), null, null, null, POSTGRES.getUsername(), POSTGRES.getPassword(), null, "resume_a", Map.of());
+		var b = new Profile("pb", POSTGRES.getJdbcUrl(), null, null, null, POSTGRES.getUsername(), POSTGRES.getPassword(), null, "resume_b", Map.of());
+		Function<String, Profile> profiles = name -> "pa".equals(name) ? a : b;
+		var options = new com.datev.dbui.config.ConnectionOptions();
+		String earlier;
+		try (Session first = session(Settings.defaults(), "pa", ConnectionParameters.resolve(options, a, Settings.defaults()), profiles)) {
+			earlier = first.directory().id();
+		}
+		var parametersB = ConnectionParameters.resolve(options, b, Settings.defaults());
+		Connection connectionB = parametersB.open();
+		var context = new SessionContext(stateDir, Settings.defaults(), parametersB, "pb", profiles);
+		try (Session session = new Session(connectionB, SessionDirectory.create(stateDir), context)) {
+			session.complete("select * from ", 14).get(10, TimeUnit.SECONDS);
+			submit(session, "/resume " + earlier);
+			assertThat(submit(session, "select current_schema()").messageBlocks().getLast().result().rows())
+				.containsExactly(List.of("resume_a"));
+			assertThat(session.complete("select * from only_", 19).get(10, TimeUnit.SECONDS).candidates())
+				.extracting(c -> c.insert()).containsExactly("only_in_a");
+		}
+	}
+
+	@Test
 	void resumeUsesThePromptApiAndForksOnlyAfterThePasswordConnects() throws Exception {
 		String earlier;
 		try (Session first = session()) { earlier = first.directory().id(); }

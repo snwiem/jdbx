@@ -31,6 +31,52 @@ class ResumeConnectionTest {
 	}
 
 	@Test
+	void theSameEndpointAndUserWithAnotherProfileReconnects() {
+		var profile = new Profile("a", null, "h", 5432, "shop", "alice", "pw", null, null, Map.of());
+		var currentInfo = ConnectionInfo.of(CURRENT, "b");
+		var result = ResumeConnection.plan("SID", stored("h", 5432, "shop", "alice", "a"), false, currentInfo, CURRENT, name -> profile,
+			Settings.defaults());
+		assertThat(result).isInstanceOf(ResumeConnection.Reconnect.class);
+	}
+
+	@Test
+	void theSameProfileWithAnotherCurrentSchemaReconnects() {
+		var stored = new ConnectionInfo("h", 5432, "shop", "alice", "jdbc:postgresql://h:5432/shop?currentSchema=a", "p");
+		var current = new ConnectionParameters("jdbc:postgresql://h:5432/shop?currentSchema=b",
+			Map.of("user", "alice", "password", "secret"), false);
+		var result = ResumeConnection.plan("SID", stored, false, ConnectionInfo.of(current, "p"), current, name -> null, Settings.defaults());
+		assertThat(result).isInstanceOf(ResumeConnection.Reconnect.class);
+	}
+
+	@Test
+	void theSameProfileWithAnotherSchemaPropertyReconnects() {
+		var profile = new Profile("p", null, "h", 5432, "shop", "alice", "pw", null, "sa", Map.of());
+		var stored = stored("h", 5432, "shop", "alice", "p");
+		var current = new ConnectionParameters("jdbc:postgresql://h:5432/shop",
+			Map.of("user", "alice", "password", "secret", "ApplicationName", "dbui", "currentSchema", "sb"), false);
+		var result = ResumeConnection.plan("SID", stored, false, ConnectionInfo.of(current, "p"), current, name -> profile, Settings.defaults());
+		assertThat(result).isInstanceOf(ResumeConnection.Reconnect.class);
+	}
+
+	@Test
+	void theSameProfileWithTheSameSchemaPropertyIsKept() {
+		var profile = new Profile("p", null, "h", 5432, "shop", "alice", "pw", null, "sa", Map.of());
+		var current = new ConnectionParameters("jdbc:postgresql://h:5432/shop",
+			Map.of("user", "alice", "password", "pw", "ApplicationName", "dbui", "currentSchema", "sa"), false);
+		assertThat(ResumeConnection.plan("SID", stored("h", 5432, "shop", "alice", "p"), false, ConnectionInfo.of(current, "p"), current,
+			name -> profile, Settings.defaults())).isInstanceOf(ResumeConnection.Keep.class);
+	}
+
+	@Test
+	void theSameProfileAndUrlIsKept() {
+		var stored = new ConnectionInfo("h", 5432, "shop", "alice", "jdbc:postgresql://h:5432/shop?currentSchema=a", "p");
+		var current = new ConnectionParameters("jdbc:postgresql://h:5432/shop?currentSchema=a",
+			Map.of("user", "alice", "password", "secret"), false);
+		assertThat(ResumeConnection.plan("SID", stored, false, ConnectionInfo.of(current, "p"), current, name -> null, Settings.defaults()))
+			.isInstanceOf(ResumeConnection.Keep.class);
+	}
+
+	@Test
 	void anotherDatabaseOfTheSameUserHostAndPortReusesTheCurrentPassword() {
 		var result = plan(stored("h", 5432, "other", "alice", null), true, name -> null);
 		var reconnect = (ResumeConnection.Reconnect) result;
