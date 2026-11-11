@@ -129,6 +129,10 @@ dbui is a Java terminal tool that talks to PostgreSQL over JDBC.
 86. As a developer, I want the screen to redraw correctly when the window is resized or a multiplexer pane is split or unsplit, so that the layout never breaks.
 87. As a developer, I want to select and copy text from the Transcript, so that I can reuse Results.
 
+### Copying Results
+
+88. As a developer, I want `/copy` to send the held query Result in the current Format and Orientation to the terminal clipboard, so that I can paste it without saving a file. OSC 52 support is required. Text above 64 KB of formatted UTF-8 bytes is refused with a hint to use `/save`; truncated Results name the Row limit.
+
 ## Implementation Decisions
 
 **Technology**
@@ -156,6 +160,7 @@ dbui is a Java terminal tool that talks to PostgreSQL over JDBC.
 - Password order: `--password` or JDBC URL, then Profile (with `${ENV}`), then masked prompt. Batch mode never prompts. `.pgpass` is not used. A Profile has no timeout field.
 - Row limit is applied through the JDBC statement, never by rewriting SQL.
 - `/save` writes the Result held in memory. `/dump` reruns all Statements of the given SQL or of the last input and streams all rows, and accepts only inputs where every Statement is a query (including `WITH ... SELECT`). It writes to a temporary file and renames it on success.
+- `/copy` takes no argument. It formats the held query Result like `/save` and sends OSC 52 through the terminal backend, with no external tools or new dependencies. The limit is 65,536 formatted UTF-8 bytes before base64 encoding. No Result, an empty Result, or a last successful Statement without a Result produces info and no clipboard write. Feedback reports delivery to the terminal, not confirmed clipboard acceptance.
 - `Ctrl-C` cancels a running Statement. It never exits dbui. `Ctrl-D` does not exit either. Only `/quit` exits.
 - Errors in Interactive mode: no stack trace on the terminal. Stack traces go to the log file in the Session directory.
 - Value rendering: NULL as `NULL` in `table`, empty in `csv` and `tsv`, `null` in `json`. ISO dates in the JVM time zone by default. Plain numbers. Long text cut with an ellipsis in `table`. Newlines shown as a marker in `table`. Binary as hex with length. All of this is configurable and will be tuned after the prototype.
@@ -174,6 +179,7 @@ The JLine spike (issue 0001) is done. Its result led to ADR 0006. A second spike
   3. **Statement splitter**: pure unit tests.
   4. **Batch entry point** (arguments, stdin, stdout, stderr, exit code) against PostgreSQL (`*IT`).
   5. **Terminal glue**: a few tests with the TamboUI test tool (Pilot) for key bindings (`Enter` sends, `Ctrl-J` newline, `Ctrl-C` cancels). Decision logic lives outside the glue and is tested at seam 1.
+- `/copy`: plain Unit tests at `CopyCommand.execute` and the `ClipboardSink` boundary check exact OSC 52 bytes, Format/Orientation, absent Results, the UTF-8 byte limit and truncation feedback. Session tests cover registry dispatch and held query Result eligibility. Actual paste in Herdr on WSL, a plain terminal and Windows Terminal is a human check.
 - Profile store and Settings: unit tests with temporary directories (round trip, atomic write, change merge, file mode).
 - Prior art: none. The project has only a generated context test.
 

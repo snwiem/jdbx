@@ -30,6 +30,10 @@ public final class InteractiveMode {
 		this.session = session; this.runner = runner; this.failure = failure;
 		this.screen = new InteractiveScreen(connection, this::submit, session::cancel, session.settings(), this::cycleOrientation);
 		this.screen.completion(session::complete);
+		session.clipboard(sequence -> {
+			runner.backend().writeRaw(sequence);
+			runner.backend().flush();
+		});
 		screen.onInteraction(save -> complete(session.saveDialog(save)), password -> {
 			if (session.interaction() instanceof SessionInteraction.Confirmation) submit(password);
 			else complete(session.answerPassword(password));

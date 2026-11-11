@@ -134,6 +134,22 @@ Configured Ctrl-H, Ctrl-I and Ctrl-M cannot be distinguished from those fixed ke
 If the terminal sends Enter instead, Ctrl-J or Ctrl-M can send input rather than run the configured action.
 Use a distinct key, Kitty keyboard support, or bracketed paste for multi-line input on legacy terminals. Bracketed paste never sends input by itself.
 
+## Copy a Result in Interactive mode
+
+`/copy` sends the newest held query Result to the terminal clipboard, with no argument. It uses the current Format, Orientation and value settings, exactly as `/save` would write the Result. It does not copy screen padding, input, info or error Message blocks. Schema Results are not query Results for `/copy`; use `/save` for those.
+
+The fixed limit is **64 KB (65,536 bytes) of formatted UTF-8 text, before base64 encoding**. Exactly 64 KB is allowed. Larger text is refused without sending anything; use `/save <file>` instead. A truncated Result copies only the held rows, and the info Message block names the original Row limit, even if `/limit` changed afterward.
+
+With no Result or an empty Result, `/copy` shows an info Message block and changes no clipboard. A successful Statement that returns no Result also disables `/copy` until another query Result arrives; it does not change `/save` retention. Info, errors and Dump do not replace the held Result.
+
+Copy uses **OSC 52 through the TamboUI backend only**. The terminal and any multiplexer, including Herdr, must allow OSC 52 clipboard writes. No external clipboard tool or fallback is used. The success Message block says the rows were **sent to the terminal clipboard**: dbui cannot confirm that the terminal accepted them. If paste does not work, check terminal permissions or use `/save`.
+
+```text
+select 7 as id;
+/format csv
+/copy
+```
+
 ## Profiles in Interactive mode
 
 Start `dbui` in a terminal without complete connection options to open **Edit Connection Profile**.
