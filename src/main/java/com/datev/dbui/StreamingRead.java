@@ -3,7 +3,6 @@ package com.datev.dbui;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
-import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
@@ -16,7 +15,7 @@ final class StreamingRead {
 	/** Rows per round trip to the server. */
 	static final int FETCH_SIZE = 1000;
 
-	private static final Pattern QUERY = Pattern.compile("^\\s*(select|with|values|table|show)\\b",
+	private static final Pattern QUERY = Pattern.compile("^(select|with|values|table|show)\\b",
 			Pattern.CASE_INSENSITIVE);
 
 	private StreamingRead() {
@@ -24,7 +23,52 @@ final class StreamingRead {
 
 	/** True when the Statement starts like a query, so reading it with autocommit off is safe. */
 	static boolean isQuery(String statement) {
-		return QUERY.matcher(statement.toLowerCase(Locale.ROOT)).find();
+		int start = skipCommentsAndWhitespace(statement);
+		return start >= 0 && QUERY.matcher(statement.substring(start)).find();
+	}
+
+	/**
+	 * Index of the first character after leading whitespace, {@code --} line comments and block comments. Block
+	 * comments nest, as in PostgreSQL. Returns -1 for an unterminated block comment.
+	 */
+	private static int skipCommentsAndWhitespace(String s) {
+		int i = 0;
+		int n = s.length();
+		while (i < n) {
+			char c = s.charAt(i);
+			if (Character.isWhitespace(c)) {
+				i++;
+			}
+			else if (s.startsWith("--", i)) {
+				while (i < n && s.charAt(i) != '\n' && s.charAt(i) != '\r') {
+					i++;
+				}
+			}
+			else if (s.startsWith("/*", i)) {
+				int depth = 1;
+				i += 2;
+				while (i < n && depth > 0) {
+					if (s.startsWith("/*", i)) {
+						depth++;
+						i += 2;
+					}
+					else if (s.startsWith("*/", i)) {
+						depth--;
+						i += 2;
+					}
+					else {
+						i++;
+					}
+				}
+				if (depth > 0) {
+					return -1;
+				}
+			}
+			else {
+				break;
+			}
+		}
+		return i;
 	}
 
 	/** pgjdbc's query timer does not cover later cursor fetches; PostgreSQL must also time each fetch. */

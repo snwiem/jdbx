@@ -35,6 +35,21 @@ dbui --host localhost --db dbui --user dbui --password dbui
 
 Test the wrapper script with `sh bin/test-dbui.sh`. It is not part of `./mvnw verify`.
 
+## Batch output and memory
+
+Batch mode streams rows and has no default row limit. Horizontal output uses constant memory.
+
+**Warning:** `--orientation vertical` buffers the whole Result in memory in Batch mode, because each output line needs one value of every row. Use `--limit N` to bound it. Vertical Batch output is not the usual use case.
+
+```sh
+dbui --host localhost --db dbui --user dbui --password dbui --orientation vertical --limit 100 -c 'select * from big_table'
+```
+
+## Orientation
+
+Orientation is `horizontal` (default) or `vertical`. Set it with `--orientation`, or with `orientation` in `config.yaml`.
+In Batch mode, `vertical` holds the whole Result in memory. Always add `--limit N` for large Results, as in the example above.
+
 ## Profiles in Interactive mode
 
 Start `dbui` in a terminal without complete connection options to open **Edit Connection Profile**.

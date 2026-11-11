@@ -54,7 +54,8 @@ class BatchCommand implements Callable<Integer> {
 	Format format;
 
 	@Option(names = "--orientation", converter = OrientationConverter.class,
-			description = "Layout: horizontal or vertical (default: from settings, else horizontal)")
+			description = "Layout: horizontal or vertical (default: from settings, else horizontal). "
+					+ "In Batch mode, vertical buffers the whole Result in memory; bound it with --limit N")
 	Orientation orientation;
 
 	static class OrientationConverter implements ITypeConverter<Orientation> {
