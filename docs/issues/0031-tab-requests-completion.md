@@ -4,7 +4,7 @@
 
 **Blocked by:** none (the default key map is in `EditorKeys`; issue 0018 makes it configurable)
 
-**Status:** ready-for-manual-check
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md` (user story 64: Completion only on a key; the default key changes from `Ctrl-Space` to `Tab`)
 
@@ -38,4 +38,4 @@ A plain switch works. Facts found in the code:
 - [x] Unit test: a pasted Tab (`PasteEvent`) does not request Completion
 - [x] Unit test: Tab in the Profile dialog still moves between fields
 - [x] `/help` and `README.md` name Tab as the Completion key and `Alt-/` as the fallback
-- [ ] Manual check in a real terminal (Herdr) that Tab completes
+- [x] Manual check in a real terminal (Herdr) that Tab completes (done by the user)
