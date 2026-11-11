@@ -89,11 +89,13 @@ class BatchCommand implements Callable<Integer> {
 			Map<String, String> environment = System.getenv();
 			loader = new ConfigLoader(ConfigLoader.directory(connectionOptions.configDir, environment,
 					Path.of(System.getProperty("user.home"))), environment);
-			settings = loader.settings();
+			boolean interactive = commands.isEmpty() && files.isEmpty() && stdinIsTerminal();
+			var configErrors = new java.util.ArrayList<String>();
+			settings = interactive ? loader.settingsForInteractive(configErrors::add) : loader.settings();
 			// Issue 0013: only Interactive mode may collect missing connection fields or a password.
-			if (commands.isEmpty() && files.isEmpty() && stdinIsTerminal()) {
+			if (interactive) {
 				return InteractiveMode.start(connectionOptions, settings.withOutput(
-					(format == null ? Format.parse(settings.format()) : format).id(), orientation(settings).id()));
+					(format == null ? Format.parse(settings.format()) : format).id(), orientation(settings).id()), configErrors);
 			}
 			Profile profile = connectionOptions.profile == null ? null : loader.profile(connectionOptions.profile);
 			parameters = ConnectionParameters.resolve(connectionOptions, profile, settings);

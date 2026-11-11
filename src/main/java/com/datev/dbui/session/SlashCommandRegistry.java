@@ -81,6 +81,10 @@ public final class SlashCommandRegistry {
 	}
 
 	public String help() {
+		return help(com.datev.dbui.config.KeyBindings.defaults());
+	}
+
+	public String help(com.datev.dbui.config.KeyBindings keys) {
 		var text = new StringBuilder("Slash commands\n");
 		for (var command : commands) {
 			var subcommand = line.getSubcommands().get("/" + command.name());
@@ -90,14 +94,14 @@ public final class SlashCommandRegistry {
 		text.append('\n').append("""
 			Key bindings
 			Enter                     Send input; accept a Ctrl-R match without sending
-			Ctrl-J                    Insert a newline (Kitty); use bracketed paste on legacy terminals
+			%-26sInsert a newline; some modified keys need Kitty keyboard support
 			Up / Down                 History at the first / last editor line; otherwise move the cursor
 			Ctrl-R                    Search history; press again for an older match
 			Esc                       Cancel history search and restore the draft
 			Ctrl-C                    Cancel a running Statement, cancel search, or clear idle input; never exit
 			Ctrl-D                    Ignore; never exit (use /quit)
-			Shift-Tab / Ctrl-O        Cycle Orientation; Ctrl-O is the legacy terminal fallback
-			Tab / Alt-/               Request Completion; Alt-/ is the fallback
+			%-26sCycle Orientation (primary / fallback)
+			%-26sRequest Completion (primary / fallback)
 			Completion Up / Down      Select a candidate
 			Completion Tab / Enter    Accept a candidate without sending input
 			Completion Esc            Close Completion
@@ -115,9 +119,14 @@ public final class SlashCommandRegistry {
 			Backspace / Delete        Delete before / after the cursor
 			Ctrl-W / Ctrl-Backspace   Delete the previous word
 			Ctrl-Delete               Delete the next word
-			Shift-Enter               Insert a newline when the terminal distinguishes it from Enter
 			Keypad navigation keys    Same cursor actions as the main navigation keys
-			""");
+			""".formatted(keys.newline().display(),
+				keys.orientationCycle().display() + " / " + keys.orientationFallback().display(),
+				keys.complete().display() + " / " + keys.completeAlternate().display()));
+		if (java.util.stream.Stream.of(keys.newline(), keys.orientationCycle(), keys.orientationFallback(), keys.complete(), keys.completeAlternate())
+				.noneMatch(key -> key.name().equals("shift-enter"))) {
+			text.append("Shift-Enter               Insert a newline when the terminal distinguishes it from Enter\n");
+		}
 		return text.toString().stripTrailing();
 	}
 }

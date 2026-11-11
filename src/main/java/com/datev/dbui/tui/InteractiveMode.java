@@ -40,6 +40,10 @@ public final class InteractiveMode {
 
 	/** Complete options connect directly; incomplete values open a prefilled dialog on the same fullscreen screen. */
 	public static int start(ConnectionOptions options, Settings settings) throws Exception {
+		return start(options, settings, java.util.List.of());
+	}
+
+	public static int start(ConnectionOptions options, Settings settings, java.util.List<String> configErrors) throws Exception {
 		Map<String, String> environment = System.getenv();
 		Path configDirectory = ConfigLoader.directory(options.configDir, environment, Path.of(System.getProperty("user.home")));
 		var profiles = new ProfileCommands(configDirectory, environment);
@@ -67,7 +71,7 @@ public final class InteractiveMode {
 				settings.withExecution(settings.rowLimit(), settings.timeout(), parameters.readOnly()), parameters, options.profile, profiles::load));
 			session.configureProfiles(configDirectory, environment);
 		}
-		return run(session, parameters == null ? "not connected" : ConnectionInfo.of(parameters, options.profile).label());
+		return run(session, parameters == null ? "not connected" : ConnectionInfo.of(parameters, options.profile).label(), configErrors);
 	}
 
 	public static int run(Connection connection, String label, SessionContext context) throws Exception {
@@ -75,6 +79,10 @@ public final class InteractiveMode {
 	}
 
 	private static int run(Session session, String label) throws Exception {
+		return run(session, label, java.util.List.of());
+	}
+
+	private static int run(Session session, String label, java.util.List<String> configErrors) throws Exception {
 		var failure = new AtomicReference<Throwable>();
 		var logging = new AtomicReference<SessionLogging>(session.logFile() == null ? null : new SessionLogging(session.logFile()));
 		try (var terminalLogging = new TerminalLogging(); session) {
@@ -87,6 +95,7 @@ public final class InteractiveMode {
 				.errorHandler((error, context) -> { failure.set(error.cause()); return ErrorAction.QUIT_IMMEDIATELY; }).build();
 			try (var runner = TuiRunner.create(config)) {
 				var mode = new InteractiveMode(session, runner, label, failure);
+				mode.screen.startupErrors(configErrors);
 				mode.refresh();
 				runner.run((event, ignored) -> mode.screen.handle(event), mode::render);
 			}

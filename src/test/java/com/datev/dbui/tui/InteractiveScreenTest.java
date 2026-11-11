@@ -240,6 +240,17 @@ class InteractiveScreenTest {
 	}
 
 	@Test
+	void startupConfigErrorsRemainErrorBandsWhenTheSessionRefreshes() {
+		var screen = new InteractiveScreen("connection", input -> { }, EditorKeys.defaults(), false);
+		screen.startupErrors(List.of("config.yaml: key-bindings.newline: invalid key 'bad'. Default key bindings apply."));
+		screen.update(List.of(MessageBlock.info("connected")));
+		var buffer = draw(screen, new Size(140, 20));
+		assertThat(line(buffer, 1)).contains("error: config.yaml", "key-bindings.newline", "'bad'", "Default key bindings apply.");
+		assertThat(buffer.get(0, 1).style()).isEqualTo(dev.tamboui.style.Style.EMPTY.bold().reversed());
+		assertThat(line(buffer, 4)).contains("connected");
+	}
+
+	@Test
 	void withoutColorTheWholeScreenWritesNoColorCodes() {
 		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { }, EditorKeys.defaults(), false);
 		screen.update(List.of(MessageBlock.input("select 1"), MessageBlock.info("CREATE TABLE"), MessageBlock.error("bad")));
@@ -289,6 +300,76 @@ class InteractiveScreenTest {
 			assertThat(inputs).containsExactly("kept");
 			terminal.pilot().quit();
 		}
+	}
+
+	@Test
+	void configuredNewlineKeyWorksThroughThePilot(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+		java.nio.file.Files.writeString(dir.resolve("config.yaml"), "key-bindings:\n  newline: alt-n\n");
+		var settings = new com.datev.dbui.config.ConfigLoader(dir, java.util.Map.of()).settings();
+		var inputs = new CopyOnWriteArrayList<String>();
+		var screen = new InteractiveScreen("connection", inputs::add, () -> { }, settings);
+		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(60, 20))) {
+			terminal.pilot().press("a");
+			terminal.pilot().press('n', KeyModifiers.ALT);
+			terminal.pilot().press("b");
+			terminal.pilot().pause();
+			assertThat(inputs).isEmpty();
+			terminal.pilot().press(KeyCode.ENTER);
+			terminal.pilot().pause();
+			assertThat(inputs).containsExactly("a\nb");
+			terminal.pilot().quit();
+		}
+	}
+
+	@Test
+	void changedNewlineDoesNotKeepCtrlJAsAnUndocumentedNewline(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+		java.nio.file.Files.writeString(dir.resolve("config.yaml"), "key-bindings:\n  newline: alt-n\n");
+		var inputs = new CopyOnWriteArrayList<String>();
+		var screen = new InteractiveScreen("connection", inputs::add, () -> { },
+			new com.datev.dbui.config.ConfigLoader(dir, java.util.Map.of()).settings());
+		screen.handle(new PasteEvent("a"));
+		screen.handle(KeyEvent.ofChar('j', KeyModifiers.CTRL));
+		screen.handle(new PasteEvent("b"));
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(inputs).containsExactly("ab");
+	}
+
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.MethodSource("configuredNewlineKeys")
+	void supportedKeyNamesProduceANewline(String name, KeyEvent key,
+			@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+		java.nio.file.Files.writeString(dir.resolve("config.yaml"), """
+			key-bindings:
+			  orientation-cycle: alt-o
+			  complete: alt-c
+			  complete-alternate: alt-e
+			  newline: %s
+			""".formatted(name));
+		var inputs = new CopyOnWriteArrayList<String>();
+		var screen = new InteractiveScreen("connection", inputs::add, () -> { },
+			new com.datev.dbui.config.ConfigLoader(dir, java.util.Map.of()).settings());
+		screen.handle(new PasteEvent("a"));
+		screen.handle(key);
+		screen.handle(new PasteEvent("b"));
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(inputs).containsExactly("a\nb");
+	}
+
+	static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> configuredNewlineKeys() {
+		return java.util.stream.Stream.of(
+			org.junit.jupiter.params.provider.Arguments.of("tab", KeyEvent.ofKey(KeyCode.TAB)),
+			org.junit.jupiter.params.provider.Arguments.of("shift-tab", KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.SHIFT)),
+			org.junit.jupiter.params.provider.Arguments.of("shift-enter", KeyEvent.ofKey(KeyCode.ENTER, KeyModifiers.SHIFT)),
+			org.junit.jupiter.params.provider.Arguments.of("ctrl-tab", KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.CTRL)),
+			org.junit.jupiter.params.provider.Arguments.of("alt-tab", KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.ALT)),
+			org.junit.jupiter.params.provider.Arguments.of("ctrl-enter", KeyEvent.ofKey(KeyCode.ENTER, KeyModifiers.CTRL)),
+			org.junit.jupiter.params.provider.Arguments.of("alt-enter", KeyEvent.ofKey(KeyCode.ENTER, KeyModifiers.ALT)),
+			org.junit.jupiter.params.provider.Arguments.of("ctrl-space", KeyEvent.ofChar(' ', KeyModifiers.CTRL)),
+			org.junit.jupiter.params.provider.Arguments.of("alt-space", KeyEvent.ofChar(' ', KeyModifiers.ALT)),
+			org.junit.jupiter.params.provider.Arguments.of("ctrl-/", KeyEvent.ofChar('/', KeyModifiers.CTRL)),
+			org.junit.jupiter.params.provider.Arguments.of("alt-/", KeyEvent.ofChar('/', KeyModifiers.ALT)),
+			org.junit.jupiter.params.provider.Arguments.of("CTRL-N", KeyEvent.ofChar('n', KeyModifiers.CTRL)),
+			org.junit.jupiter.params.provider.Arguments.of("alt-n", KeyEvent.ofChar('n', KeyModifiers.ALT)));
 	}
 
 	@Test

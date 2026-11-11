@@ -57,6 +57,15 @@ public class ConfigLoader {
 	}
 
 	public Settings settings() {
+		return settings(error -> { throw new ConfigException(error); });
+	}
+
+	/** Reject a bad key map, report its error, and retain the other settings with default editor keys. */
+	public Settings settingsForInteractive(java.util.function.Consumer<String> keyBindingError) {
+		return settings(error -> keyBindingError.accept(error + " Default key bindings apply."));
+	}
+
+	private Settings settings(java.util.function.Consumer<String> keyBindingError) {
 		Map<String, Object> root = read("config.yaml");
 		Settings defaults = Settings.defaults();
 		int rowLimit = root.containsKey("row-limit") ? integer("config.yaml", "row-limit", root.get("row-limit"))
@@ -75,7 +84,18 @@ public class ConfigLoader {
 			throw new ConfigException("config.yaml: 'max-width' must be 0 or more, but is '" + maxWidth + "'.");
 		}
 		return new Settings(rowLimit, timeout, format, orientation, readOnly, nullMarker, multilineMarker, maxWidth,
-				timezone(root.get("timezone")), historyEnabled(root.get("history")), sessionsKeep(root.get("sessions")));
+				timezone(root.get("timezone")), historyEnabled(root.get("history")), sessionsKeep(root.get("sessions")),
+				keyBindings(root.get("key-bindings"), keyBindingError));
+	}
+
+	private static KeyBindings keyBindings(Object value, java.util.function.Consumer<String> error) {
+		try {
+			return KeyBindings.from(value);
+		}
+		catch (ConfigException e) {
+			error.accept(e.getMessage());
+			return KeyBindings.defaults();
+		}
 	}
 
 	/** {@code history: {enabled: true|false}}, the nested form of the PRD wording. */

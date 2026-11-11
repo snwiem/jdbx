@@ -114,6 +114,58 @@ class InteractiveScreenCompletionTest {
 	}
 
 	@Test
+	void configuredCompletionAndOrientationKeysReplaceTheDefaults(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+		java.nio.file.Files.writeString(dir.resolve("config.yaml"), """
+			key-bindings:
+			  orientation-cycle: alt-o
+			  orientation-fallback: ctrl-t
+			  complete: ctrl-space
+			  complete-alternate: alt-c
+			""");
+		var cycles = new java.util.concurrent.atomic.AtomicInteger();
+		var screen = new InteractiveScreen("connection", sent::add, () -> { },
+			new com.datev.dbui.config.ConfigLoader(dir, java.util.Map.of()).settings(), cycles::incrementAndGet);
+		screen.completion((text, cursor) -> {
+			requests.add(text);
+			return CompletableFuture.completedFuture(three());
+		});
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB));
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.SHIFT));
+		screen.handle(KeyEvent.ofChar('/', KeyModifiers.ALT));
+		screen.handle(KeyEvent.ofChar('o', KeyModifiers.CTRL));
+		assertThat(requests).isEmpty();
+		assertThat(cycles.get()).isZero();
+		screen.handle(KeyEvent.ofChar(' ', KeyModifiers.CTRL));
+		assertThat(requests).hasSize(1);
+		screen.handle(KeyEvent.ofChar('o', KeyModifiers.ALT)); // closes the popup and cycles
+		screen.handle(KeyEvent.ofChar('t', KeyModifiers.CTRL));
+		assertThat(cycles.get()).isEqualTo(2);
+		screen.handle(KeyEvent.ofChar('c', KeyModifiers.ALT));
+		assertThat(requests).hasSize(2);
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB)); // popup Tab stays fixed
+		assertThat(requests).hasSize(2);
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(sent).singleElement().asString().endsWith("alpha");
+	}
+
+	@Test
+	void configuredShiftTabCanRequestCompletionWhenOrientationUsesAnotherKey(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+		java.nio.file.Files.writeString(dir.resolve("config.yaml"), "key-bindings:\n  orientation-cycle: alt-o\n  complete: shift-tab\n");
+		var cycles = new java.util.concurrent.atomic.AtomicInteger();
+		var screen = new InteractiveScreen("connection", sent::add, () -> { },
+			new com.datev.dbui.config.ConfigLoader(dir, java.util.Map.of()).settings(), cycles::incrementAndGet);
+		screen.completion((text, cursor) -> {
+			requests.add(text);
+			return CompletableFuture.completedFuture(three());
+		});
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB));
+		assertThat(requests).isEmpty();
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.SHIFT));
+		assertThat(requests).hasSize(1);
+		assertThat(cycles.get()).isZero();
+	}
+
+	@Test
 	void tabWithAnOpenPopupAcceptsAndDoesNotRequestAgain() {
 		backendAnswers(new Completion(0, 0, List.of(column("alpha"), column("beta"))));
 		tab();

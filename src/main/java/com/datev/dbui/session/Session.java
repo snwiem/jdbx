@@ -452,7 +452,7 @@ public final class Session implements AutoCloseable {
 				return List.of();
 			}));
 		commands.add(new SlashCommand("help", "List Slash commands and key bindings.", null, false,
-			argument -> List.of(MessageBlock.info(slashCommands.help()))));
+			argument -> List.of(MessageBlock.info(slashCommands.help(settings().keyBindings())))));
 		return commands;
 	}
 

@@ -39,6 +39,7 @@ public final class InteractiveScreen {
 	private final Style statusStyle;
 	private final Style warningStyle;
 	private final Transcript transcript;
+	private List<MessageBlock> startupErrors = List.of();
 	private final ScrollbarState scrollbar = new ScrollbarState();
 	private int transcriptHeight;
 	private boolean busy;
@@ -90,7 +91,7 @@ public final class InteractiveScreen {
 	}
 
 	public InteractiveScreen(String connection, Consumer<String> send, Runnable cancel, Settings settings, Runnable cycleOrientation) {
-		this(connection, send, EditorKeys.defaults(), MessageBlockRenderer.colorEnabled(System.getenv()), cancel, settings, cycleOrientation);
+		this(connection, send, EditorKeys.from(settings.keyBindings()), MessageBlockRenderer.colorEnabled(System.getenv()), cancel, settings, cycleOrientation);
 	}
 
 	private InteractiveScreen(String connection, Consumer<String> send, EditorKeys keys, boolean color, Runnable cancel, Settings settings,
@@ -125,8 +126,14 @@ public final class InteractiveScreen {
 		modal = interaction == null ? null : new ConnectionModal(interaction, saveDialog, answerPassword, cancelDialog);
 	}
 
+	/** Startup config errors precede Session messages and survive its refreshes. */
+	public void startupErrors(List<String> errors) {
+		startupErrors = errors.stream().map(MessageBlock::error).toList();
+	}
+
 	public void update(List<MessageBlock> blocks) {
-		transcript.replace(blocks);
+		transcript.replace(startupErrors.isEmpty() ? blocks
+			: java.util.stream.Stream.concat(startupErrors.stream(), blocks.stream()).toList());
 		if (modal != null) modal.error(!blocks.isEmpty() && blocks.getLast().kind() == MessageBlock.Kind.ERROR ? blocks.getLast().text() : null);
 	}
 

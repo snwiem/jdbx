@@ -79,6 +79,69 @@ class ConfigTest {
 	// --- Settings ---
 
 	@Test
+	void editorBindingsUseTabForCompletionAndKeepLegacyFallbacks() {
+		var keys = loader(Map.of()).settings().keyBindings();
+		assertThat(keys.newline().name()).isEqualTo("ctrl-j");
+		assertThat(keys.complete().name()).isEqualTo("tab");
+		assertThat(keys.completeAlternate().name()).isEqualTo("alt-/");
+		assertThat(keys.orientationCycle().name()).isEqualTo("shift-tab");
+		assertThat(keys.orientationFallback().name()).isEqualTo("ctrl-o");
+	}
+
+	@Test
+	void keyBindingsOverrideDefaultsAndSurviveOutputChangesAndResume() throws Exception {
+		write("config.yaml", "key-bindings:\n  newline: ALT-N\n");
+		var settings = loader(Map.of()).settings().withOutput("csv", "vertical").withExecution(12, null, true);
+		assertThat(settings.keyBindings().newline().name()).isEqualTo("alt-n");
+		assertThat(settings.keyBindings().complete().name()).isEqualTo("tab");
+	}
+
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(strings = {"not-a-key", "ctrl-", "ctrl-alt-j", "shift-a", "f99", ""})
+	void invalidKeyNamesIdentifyTheConfigFieldAndValue(String name) throws Exception {
+		write("config.yaml", "key-bindings:\n  newline: '" + name + "'\n");
+		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
+			.hasMessageContaining("config.yaml").hasMessageContaining("key-bindings.newline")
+			.hasMessageContaining("'" + name + "'").hasMessageContaining("ctrl-j");
+	}
+
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.CsvSource({
+		"tab, complete", "ALT-N, complete", "ctrl-o, orientation-fallback",
+		"enter, send", "ctrl-c, cancel", "ctrl-d, ignore", "ctrl-r, search"
+	})
+	void conflictingBindingsIdentifyBothActionsAndTheKey(String name, String otherAction) throws Exception {
+		write("config.yaml", "key-bindings:\n  newline: '" + name + "'\n"
+			+ (otherAction.equals("complete") && !name.equals("tab") ? "  complete: alt-n\n" : ""));
+		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
+			.hasMessageContaining("config.yaml").hasMessageContaining("newline")
+			.hasMessageContaining(otherAction).hasMessageContaining(name.toLowerCase(java.util.Locale.ROOT));
+	}
+
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(strings = {
+		"key-bindings: off", "key-bindings: [tab]", "key-bindings: {newlien: alt-n}",
+		"key-bindings: {newline: null}", "key-bindings: {newline: 42}", "key-bindings: {newline: [alt-n]}",
+		"key-bindings: {null: alt-n}"
+	})
+	void malformedBindingConfigurationGivesAConfigError(String yaml) throws Exception {
+		write("config.yaml", yaml);
+		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
+			.hasMessageContaining("config.yaml").hasMessageContaining("key-bindings");
+	}
+
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(strings = {"invalid", "tab"})
+	void interactiveStartupRejectsAnInvalidMapAndReportsItWhileUsingAllDefaultBindings(String name) throws Exception {
+		write("config.yaml", "row-limit: 17\nkey-bindings:\n  newline: " + name + "\n  complete-alternate: alt-c\n");
+		var errors = new java.util.ArrayList<String>();
+		var settings = loader(Map.of()).settingsForInteractive(errors::add);
+		assertThat(errors).singleElement().asString().contains("config.yaml", "newline", name);
+		assertThat(settings.keyBindings()).isEqualTo(KeyBindings.defaults());
+		assertThat(settings.rowLimit()).isEqualTo(17);
+	}
+
+	@Test
 	void missingConfigFileGivesDefaults() {
 		Settings settings = loader(Map.of()).settings();
 

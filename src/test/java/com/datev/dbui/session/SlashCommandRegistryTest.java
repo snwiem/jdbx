@@ -53,6 +53,33 @@ class SlashCommandRegistryTest {
 	}
 
 	@Test
+	void helpShowsConfiguredEditorBindingsBeforeConnecting(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+		java.nio.file.Files.writeString(dir.resolve("config.yaml"), """
+			key-bindings:
+			  newline: alt-n
+			  orientation-cycle: ctrl-t
+			  orientation-fallback: alt-o
+			  complete: ctrl-space
+			  complete-alternate: alt-c
+			""");
+		var settings = new com.datev.dbui.config.ConfigLoader(dir, java.util.Map.of()).settings();
+		try (var session = new Session(SessionDirectory.create(dir), settings)) {
+			var update = session.submit("/help").get();
+			assertThat(update.messageBlocks().getLast().text())
+				.contains("Alt-N", "Ctrl-T / Alt-O", "Ctrl-Space / Alt-C", "Completion Tab / Enter")
+				.doesNotContain("Ctrl-J", "Shift-Tab / Ctrl-O", "Tab / Alt-/");
+		}
+	}
+
+	@Test
+	void helpDoesNotDescribeShiftEnterAsANewlineWhenItRequestsCompletion() {
+		var registry = new SlashCommandRegistry(List.of());
+		var keys = com.datev.dbui.config.KeyBindings.from(java.util.Map.of("complete", "shift-enter"));
+		assertThat(registry.help(keys)).contains("Shift-Enter / Alt-/")
+			.doesNotContain("Shift-Enter               Insert a newline");
+	}
+
+	@Test
 	void helpListsEveryRegisteredCommandAndEveryInteractiveKeyBinding() {
 		var registry = new SlashCommandRegistry(List.of(
 			new SlashCommand("help", "List commands and keys.", null, false, argument -> List.of()),
