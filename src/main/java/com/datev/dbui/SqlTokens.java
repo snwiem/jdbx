@@ -1,29 +1,29 @@
-package com.datev.dbui.completion;
+package com.datev.dbui;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A small SQL scanner for Completion: it knows words, quoted identifiers, strings, dollar-quoted strings and
+ * A small SQL scanner shared by Completion and the Dump query check: it knows words, quoted identifiers, strings, dollar-quoted strings and
  * comments so that nothing inside them is read as SQL. It does not parse.
  */
-final class SqlTokens {
+public final class SqlTokens {
 
-	enum Type {
+	public enum Type {
 		WORD, QUOTED, STRING, COMMENT, DOT, COMMA, SEMICOLON, OTHER
 	}
 
 	/** {@code closed} is false for an unterminated quote, string or block comment, and for a line comment. */
-	record Token(Type type, int start, int end, boolean closed) {
+	public record Token(Type type, int start, int end, boolean closed) {
 
-		String text(String source) {
+		public String text(String source) {
 			return source.substring(start, end);
 		}
 	}
 
 	private SqlTokens() { }
 
-	static List<Token> scan(String text) {
+	public static List<Token> scan(String text) {
 		List<Token> tokens = new ArrayList<>();
 		int n = text.length();
 		int i = 0;

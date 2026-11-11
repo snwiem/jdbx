@@ -5,8 +5,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-import com.datev.dbui.completion.SqlTokens.Token;
-import com.datev.dbui.completion.SqlTokens.Type;
+import com.datev.dbui.SqlTokens;
+import com.datev.dbui.SqlTokens.Token;
+import com.datev.dbui.SqlTokens.Type;
 
 /**
  * What a {@link CandidateSource} needs to know about the request: the word being completed, where the cursor

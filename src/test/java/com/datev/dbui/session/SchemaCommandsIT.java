@@ -55,9 +55,9 @@ class SchemaCommandsIT {
 			var blocks = described.messageBlocks();
 			var fromDescribe = blocks.subList(blocks.size() - 1 - blocks.reversed().stream().takeWhile(b -> b.kind() != MessageBlock.Kind.INPUT).toList().size() + 1, blocks.size());
 			var results = fromDescribe.stream().filter(b -> b.kind() == MessageBlock.Kind.RESULT).toList();
-			assertThat(results.getFirst().result().columns())
-				.containsExactly("name", "type", "nullable", "default", "position", "remarks");
-			assertThat(results.getFirst().result().rows().get(1)).containsExactly("label", "text", "NO", "'x'::text", 2, "");
+			assertThat(results.getFirst().result()).isNull();
+			assertThat(results.getFirst().text()).contains("name", "type", "nullable", "default", "position", "remarks")
+				.containsPattern("label\\s+\\| text\\s+\\| NO\\s+\\| 'x'::text\\s+\\| 2");
 			assertThat(described.messageBlocks()).extracting(MessageBlock::text).contains("Primary key", "Indexes");
 		}
 	}

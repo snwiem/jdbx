@@ -36,6 +36,17 @@ class SessionIT {
 	}
 
 	@Test
+	void transcriptRetainsOnlyTwoHundredBlocksAndOneResultAfterManyInputs() throws Exception {
+		try (Session session = session()) {
+			for (int i = 0; i < 110; i++) session.submit("select " + i + " as id").get(5, TimeUnit.SECONDS);
+			assertThat(session.messageBlocks()).hasSize(200);
+			assertThat(session.messageBlocks().getFirst().text()).isEqualTo("select 10 as id");
+			assertThat(session.messageBlocks()).filteredOn(block -> block.result() != null).hasSize(1);
+			assertThat(session.messageBlocks().get(1).text()).isEqualTo("id\n--\n10\n");
+		}
+	}
+
+	@Test
 	void invalidConfiguredTimeoutIsRejectedBeforeExecutingStatements() throws Exception {
 		var settings = new com.datev.dbui.config.Settings(1000, java.time.Duration.ofSeconds(-1), "table", "horizontal", false);
 		try (Connection connection = connection()) {
@@ -247,7 +258,8 @@ class SessionIT {
 				.get(5, TimeUnit.SECONDS).messageBlocks();
 			assertThat(blocks).extracting(MessageBlock::kind).containsExactly(MessageBlock.Kind.INPUT,
 				MessageBlock.Kind.INFO, MessageBlock.Kind.INFO, MessageBlock.Kind.RESULT, MessageBlock.Kind.RESULT);
-			assertThat(blocks.get(3).result().rows().getFirst()).containsExactly("a;b");
+			assertThat(blocks.get(3).result()).isNull();
+			assertThat(blocks.get(3).text()).isEqualTo("v\n---\na;b\n");
 			assertThat(blocks.get(4).result().rows().getFirst()).containsExactly("last;value");
 		}
 	}

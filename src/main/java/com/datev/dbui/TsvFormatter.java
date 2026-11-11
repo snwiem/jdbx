@@ -55,7 +55,7 @@ public class TsvFormatter implements ResultFormatter {
 		out.append(String.join("\t", cells.stream().map(TsvFormatter::escape).toList())).append('\n');
 	}
 
-	private static String escape(String cell) {
+	static String escape(String cell) {
 		return cell.replace("\t", "\\t").replace("\n", "\\n").replace("\r", "\\r");
 	}
 }
