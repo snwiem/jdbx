@@ -45,6 +45,10 @@ Batch mode streams rows and has no default row limit. Horizontal output uses con
 dbui --host localhost --db dbui --user dbui --password dbui --orientation vertical --limit 100 -c 'select * from big_table'
 ```
 
+## JSON output for several Results
+
+With `--format json`, Batch mode writes each Result as its own JSON array. The arrays follow each other directly, with no blank line. This is a stream of concatenated JSON documents. It is not one document and not strict JSON Lines. `jq` and similar tools read it. If you need one valid JSON document, run one Statement per call.
+
 ## Orientation
 
 Orientation is `horizontal` (default) or `vertical`. Set it with `--orientation`, or with `orientation` in `config.yaml`.

@@ -12,6 +12,11 @@ public enum Format {
 		return name().toLowerCase(Locale.ROOT);
 	}
 
+	/** True if Batch Results follow each other without a blank line: every Result is a complete JSON document. */
+	public boolean isDocumentStream() {
+		return this == JSON;
+	}
+
 	public ResultFormatter formatter(FormatOptions options) {
 		return formatter(options, Orientation.HORIZONTAL);
 	}
