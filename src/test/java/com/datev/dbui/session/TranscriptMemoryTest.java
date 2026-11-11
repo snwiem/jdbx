@@ -24,6 +24,20 @@ class TranscriptMemoryTest {
 	}
 
 	@Test
+	void unformattedAdapterResultKeepsReadableTextBeforeItsRowsAreDropped() {
+		var transcript = new TranscriptMemory();
+		transcript.add(MessageBlock.result(new Result(List.of("id"), List.of(List.of(7)))));
+		var newest = new Result(List.of("id"), List.of(List.of(8)));
+		transcript.add(MessageBlock.result(newest));
+		var earlier = transcript.blocks().getFirst();
+		assertThat(earlier.result()).isNull();
+		assertThat(earlier.text()).isEqualTo("id\n--\n7\n");
+		assertThat(new MessageBlockRenderer(false).rows(List.of(earlier), 80))
+			.extracting(MessageBlockRenderer.Row::text).contains("7");
+		assertThat(transcript.heldResult()).isSameAs(newest);
+	}
+
+	@Test
 	void onlyTheNewestResultKeepsRowsWhileOlderResultsKeepTheirFrozenText() {
 		var transcript = new TranscriptMemory();
 		for (int i = 0; i < 50; i++) {

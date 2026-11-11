@@ -491,8 +491,9 @@ public final class Session implements AutoCloseable {
 			return;
 		}
 		try {
-			com.datev.dbui.ResultFiles.save(result, settings(), FileCommandLine.parse(argument, false).file(), () -> cancelRequested);
-			add(MessageBlock.info("Saved " + result.rows().size() + " rows to " + argument
+			var request = FileCommandLine.parse(argument, false);
+			com.datev.dbui.ResultFiles.save(result, settings(), request.file(), () -> cancelRequested);
+			add(MessageBlock.info("Saved " + result.rows().size() + " rows to " + request.file()
 				+ (heldResultTruncated ? ". Warning: the held Result was truncated." : ".")));
 		}
 		catch (IOException | SQLException | IllegalArgumentException e) {

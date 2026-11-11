@@ -23,6 +23,8 @@
 - Horizontal Formatters stream as in Batch; horizontal `table` samples 1000 rows. Vertical Dump transposes into temporary column files in the target directory, then streams them into the final temporary file. This avoids Batch's whole-Result vertical buffer. It needs extra disk space and one open stream per column; a single large value can still require large memory.
 - File names are literal paths in the current directory unless absolute. Both commands accept single or double quotes around a name with spaces; the matching quote cannot occur inside it. There is no shell expansion, and SQL after the file name is not shell-parsed. The target directory must already exist and support atomic replacement. Completed files use mode `600` on POSIX systems. Replacement does not preserve old permissions and replaces a target symlink rather than following it.
 - Both Save and Dump use same-directory temporary files. Cancellation before publication leaves the target unchanged; cancellation after the atomic publication point cannot retract a completed file. Unexpected failures produce an error Message block and a trace in the Session log, not a failed future that ends Interactive mode.
+- Dump requires the connection's reported `standard_conforming_strings` to be on, matching the scanner. Refuse off before executing SQL or creating temporary files. Reject an existing directory target without following symlinks, preserving the documented symlink replacement rule. Force the completed temporary file to disk before atomic publication.
+- An unformatted adapter Result has no captured Settings. Freeze it with default table Settings before dropping its rows. The nested JSON writer has package visibility as the smallest plain-unit-test seam; it is not a new public API.
 
 ## Acceptance criteria
 
@@ -50,6 +52,37 @@
 - Observed red before implementation: Save and Dump were unknown commands; writing CTEs and SELECT INTO were accepted; the vertical 3-million-row CSV child exhausted its heap; a quoted Dump path failed; Dump accepted an open user transaction; an unexpected JDBC-boundary failure escaped through the future; a slow cursor-fetch cancel timed out; FOR SHARE variants were accepted; a paused cancel packet blocked status.
 - Other cases added after shared implementation passed immediately and are regression coverage, not separate red-before-green claims. These include JSON parsing/indentation, several Format/Orientation cases, later-fetch timeout, connection loss/reconnect, read-only preservation and missing-directory behavior.
 - The function-write backstop test initially used a temporary table, which PostgreSQL permits in READ ONLY transactions. The corrected permanent-table case passed after the backstop existed; it is not claimed as a separate red-before-green cycle.
+
+## Review follow-up
+
+1. Fixed the nonstandard-string query-check bypass: Dump refuses `standard_conforming_strings = off` using pgjdbc's reported parameter. The integration probe proves no Statement ran, no table was created and the target stayed unchanged. README retains the READ ONLY guarantee for accepted Dump input and the ADR 0007 limits.
+2. Reject existing directory targets before running SQL. File errors include the requested target, including temporary-file creation and publication failures.
+3. Save now requires one unquoted token or one quoted name, rejects trailing text, and uses the parsed name in its success Message block.
+4. Added database-free parser coverage, a 23-case query-preflight table, nested JSON writer and disk transpose tests. POSIX checks cover completed files and live column/width spools; unsupported file systems skip only permission tests. Spool files now use private temporary-file creation (previously mode `644`).
+5. Call `FileChannel.force(true)` after closing the writer and before atomic replacement, with a final cancellation check before publication.
+6. The slow-cancel integration test waits for its exact Statement to be active in `pg_stat_activity`, rather than sleeping 100 ms.
+7. Transcript retention formats an unformatted earlier Result before removing its rows, so its frozen text remains readable.
+8. Preflight errors identify the first refused Statement, limited to its first 60 characters. Tests parse single-Result JSON and JSON pretty Dumps as one outer array. README warns about crash leftovers (`.dbui-*.tmp` and `.dbui-columns-*`).
+
+### Follow-up test evidence
+
+| Test | Observed before the fix |
+|---|---|
+| `SaveAndDumpIT.dumpRefusesNonstandardStringsBeforeRunningAnyStatement` | Red: Dump succeeded instead of refusing the bypass input. |
+| `SaveAndDumpIT.dumpToAnExistingDirectoryNamesTheTargetAndRunsNothing` | Red: sequence probe showed a Statement ran. |
+| `FileCommandLineTest.saveRejectsTrailingTextAfterAnUnquotedFileName` | Red: parser accepted trailing text. |
+| `DiskVerticalFormatterTest.columnAndWidthSpoolFilesArePrivateWhileTheyExist` | Red: spool permissions were `644`, not `600`. |
+| Existing quoted-name integration test, strengthened success-message assertion | Red: Save displayed quote delimiters. |
+| `TranscriptMemoryTest.unformattedAdapterResultKeepsReadableTextBeforeItsRowsAreDropped` | Red: earlier text was null. |
+| `ResultFilesTest.preflightNamesTheFirstRefusedStatementWithAtMostSixtyCharacters` | Red: error omitted the refused Statement. |
+| `ResultFilesTest.nestedJsonWriterIndentsAcrossChunksAndLeavesTheFinalNewlineToTheDocument` | Compile-red: writer was private. After opening package visibility, existing behavior passed; no behavioral-red claim. |
+| Other `FileCommandLineTest` methods: `plainAndQuotedFileNamesAreLiteral`, `dumpKeepsSqlQuotesAndInternalWhitespaceUntouched`, `invalidFileNamesHaveClearErrors` | Passed immediately; regression guards. |
+| Other `ResultFilesTest` methods: `preflightUnderstandsQuotesAndCommentsAndRefusesWritesAndLocks`, `fileErrorsNameTheRequestedTargetNotJustATemporaryFile` | Passed immediately; regression guards. |
+| Other `DiskVerticalFormatterTest` methods: `diskTransposePreservesValuesAndCleansUpItsSpools`, `emptyDiskTransposeKeepsColumnNames` | Passed immediately; regression guards. |
+| `SaveAndDumpIT.aSingleResultDumpIsOneValidOuterArray`, `completedDumpAndSaveFilesHavePrivatePosixPermissions` | Passed immediately; regression guards. |
+| Existing missing-directory target assertion and active-Statement slow-cancel synchronization | Passed immediately; strengthened regression guards. |
+
+`./mvnw -q verify` passed after the follow-up: **387 Unit tests and 246 Integration tests**, no failures, errors or skips. Log: `/tmp/dbui-review-follow-up-verify.log`. `git diff --check` also passed. `force(true)` is checked directly in the publication code and exercised by file-writing tests; there is no dedicated simulated-crash/fsync test. Human terminal checks below remain unchanged.
 
 ## Limits and human checks
 

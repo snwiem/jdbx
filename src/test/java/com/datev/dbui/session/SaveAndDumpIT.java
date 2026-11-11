@@ -55,6 +55,24 @@ class SaveAndDumpIT {
 	}
 
 	@Test
+	void dumpRefusesNonstandardStringsBeforeRunningAnyStatement() throws Exception {
+		Path target = directory.resolve("nonstandard.csv");
+		Files.writeString(target, "original");
+		try (Session session = session()) {
+			submit(session, "create temporary sequence nonstandard_probe");
+			submit(session, "set standard_conforming_strings = off");
+			var band = submit(session, "/dump " + target + " select nextval('nonstandard_probe'); "
+				+ "select '\\''; commit; create table dump_bypass(id int); select ''''");
+			assertThat(band.kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(band.text()).contains("standard_conforming_strings", "Nothing was run");
+			assertThat(submit(session, "select is_called from nonstandard_probe").result().rows()).containsExactly(java.util.List.of(false));
+			assertThat(submit(session, "select to_regclass('dump_bypass') is null").result().rows()).containsExactly(java.util.List.of(true));
+			assertThat(Files.readString(target)).isEqualTo("original");
+			try (var files = Files.list(directory)) { assertThat(files.map(p -> p.getFileName().toString())).noneMatch(n -> n.startsWith(".dbui-")); }
+		}
+	}
+
+	@Test
 	void dumpRejectsFunctionWritesAtTheServerWithoutChangingTheSessionReadOnlySetting() throws Exception {
 		Path target = directory.resolve("side-effect.csv");
 		try (Session session = session()) {
@@ -92,6 +110,37 @@ class SaveAndDumpIT {
 		}
 	}
 
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(strings = { "json", "json-pretty" })
+	void aSingleResultDumpIsOneValidOuterArray(String format) throws Exception {
+		Path target = directory.resolve("single-" + format + ".json");
+		try (Session session = session()) {
+			submit(session, "/format " + format);
+			assertThat(submit(session, "/dump " + target + " select 7 as id").kind()).isEqualTo(MessageBlock.Kind.INFO);
+			var tokener = new org.json.JSONTokener(Files.readString(target));
+			var all = (org.json.JSONArray) tokener.nextValue();
+			assertThat(tokener.nextClean()).isEqualTo((char) 0);
+			assertThat(all.length()).isEqualTo(1);
+			assertThat(all.getJSONArray(0).length()).isEqualTo(1);
+			assertThat(all.getJSONArray(0).getJSONObject(0).getInt("id")).isEqualTo(7);
+		}
+	}
+
+	@Test
+	void completedDumpAndSaveFilesHavePrivatePosixPermissions() throws Exception {
+		org.junit.jupiter.api.Assumptions.assumeTrue(Files.getFileStore(directory).supportsFileAttributeView("posix"));
+		Path dumped = directory.resolve("private-dump.csv"), saved = directory.resolve("private-save.csv");
+		Files.writeString(dumped, "old");
+		Files.setPosixFilePermissions(dumped, java.nio.file.attribute.PosixFilePermissions.fromString("rw-r--r--"));
+		try (Session session = session()) {
+			assertThat(submit(session, "/dump " + dumped + " select 7 as id").kind()).isEqualTo(MessageBlock.Kind.INFO);
+			submit(session, "select 8 as id");
+			assertThat(submit(session, "/save " + saved).kind()).isEqualTo(MessageBlock.Kind.INFO);
+			for (Path target : java.util.List.of(dumped, saved)) assertThat(Files.getPosixFilePermissions(target))
+				.as("completed file %s", target).isEqualTo(java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"));
+		}
+	}
+
 	@Test
 	void dumpAndSaveAcceptQuotedFileNamesWithSpacesAndKeepSqlQuotesLiteral() throws Exception {
 		Path target = directory.resolve("quoted dump.csv");
@@ -101,7 +150,9 @@ class SaveAndDumpIT {
 			assertThat(Files.readString(target)).isEqualTo("x y\na  b\n");
 			submit(session, "select 2 as id");
 			Path saved = directory.resolve("quoted save.csv");
-			assertThat(submit(session, "/save '" + saved + "'").kind()).isEqualTo(MessageBlock.Kind.INFO);
+			var band = submit(session, "/save '" + saved + "'");
+			assertThat(band.kind()).isEqualTo(MessageBlock.Kind.INFO);
+			assertThat(band.text()).isEqualTo("Saved 1 rows to " + saved + ".");
 			assertThat(Files.readString(saved)).isEqualTo("id\n2\n");
 		}
 	}
@@ -264,11 +315,27 @@ class SaveAndDumpIT {
 	}
 
 	@Test
+	void dumpToAnExistingDirectoryNamesTheTargetAndRunsNothing() throws Exception {
+		Path target = Files.createDirectory(directory.resolve("not-a-file"));
+		try (Session session = session()) {
+			submit(session, "create temporary sequence directory_probe");
+			var band = submit(session, "/dump " + target + " select nextval('directory_probe')");
+			assertThat(band.kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(band.text()).contains(target.toString(), "directory");
+			assertThat(submit(session, "select is_called from directory_probe").result().rows()).containsExactly(java.util.List.of(false));
+			assertThat(target).isDirectory();
+			try (var files = Files.list(directory)) { assertThat(files.map(p -> p.getFileName().toString())).noneMatch(n -> n.startsWith(".dbui-")); }
+		}
+	}
+
+	@Test
 	void dumpToAMissingDirectoryFailsWithoutRunningQueriesOrLeavingTemporaryFiles() throws Exception {
 		try (Session session = session()) {
 			submit(session, "create temporary sequence missing_directory_probe");
 			Path target = directory.resolve("missing").resolve("file.csv");
-			assertThat(submit(session, "/dump " + target + " select nextval('missing_directory_probe')").kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			var band = submit(session, "/dump " + target + " select nextval('missing_directory_probe')");
+			assertThat(band.kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(band.text()).contains(target.toString());
 			assertThat(submit(session, "select is_called from missing_directory_probe").result().rows()).containsExactly(java.util.List.of(false));
 			assertThat(target).doesNotExist();
 			try (var files = Files.list(directory)) { assertThat(files.map(p -> p.getFileName().toString())).noneMatch(n -> n.startsWith(".dbui-")); }
@@ -295,7 +362,18 @@ class SaveAndDumpIT {
 			});
 		try (Session session = new Session(boundary, SessionDirectory.create(directory.resolve("slow-cancel-state")))) {
 			var pending = session.submit("/dump " + directory.resolve("slow.csv") + " select pg_sleep(30)");
-			Thread.sleep(100);
+			try (var observer = DriverManager.getConnection(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+				var activity = observer.prepareStatement("select state = 'active' and query = ? from pg_stat_activity where pid = ?")) {
+				activity.setString(1, "select pg_sleep(30)");
+				activity.setInt(2, pg.getBackendPID());
+				long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+				boolean active = false;
+				while (!active && System.nanoTime() < deadline) {
+					try (var rows = activity.executeQuery()) { active = rows.next() && rows.getBoolean(1); }
+					if (!active) Thread.sleep(10);
+				}
+				assertThat(active).as("Dump Statement is active before cancellation").isTrue();
+			}
 			session.cancel();
 			try {
 				assertThat(entered.await(2, TimeUnit.SECONDS)).isTrue();

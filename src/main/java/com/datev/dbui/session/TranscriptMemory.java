@@ -18,7 +18,9 @@ public final class TranscriptMemory {
 			for (int i = 0; i < blocks.size(); i++) {
 				var earlier = blocks.get(i);
 				if (earlier.result() != null) {
-					blocks.set(i, new MessageBlock(earlier.kind(), earlier.text(), null));
+					String text = earlier.text() == null
+						? MessageBlock.result(earlier.result(), com.datev.dbui.config.Settings.defaults()).text() : earlier.text();
+					blocks.set(i, new MessageBlock(earlier.kind(), text, null));
 				}
 			}
 			heldResult = block.result();

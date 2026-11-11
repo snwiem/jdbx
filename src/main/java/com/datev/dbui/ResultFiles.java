@@ -27,9 +27,12 @@ public final class ResultFiles {
 	public static List<String> queries(String input) {
 		var statements = new StatementSplitter().split(input);
 		if (statements.isEmpty()) throw new IllegalArgumentException("No SQL input to dump. Supply SQL or submit an input first.");
-		if (statements.stream().anyMatch(sql -> !queryOnly(sql))) {
-			throw new IllegalArgumentException("Dump requires a query for every Statement. Nothing was run. "
-				+ "Writes, INTO and locking queries are not accepted; quote identifiers named insert, update, delete or merge.");
+		for (String sql : statements) {
+			if (!queryOnly(sql)) {
+				String preview = sql.length() > 60 ? sql.substring(0, 60) + "..." : sql;
+				throw new IllegalArgumentException("Dump requires a query for every Statement. Refused Statement: " + preview + ". Nothing was run. "
+					+ "Writes, INTO and locking queries are not accepted; quote identifiers named insert, update, delete or merge.");
+			}
 		}
 		return statements;
 	}
@@ -55,8 +58,12 @@ public final class ResultFiles {
 	/** Streams all rows. The caller validates the whole input before opening a file or executing SQL. */
 	public static long dump(Connection connection, Statement statement, List<String> statements, Settings settings,
 			Path target, BooleanSupplier cancelled) throws IOException, SQLException {
+		var pg = connection.unwrap(org.postgresql.core.BaseConnection.class);
+		if (!pg.getStandardConformingStrings()) {
+			throw new SQLException("Dump requires standard_conforming_strings = on. Nothing was run.");
+		}
 		// SQL BEGIN does not change JDBC's autocommit flag; ask pgjdbc before owning a read transaction.
-		if (!connection.getAutoCommit() || connection.unwrap(org.postgresql.core.BaseConnection.class).getTransactionState()
+		if (!connection.getAutoCommit() || pg.getTransactionState()
 				!= org.postgresql.core.TransactionState.IDLE) {
 			throw new SQLException("Finish the open transaction with COMMIT or ROLLBACK before /dump.");
 		}
@@ -102,7 +109,7 @@ public final class ResultFiles {
 	}
 
 	/** Indents a Result array by two spaces and leaves its final newline to the outer document. */
-	private static final class NestedJsonWriter extends Writer {
+	static final class NestedJsonWriter extends Writer {
 		private final Writer out;
 		private boolean start = true;
 		private boolean newline;
@@ -129,20 +136,31 @@ public final class ResultFiles {
 
 	private static void atomic(Path target, BooleanSupplier cancelled, Write write) throws IOException, SQLException {
 		Path absolute = target.toAbsolutePath();
-		Path temporary = Files.createTempFile(absolute.getParent(), ".dbui-", ".tmp");
 		try {
-			try (Writer out = new java.io.FilterWriter(Files.newBufferedWriter(temporary)) {
-				@Override public void write(int c) throws IOException { checkCancelled(cancelled); super.write(c); }
-				@Override public void write(char[] chars, int offset, int length) throws IOException { checkCancelled(cancelled); super.write(chars, offset, length); }
-				@Override public void write(String text, int offset, int length) throws IOException { checkCancelled(cancelled); super.write(text, offset, length); }
-			}) {
-				write.write(out);
+			if (Files.isDirectory(absolute, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+				throw new IOException("Target is a directory: " + absolute);
 			}
-			checkCancelled(cancelled);
-			Files.move(temporary, absolute, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+			Path temporary = Files.createTempFile(absolute.getParent(), ".dbui-", ".tmp");
+			try {
+				try (Writer out = new java.io.FilterWriter(Files.newBufferedWriter(temporary)) {
+					@Override public void write(int c) throws IOException { checkCancelled(cancelled); super.write(c); }
+					@Override public void write(char[] chars, int offset, int length) throws IOException { checkCancelled(cancelled); super.write(chars, offset, length); }
+					@Override public void write(String text, int offset, int length) throws IOException { checkCancelled(cancelled); super.write(text, offset, length); }
+				}) {
+					write.write(out);
+				}
+				try (var file = java.nio.channels.FileChannel.open(temporary, java.nio.file.StandardOpenOption.WRITE)) {
+					file.force(true);
+				}
+				checkCancelled(cancelled);
+				Files.move(temporary, absolute, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+			}
+			finally {
+				Files.deleteIfExists(temporary);
+			}
 		}
-		finally {
-			Files.deleteIfExists(temporary);
+		catch (IOException e) {
+			throw new IOException("Cannot write target " + absolute + ": " + e.getMessage(), e);
 		}
 	}
 

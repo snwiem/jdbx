@@ -18,7 +18,7 @@ record FileCommandLine(Path file, String sql) {
 			if (end < text.length() && !Character.isWhitespace(text.charAt(end))) throw new IllegalArgumentException("Separate the file name and SQL with whitespace.");
 		}
 		else {
-			end = dump ? 0 : text.length();
+			end = 0;
 			while (end < text.length() && !Character.isWhitespace(text.charAt(end))) end++;
 			file = text.substring(0, end);
 		}
