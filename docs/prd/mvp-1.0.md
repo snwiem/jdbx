@@ -77,8 +77,8 @@ dbui is a Java terminal tool that talks to PostgreSQL over JDBC.
 49. As a developer, I want binary values shown as hex with their length, so that I can recognise them.
 50. As a developer, I want `json` and `jsonb` columns embedded as real JSON in the `json` Format, so that output stays valid JSON.
 51. As a developer, I want `/save <file>` to write the current Result in the current Format and Orientation, so that I keep a result quickly.
-52. As a developer, I want `/dump <file> [sql]` to rerun a Statement and write all rows, so that I can export beyond the Row limit.
-53. As a developer, I want `/dump` to refuse non-query Statements, so that a repeat does not change data twice.
+52. As a developer, I want `/dump <file> [sql]` to rerun all Statements of the given SQL, or of my last input, and write all rows, so that I can export beyond the Row limit. With `json` the file is one valid JSON document.
+53. As a developer, I want `/dump` to refuse an input with any non-query Statement, so that a repeat does not change data twice.
 
 ### Screen and messages
 
@@ -155,7 +155,7 @@ dbui is a Java terminal tool that talks to PostgreSQL over JDBC.
 - Connection precedence: command-line options override Profile fields. Direct connect when values are complete. Otherwise the edit dialog opens prefilled.
 - Password order: `--password` or JDBC URL, then Profile (with `${ENV}`), then masked prompt. Batch mode never prompts. `.pgpass` is not used. A Profile has no timeout field.
 - Row limit is applied through the JDBC statement, never by rewriting SQL.
-- `/save` writes the Result held in memory. `/dump` reruns and streams all rows, and accepts only query Statements (including `WITH ... SELECT`).
+- `/save` writes the Result held in memory. `/dump` reruns all Statements of the given SQL or of the last input and streams all rows, and accepts only inputs where every Statement is a query (including `WITH ... SELECT`). It writes to a temporary file and renames it on success.
 - `Ctrl-C` cancels a running Statement. It never exits dbui. `Ctrl-D` does not exit either. Only `/quit` exits.
 - Errors in Interactive mode: no stack trace on the terminal. Stack traces go to the log file in the Session directory.
 - Value rendering: NULL as `NULL` in `table`, empty in `csv` and `tsv`, `null` in `json`. ISO dates in the JVM time zone by default. Plain numbers. Long text cut with an ellipsis in `table`. Newlines shown as a marker in `table`. Binary as hex with length. All of this is configurable and will be tuned after the prototype.
