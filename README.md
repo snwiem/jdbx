@@ -111,20 +111,28 @@ Key names are case-insensitive, with surrounding whitespace ignored. Supported n
 - `ctrl-` or `alt-` followed by one letter `a`–`z`, `/`, `space`, `tab` or `enter`, for example `ctrl-j`, `alt-/`, `ctrl-space`.
 
 Combined modifiers, function keys and unmodified printable characters are not supported.
-Modifiers match exactly: plain Tab does not also consume Shift-Tab.
-Enter always sends input. `enter`, `ctrl-c`, `ctrl-d` and `ctrl-r` are reserved for send, cancel/clear, ignore and history search.
+Tab and Enter match Shift exactly: plain Tab does not also consume Shift-Tab.
+Character bindings allow layout-required Shift, for example Alt+Shift+7 for Alt-/ on a German keyboard.
+Enter always sends input. `enter`, `ctrl-c`, `ctrl-d`, `ctrl-r` and `ctrl-w` are reserved for send, cancel/clear, ignore, history search and delete previous word.
 Every configured binding must be different, including unchanged defaults and fallback keys.
 To reuse a default key for another action, also change the action that currently uses it.
 
 An invalid name, unknown action or conflict rejects the **whole key map**, not just one entry.
 Interactive mode shows a startup error Message block naming the action and key, and uses all default bindings.
+That error stays at the top of the Transcript for the Session; it does not disappear after connecting or running input.
 Other valid settings still apply. Batch mode instead reports the config error on stderr and exits before connecting.
 Fix the file and restart to apply changes.
 
 Dialog keys and popup acceptance keys do not change: Tab or Enter accepts an open Completion candidate without sending input.
-Shift-Enter also inserts a newline when the terminal distinguishes it, unless it is configured for another action.
-Some terminals intercept modified keys or send the same bytes for different keys, such as Ctrl-I and Tab.
-Use keys your terminal can distinguish; some combinations require Kitty keyboard support. Bracketed paste remains unchanged.
+Shift-Enter inserts a newline without sending when the terminal distinguishes it, unless it is configured for another action.
+This differs from the behavior before configurable keys, when Shift-Enter also sent input.
+
+Some terminals intercept modified keys or send the same bytes for different keys.
+Without Kitty keyboard support, the legacy aliases are `ctrl-h` = Backspace (byte 8), `ctrl-i` = Tab (9), `ctrl-j` = LF (10, normally parsed as Enter), and `ctrl-m` = Enter (13).
+Configured Ctrl-H, Ctrl-I and Ctrl-M cannot be distinguished from those fixed keys on legacy terminals.
+**Ctrl-J exception:** dbui preserves a bare LF as Ctrl-J outside bracketed paste, so the default newline key still works if the terminal sends LF.
+If the terminal sends Enter instead, Ctrl-J or Ctrl-M can send input rather than run the configured action.
+Use a distinct key, Kitty keyboard support, or bracketed paste for multi-line input on legacy terminals. Bracketed paste never sends input by itself.
 
 ## Profiles in Interactive mode
 

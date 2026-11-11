@@ -7,7 +7,7 @@ import dev.tamboui.tui.bindings.KeyTrigger;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 
-/** Thin adapter from validated configuration to terminal keys, with exact modifier matching. */
+/** Thin adapter from validated configuration to terminal keys. */
 public record EditorKeys(Binding send, Binding newline, Binding orientationCycle, Binding orientationFallback,
 		Binding complete, Binding completeAlternate) {
 
@@ -38,8 +38,10 @@ public record EditorKeys(Binding send, Binding newline, Binding orientationCycle
 				yield ctrl ? KeyTrigger.ctrl(character) : KeyTrigger.alt(character);
 			}
 		};
-		// KeyTrigger ignores unrequested Shift. In particular, plain Tab must not consume Shift-Tab.
-		return key -> key.hasShift() == shift
+		// Tab and Enter distinguish Shift explicitly. Characters may need Shift on a non-US keyboard;
+		// retain KeyTrigger's shifted-character matching (for example German Alt+Shift+7 for Alt-/).
+		boolean exactShift = base.equals("tab") || base.equals("enter");
+		return key -> (!exactShift || key.hasShift() == shift)
 			&& !key.hasSuper() && !key.hasHyper() && !key.hasMeta() && trigger.matches(key);
 	}
 

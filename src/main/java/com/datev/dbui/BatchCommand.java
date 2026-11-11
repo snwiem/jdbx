@@ -90,7 +90,7 @@ class BatchCommand implements Callable<Integer> {
 			loader = new ConfigLoader(ConfigLoader.directory(connectionOptions.configDir, environment,
 					Path.of(System.getProperty("user.home"))), environment);
 			boolean interactive = commands.isEmpty() && files.isEmpty() && stdinIsTerminal();
-			var configErrors = new java.util.ArrayList<String>();
+			var configErrors = new ArrayList<String>();
 			settings = interactive ? loader.settingsForInteractive(configErrors::add) : loader.settings();
 			// Issue 0013: only Interactive mode may collect missing connection fields or a password.
 			if (interactive) {

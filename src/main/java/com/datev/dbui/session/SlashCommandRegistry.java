@@ -3,6 +3,9 @@ package com.datev.dbui.session;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
+
+import com.datev.dbui.config.KeyBindings;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Model.CommandSpec;
@@ -81,10 +84,10 @@ public final class SlashCommandRegistry {
 	}
 
 	public String help() {
-		return help(com.datev.dbui.config.KeyBindings.defaults());
+		return help(KeyBindings.defaults());
 	}
 
-	public String help(com.datev.dbui.config.KeyBindings keys) {
+	public String help(KeyBindings keys) {
 		var text = new StringBuilder("Slash commands\n");
 		for (var command : commands) {
 			var subcommand = line.getSubcommands().get("/" + command.name());
@@ -123,10 +126,17 @@ public final class SlashCommandRegistry {
 			""".formatted(keys.newline().display(),
 				keys.orientationCycle().display() + " / " + keys.orientationFallback().display(),
 				keys.complete().display() + " / " + keys.completeAlternate().display()));
-		if (java.util.stream.Stream.of(keys.newline(), keys.orientationCycle(), keys.orientationFallback(), keys.complete(), keys.completeAlternate())
+		if (Stream.of(keys.newline(), keys.orientationCycle(), keys.orientationFallback(), keys.complete(), keys.completeAlternate())
 				.noneMatch(key -> key.name().equals("shift-enter"))) {
 			text.append("Shift-Enter               Insert a newline when the terminal distinguishes it from Enter\n");
 		}
+		text.append("""
+
+			Legacy terminals: Ctrl-H = Backspace, Ctrl-I = Tab, Ctrl-J = LF, Ctrl-M = Enter.
+			Without Kitty these are not distinct keys; dbui preserves bare LF as Ctrl-J.
+			If the terminal sends Enter instead, Ctrl-J / Ctrl-M can send input. Use a distinct key
+			or bracketed paste for multi-line input on legacy terminals.
+			""");
 		return text.toString().stripTrailing();
 	}
 }

@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
+import com.datev.dbui.config.KeyBindings;
 import com.datev.dbui.config.Profile;
 import com.datev.dbui.config.ProfileDialogModel;
 import com.datev.dbui.session.MessageBlock;
@@ -29,7 +30,7 @@ class ProfileDialogScreenTest {
 	private final AtomicInteger cancelled = new AtomicInteger();
 
 	private InteractiveScreen screen(boolean color) {
-		var screen = new InteractiveScreen("not connected", input -> { }, EditorKeys.defaults(), color);
+		var screen = new InteractiveScreen("not connected", input -> { }, KeyBindings.defaults(), color);
 		screen.onInteraction(saved::add, passwords::add, cancelled::incrementAndGet);
 		var blocks = new ArrayList<MessageBlock>();
 		for (int i = 0; i < 40; i++) blocks.add(MessageBlock.info("TRANSCRIPT" + i));

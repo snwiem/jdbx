@@ -3,12 +3,15 @@ package com.datev.dbui.config;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.DateTimeException;
 import java.time.Duration;
+import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -61,11 +64,11 @@ public class ConfigLoader {
 	}
 
 	/** Reject a bad key map, report its error, and retain the other settings with default editor keys. */
-	public Settings settingsForInteractive(java.util.function.Consumer<String> keyBindingError) {
+	public Settings settingsForInteractive(Consumer<String> keyBindingError) {
 		return settings(error -> keyBindingError.accept(error + " Default key bindings apply."));
 	}
 
-	private Settings settings(java.util.function.Consumer<String> keyBindingError) {
+	private Settings settings(Consumer<String> keyBindingError) {
 		Map<String, Object> root = read("config.yaml");
 		Settings defaults = Settings.defaults();
 		int rowLimit = root.containsKey("row-limit") ? integer("config.yaml", "row-limit", root.get("row-limit"))
@@ -88,7 +91,7 @@ public class ConfigLoader {
 				keyBindings(root.get("key-bindings"), keyBindingError));
 	}
 
-	private static KeyBindings keyBindings(Object value, java.util.function.Consumer<String> error) {
+	private static KeyBindings keyBindings(Object value, Consumer<String> error) {
 		try {
 			return KeyBindings.from(value);
 		}
@@ -248,14 +251,14 @@ public class ConfigLoader {
 		return String.valueOf(value);
 	}
 
-	private static java.time.ZoneId timezone(Object value) {
+	private static ZoneId timezone(Object value) {
 		if (value == null) {
 			return null;
 		}
 		try {
-			return java.time.ZoneId.of(String.valueOf(value));
+			return ZoneId.of(String.valueOf(value));
 		}
-		catch (java.time.DateTimeException e) {
+		catch (DateTimeException e) {
 			throw new ConfigException("config.yaml: 'timezone' is '" + value
 					+ "'. Use a time zone id such as 'Europe/Berlin' or 'UTC'.");
 		}

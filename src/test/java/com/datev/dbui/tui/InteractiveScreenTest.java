@@ -2,19 +2,40 @@ package com.datev.dbui.tui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.time.Duration;
+import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.datev.dbui.Result;
+import com.datev.dbui.config.KeyBindings;
+import com.datev.dbui.config.Settings;
+import com.datev.dbui.session.ExecutionStatus;
+import com.datev.dbui.session.ExecutionStatus.ResultSummary;
 import com.datev.dbui.session.MessageBlock;
 
 import dev.tamboui.buffer.Buffer;
+import dev.tamboui.buffer.DiffResult;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.layout.Size;
+import dev.tamboui.style.Style;
 import dev.tamboui.terminal.Frame;
+import dev.tamboui.terminal.KeyboardProtocol;
+import dev.tamboui.terminal.TestBackend;
+import dev.tamboui.tui.TuiConfig;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyModifiers;
 import dev.tamboui.tui.event.KeyEvent;
@@ -27,9 +48,9 @@ class InteractiveScreenTest {
 	@Test
 	void shiftTabAndCtrlOCycleOrientationWithoutSendingOrClearingTheEditorDraft() throws Exception {
 		var inputs = new CopyOnWriteArrayList<String>();
-		var cycles = new java.util.concurrent.atomic.AtomicInteger();
+		var cycles = new AtomicInteger();
 		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add, () -> { },
-			com.datev.dbui.config.Settings.defaults(), cycles::incrementAndGet);
+			Settings.defaults(), cycles::incrementAndGet);
 		screen.history(List.of("select 1"));
 		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(120, 20))) {
 			terminal.runner().dispatch(new PasteEvent("draft"));
@@ -38,7 +59,7 @@ class InteractiveScreenTest {
 			terminal.pilot().pause();
 			assertThat(cycles.get()).isEqualTo(1);
 			assertThat(inputs).isEmpty();
-			screen.settings(com.datev.dbui.config.Settings.defaults().withOutput("table", "vertical"));
+			screen.settings(Settings.defaults().withOutput("table", "vertical"));
 			assertThat(line(draw(screen, new Size(120, 20)), 18)).contains("Orientation: vertical");
 			terminal.pilot().press('o', KeyModifiers.CTRL);
 			terminal.pilot().pause();
@@ -61,7 +82,7 @@ class InteractiveScreenTest {
 	@Test
 	void statusBarShowsTheCurrentFormatAndOrientation() {
 		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { }, () -> { },
-			com.datev.dbui.config.Settings.defaults().withOutput("csv", "vertical"));
+			Settings.defaults().withOutput("csv", "vertical"));
 		assertThat(line(draw(screen, new Size(140, 20)), 18)).contains("Format: csv", "Orientation: vertical");
 		assertThat(line(draw(screen, new Size(140, 20)), 19)).contains("Row limit: 1000");
 	}
@@ -70,7 +91,7 @@ class InteractiveScreenTest {
 	void anEmptyFrozenCsvResultDoesNotFallBackToTable() {
 		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { });
 		var result = new Result(List.of(), List.of(List.of()));
-		var block = MessageBlock.result(result, com.datev.dbui.config.Settings.defaults().withOutput("csv", "vertical"));
+		var block = MessageBlock.result(result, Settings.defaults().withOutput("csv", "vertical"));
 		assertThat(block.text()).isEmpty();
 		screen.update(List.of(MessageBlock.info("before"), block, MessageBlock.info("after")));
 		assertThat(line(draw(screen, new Size(100, 20)), 7)).contains("after");
@@ -79,45 +100,45 @@ class InteractiveScreenTest {
 	@Test
 	void transcriptDrawsTheFormatFrozenOnEachResultInsteadOfAlwaysUsingTable() {
 		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { });
-		var settings = com.datev.dbui.config.Settings.defaults().withOutput("json", "vertical");
+		var settings = Settings.defaults().withOutput("json", "vertical");
 		screen.update(List.of(MessageBlock.result(new Result(List.of("id"), List.of(List.of(7))), settings)));
 		var buffer = draw(screen, new Size(80, 20));
-		var transcript = IntStream.range(0, 15).mapToObj(y -> line(buffer, y)).collect(java.util.stream.Collectors.joining("\n"));
+		var transcript = IntStream.range(0, 15).mapToObj(y -> line(buffer, y)).collect(Collectors.joining("\n"));
 		assertThat(transcript).contains("{\"id\":7}", "[", "]").doesNotContain("--");
 	}
 
 	@Test
 	void screenDrawsConfiguredFormatterOptionsAndCurrentExecutionStatus() {
-		var settings = new com.datev.dbui.config.Settings(5, null, "table", "horizontal", false,
-			"∅", "↵", 5, java.time.ZoneId.of("UTC"));
+		var settings = new Settings(5, null, "table", "horizontal", false,
+			"∅", "↵", 5, ZoneId.of("UTC"));
 		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { }, () -> { }, settings);
 		screen.update(List.of(MessageBlock.result(new Result(List.of("null", "lines", "long"),
-			List.of(java.util.Arrays.asList(null, "a\nb", "abcdefgh"))))));
+			List.of(Arrays.asList(null, "a\nb", "abcdefgh"))))));
 		assertThat(line(draw(screen, new Size(100, 20)), 19)).contains("Row limit: 5");
-		screen.status(new com.datev.dbui.session.ExecutionStatus(5, true, java.time.Duration.ofSeconds(12),
-			new com.datev.dbui.session.ExecutionStatus.ResultSummary(5, java.time.Duration.ofMillis(123), true)));
+		screen.status(new ExecutionStatus(5, true, Duration.ofSeconds(12),
+			new ResultSummary(5, Duration.ofMillis(123), true)));
 		var buffer = draw(screen, new Size(100, 20));
 		assertThat(line(buffer, 19)).contains("Row limit: 5 · running… 12 s · 5 rows · 0.123 s · truncated");
-		var all = IntStream.range(0, 15).mapToObj(y -> line(buffer, y)).collect(java.util.stream.Collectors.joining("\n"));
+		var all = IntStream.range(0, 15).mapToObj(y -> line(buffer, y)).collect(Collectors.joining("\n"));
 		assertThat(all).contains("∅", "a↵b", "abcd…").doesNotContain("abcdefgh");
 	}
 
 	@Test
 	void statusBarShowsModeAlsoWithoutColor() {
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { }, EditorKeys.defaults(), false);
+		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { }, KeyBindings.defaults(), false);
 		assertThat(line(draw(screen, new Size(100, 20)), 19)).contains("read-write · Row limit");
-		screen.status(new com.datev.dbui.session.ExecutionStatus(5, false, java.time.Duration.ZERO, null, true, true));
+		screen.status(new ExecutionStatus(5, false, Duration.ZERO, null, true, true));
 		assertThat(line(draw(screen, new Size(100, 20)), 19)).contains("read-only · Row limit");
-		screen.status(new com.datev.dbui.session.ExecutionStatus(5, false, java.time.Duration.ZERO, null, true, false));
+		screen.status(new ExecutionStatus(5, false, Duration.ZERO, null, true, false));
 		assertThat(line(draw(screen, new Size(100, 20)), 19)).contains("not connected · Row limit");
 	}
 
 	@Test
 	void ctrlCCancelsWhileLockedAndOtherKeysAndPasteAreIgnored() throws Exception {
 		var inputs = new CopyOnWriteArrayList<String>();
-		var cancellations = new java.util.concurrent.atomic.AtomicInteger();
+		var cancellations = new AtomicInteger();
 		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add, cancellations::incrementAndGet,
-			com.datev.dbui.config.Settings.defaults());
+			Settings.defaults());
 		screen.busy(true);
 		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(80, 20))) {
 			terminal.pilot().press("x");
@@ -151,17 +172,17 @@ class InteractiveScreenTest {
 		}
 		// Disable the legitimate Kitty negotiation ESC, so raw output here can only be application data.
 		var terminalCells = new StringBuilder();
-		var backend = new dev.tamboui.terminal.TestBackend(100, 24) {
+		var backend = new TestBackend(100, 24) {
 			@Override
-			public void draw(dev.tamboui.buffer.DiffResult diff) throws java.io.IOException {
+			public void draw(DiffResult diff) throws IOException {
 				for (int i = 0; i < diff.size(); i++) {
 					terminalCells.append(diff.getCell(i).symbol());
 				}
 				super.draw(diff);
 			}
 		};
-		var config = dev.tamboui.tui.TuiConfig.builder().backend(backend)
-			.keyboardProtocol(dev.tamboui.terminal.KeyboardProtocol.LEGACY).build();
+		var config = TuiConfig.builder().backend(backend)
+			.keyboardProtocol(KeyboardProtocol.LEGACY).build();
 		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(100, 24), config)) {
 			terminal.pilot().pause();
 			assertThat(terminalCells.toString()).contains("control", "title").doesNotContain("\u001b", "\u0007");
@@ -241,18 +262,18 @@ class InteractiveScreenTest {
 
 	@Test
 	void startupConfigErrorsRemainErrorBandsWhenTheSessionRefreshes() {
-		var screen = new InteractiveScreen("connection", input -> { }, EditorKeys.defaults(), false);
+		var screen = new InteractiveScreen("connection", input -> { }, KeyBindings.defaults(), false);
 		screen.startupErrors(List.of("config.yaml: key-bindings.newline: invalid key 'bad'. Default key bindings apply."));
 		screen.update(List.of(MessageBlock.info("connected")));
 		var buffer = draw(screen, new Size(140, 20));
 		assertThat(line(buffer, 1)).contains("error: config.yaml", "key-bindings.newline", "'bad'", "Default key bindings apply.");
-		assertThat(buffer.get(0, 1).style()).isEqualTo(dev.tamboui.style.Style.EMPTY.bold().reversed());
+		assertThat(buffer.get(0, 1).style()).isEqualTo(Style.EMPTY.bold().reversed());
 		assertThat(line(buffer, 4)).contains("connected");
 	}
 
 	@Test
 	void withoutColorTheWholeScreenWritesNoColorCodes() {
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { }, EditorKeys.defaults(), false);
+		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { }, KeyBindings.defaults(), false);
 		screen.update(List.of(MessageBlock.input("select 1"), MessageBlock.info("CREATE TABLE"), MessageBlock.error("bad")));
 		var buffer = draw(screen, new Size(40, 14));
 		for (int y = 0; y < 14; y++) {
@@ -303,17 +324,29 @@ class InteractiveScreenTest {
 	}
 
 	@Test
-	void statusBarShowsTheConfiguredNewlineKey(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
-		java.nio.file.Files.writeString(dir.resolve("config.yaml"), "key-bindings:\n  newline: alt-n\n");
+	void statusBarShowsTheConfiguredNewlineKey() {
+		var bindings = KeyBindings.from(Map.of("newline", "alt-n"));
 		var screen = new InteractiveScreen("connection", input -> { }, () -> { },
-			new com.datev.dbui.config.ConfigLoader(dir, java.util.Map.of()).settings());
+			Settings.defaults().withKeyBindings(bindings));
 		assertThat(line(draw(screen, new Size(140, 20)), 19)).contains("Alt-N newline").doesNotContain("Ctrl-J");
 	}
 
 	@Test
-	void configuredNewlineKeyWorksThroughThePilot(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
-		java.nio.file.Files.writeString(dir.resolve("config.yaml"), "key-bindings:\n  newline: alt-n\n");
-		var settings = new com.datev.dbui.config.ConfigLoader(dir, java.util.Map.of()).settings();
+	void customBindingsAndStatusBarUseTheSameNewlineKeyWithoutColor() {
+		var bindings = KeyBindings.from(Map.of("newline", "alt-n"));
+		var inputs = new CopyOnWriteArrayList<String>();
+		var screen = new InteractiveScreen("connection", inputs::add, bindings, false);
+		assertThat(line(draw(screen, new Size(140, 20)), 19)).contains("Alt-N newline").doesNotContain("Ctrl-J");
+		screen.handle(new PasteEvent("a"));
+		screen.handle(KeyEvent.ofChar('n', KeyModifiers.ALT));
+		screen.handle(new PasteEvent("b"));
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(inputs).containsExactly("a\nb");
+	}
+
+	@Test
+	void configuredNewlineKeyWorksThroughThePilot() throws Exception {
+		var settings = Settings.defaults().withKeyBindings(KeyBindings.from(Map.of("newline", "alt-n")));
 		var inputs = new CopyOnWriteArrayList<String>();
 		var screen = new InteractiveScreen("connection", inputs::add, () -> { }, settings);
 		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(60, 20))) {
@@ -330,11 +363,11 @@ class InteractiveScreenTest {
 	}
 
 	@Test
-	void changedNewlineDoesNotKeepCtrlJAsAnUndocumentedNewline(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
-		java.nio.file.Files.writeString(dir.resolve("config.yaml"), "key-bindings:\n  newline: alt-n\n");
+	void changedNewlineDoesNotKeepCtrlJAsAnUndocumentedNewline() {
+		var bindings = KeyBindings.from(Map.of("newline", "alt-n"));
 		var inputs = new CopyOnWriteArrayList<String>();
 		var screen = new InteractiveScreen("connection", inputs::add, () -> { },
-			new com.datev.dbui.config.ConfigLoader(dir, java.util.Map.of()).settings());
+			Settings.defaults().withKeyBindings(bindings));
 		screen.handle(new PasteEvent("a"));
 		screen.handle(KeyEvent.ofChar('j', KeyModifiers.CTRL));
 		screen.handle(new PasteEvent("b"));
@@ -342,20 +375,14 @@ class InteractiveScreenTest {
 		assertThat(inputs).containsExactly("ab");
 	}
 
-	@org.junit.jupiter.params.ParameterizedTest
-	@org.junit.jupiter.params.provider.MethodSource("configuredNewlineKeys")
-	void supportedKeyNamesProduceANewline(String name, KeyEvent key,
-			@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
-		java.nio.file.Files.writeString(dir.resolve("config.yaml"), """
-			key-bindings:
-			  orientation-cycle: alt-o
-			  complete: alt-c
-			  complete-alternate: alt-e
-			  newline: %s
-			""".formatted(name));
+	@ParameterizedTest
+	@MethodSource("configuredNewlineKeys")
+	void supportedKeyNamesProduceANewline(String name, KeyEvent key) {
+		var bindings = KeyBindings.from(Map.of("orientation-cycle", "alt-o", "complete", "alt-c",
+			"complete-alternate", "alt-e", "newline", name));
 		var inputs = new CopyOnWriteArrayList<String>();
 		var screen = new InteractiveScreen("connection", inputs::add, () -> { },
-			new com.datev.dbui.config.ConfigLoader(dir, java.util.Map.of()).settings());
+			Settings.defaults().withKeyBindings(bindings));
 		screen.handle(new PasteEvent("a"));
 		screen.handle(key);
 		screen.handle(new PasteEvent("b"));
@@ -363,21 +390,38 @@ class InteractiveScreenTest {
 		assertThat(inputs).containsExactly("a\nb");
 	}
 
-	static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> configuredNewlineKeys() {
-		return java.util.stream.Stream.of(
-			org.junit.jupiter.params.provider.Arguments.of("tab", KeyEvent.ofKey(KeyCode.TAB)),
-			org.junit.jupiter.params.provider.Arguments.of("shift-tab", KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.SHIFT)),
-			org.junit.jupiter.params.provider.Arguments.of("shift-enter", KeyEvent.ofKey(KeyCode.ENTER, KeyModifiers.SHIFT)),
-			org.junit.jupiter.params.provider.Arguments.of("ctrl-tab", KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.CTRL)),
-			org.junit.jupiter.params.provider.Arguments.of("alt-tab", KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.ALT)),
-			org.junit.jupiter.params.provider.Arguments.of("ctrl-enter", KeyEvent.ofKey(KeyCode.ENTER, KeyModifiers.CTRL)),
-			org.junit.jupiter.params.provider.Arguments.of("alt-enter", KeyEvent.ofKey(KeyCode.ENTER, KeyModifiers.ALT)),
-			org.junit.jupiter.params.provider.Arguments.of("ctrl-space", KeyEvent.ofChar(' ', KeyModifiers.CTRL)),
-			org.junit.jupiter.params.provider.Arguments.of("alt-space", KeyEvent.ofChar(' ', KeyModifiers.ALT)),
-			org.junit.jupiter.params.provider.Arguments.of("ctrl-/", KeyEvent.ofChar('/', KeyModifiers.CTRL)),
-			org.junit.jupiter.params.provider.Arguments.of("alt-/", KeyEvent.ofChar('/', KeyModifiers.ALT)),
-			org.junit.jupiter.params.provider.Arguments.of("CTRL-N", KeyEvent.ofChar('n', KeyModifiers.CTRL)),
-			org.junit.jupiter.params.provider.Arguments.of("alt-n", KeyEvent.ofChar('n', KeyModifiers.ALT)));
+	static Stream<Arguments> configuredNewlineKeys() {
+		return Stream.of(
+			Arguments.of("tab", KeyEvent.ofKey(KeyCode.TAB)),
+			Arguments.of("shift-tab", KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.SHIFT)),
+			Arguments.of("shift-enter", KeyEvent.ofKey(KeyCode.ENTER, KeyModifiers.SHIFT)),
+			Arguments.of("ctrl-tab", KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.CTRL)),
+			Arguments.of("alt-tab", KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.ALT)),
+			Arguments.of("ctrl-enter", KeyEvent.ofKey(KeyCode.ENTER, KeyModifiers.CTRL)),
+			Arguments.of("alt-enter", KeyEvent.ofKey(KeyCode.ENTER, KeyModifiers.ALT)),
+			Arguments.of("ctrl-space", KeyEvent.ofChar(' ', KeyModifiers.CTRL)),
+			Arguments.of("alt-space", KeyEvent.ofChar(' ', KeyModifiers.ALT)),
+			Arguments.of("ctrl-/", KeyEvent.ofChar('/', KeyModifiers.CTRL)),
+			Arguments.of("alt-/", KeyEvent.ofChar('/', KeyModifiers.ALT)),
+			Arguments.of("CTRL-N", KeyEvent.ofChar('n', KeyModifiers.CTRL)),
+			Arguments.of("alt-n", KeyEvent.ofChar('n', KeyModifiers.ALT)));
+	}
+
+	@Test
+	void shiftEnterInsertsANewlineWithoutSendingThroughThePilot() throws Exception {
+		var inputs = new CopyOnWriteArrayList<String>();
+		var screen = new InteractiveScreen("connection", inputs::add);
+		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(60, 20))) {
+			terminal.pilot().press("a");
+			terminal.pilot().press(KeyCode.ENTER, KeyModifiers.SHIFT);
+			terminal.pilot().press("b");
+			terminal.pilot().pause();
+			assertThat(inputs).isEmpty();
+			terminal.pilot().press(KeyCode.ENTER);
+			terminal.pilot().pause();
+			assertThat(inputs).containsExactly("a\nb");
+			terminal.pilot().quit();
+		}
 	}
 
 	@Test
@@ -413,7 +457,7 @@ class InteractiveScreenTest {
 		}
 	}
 
-	private static InteractiveScreen screenWithHistory(java.util.function.Consumer<String> send, String... entries) {
+	private static InteractiveScreen screenWithHistory(Consumer<String> send, String... entries) {
 		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", send);
 		screen.history(List.of(entries));
 		return screen;
@@ -463,9 +507,9 @@ class InteractiveScreenTest {
 	@Test
 	void ctrlCCancelsTheStatementOrSearchOrClearsIdleInputWithoutColliding() {
 		var inputs = new CopyOnWriteArrayList<String>();
-		var cancellations = new java.util.concurrent.atomic.AtomicInteger();
+		var cancellations = new AtomicInteger();
 		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add, cancellations::incrementAndGet,
-			com.datev.dbui.config.Settings.defaults());
+			Settings.defaults());
 		screen.history(List.of("select 1"));
 		type(screen, "draft");
 		screen.handle(KeyEvent.ofChar('r', KeyModifiers.CTRL));

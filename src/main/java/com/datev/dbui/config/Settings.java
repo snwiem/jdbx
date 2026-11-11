@@ -54,6 +54,12 @@ public record Settings(int rowLimit, Duration timeout, String format, String ori
 				timezone, historyEnabled, sessionsKeep, keyBindings);
 	}
 
+	/** The same Settings with another editor key map. */
+	public Settings withKeyBindings(KeyBindings keyBindings) {
+		return new Settings(rowLimit, timeout, format, orientation, readOnly, nullMarker, multilineMarker, maxWidth,
+			timezone, historyEnabled, sessionsKeep, keyBindings);
+	}
+
 	public static Settings defaults() {
 		return new Settings(1000, null, "table", "horizontal", false);
 	}

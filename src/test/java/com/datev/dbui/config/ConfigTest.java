@@ -6,10 +6,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Locale;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /** Seam 1: loading Settings and Profiles, ${ENV} resolution, validation and override order. */
 class ConfigTest {
@@ -96,8 +102,8 @@ class ConfigTest {
 		assertThat(settings.keyBindings().complete().name()).isEqualTo("tab");
 	}
 
-	@org.junit.jupiter.params.ParameterizedTest
-	@org.junit.jupiter.params.provider.ValueSource(strings = {"not-a-key", "ctrl-", "ctrl-alt-j", "shift-a", "f99", ""})
+	@ParameterizedTest
+	@ValueSource(strings = {"not-a-key", "ctrl-", "ctrl-alt-j", "shift-a", "f99", ""})
 	void invalidKeyNamesIdentifyTheConfigFieldAndValue(String name) throws Exception {
 		write("config.yaml", "key-bindings:\n  newline: '" + name + "'\n");
 		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
@@ -105,8 +111,8 @@ class ConfigTest {
 			.hasMessageContaining("'" + name + "'").hasMessageContaining("ctrl-j");
 	}
 
-	@org.junit.jupiter.params.ParameterizedTest
-	@org.junit.jupiter.params.provider.CsvSource({
+	@ParameterizedTest
+	@CsvSource({
 		"tab, complete", "ALT-N, complete", "ctrl-o, orientation-fallback",
 		"enter, send", "ctrl-c, cancel", "ctrl-d, ignore", "ctrl-r, search"
 	})
@@ -115,11 +121,19 @@ class ConfigTest {
 			+ (otherAction.equals("complete") && !name.equals("tab") ? "  complete: alt-n\n" : ""));
 		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
 			.hasMessageContaining("config.yaml").hasMessageContaining("newline")
-			.hasMessageContaining(otherAction).hasMessageContaining(name.toLowerCase(java.util.Locale.ROOT));
+			.hasMessageContaining(otherAction).hasMessageContaining(name.toLowerCase(Locale.ROOT));
 	}
 
-	@org.junit.jupiter.params.ParameterizedTest
-	@org.junit.jupiter.params.provider.ValueSource(strings = {
+	@Test
+	void ctrlWIsReservedForDeletingThePreviousWord() throws Exception {
+		write("config.yaml", "key-bindings:\n  newline: ctrl-w\n");
+		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
+			.hasMessageContaining("key-bindings.newline").hasMessageContaining("ctrl-w")
+			.hasMessageContaining("delete-previous-word");
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {
 		"key-bindings: off", "key-bindings: [tab]", "key-bindings: {newlien: alt-n}",
 		"key-bindings: {newline: null}", "key-bindings: {newline: 42}", "key-bindings: {newline: [alt-n]}",
 		"key-bindings: {null: alt-n}"
@@ -130,11 +144,11 @@ class ConfigTest {
 			.hasMessageContaining("config.yaml").hasMessageContaining("key-bindings");
 	}
 
-	@org.junit.jupiter.params.ParameterizedTest
-	@org.junit.jupiter.params.provider.ValueSource(strings = {"invalid", "tab"})
+	@ParameterizedTest
+	@ValueSource(strings = {"invalid", "tab"})
 	void interactiveStartupRejectsAnInvalidMapAndReportsItWhileUsingAllDefaultBindings(String name) throws Exception {
 		write("config.yaml", "row-limit: 17\nkey-bindings:\n  newline: " + name + "\n  complete-alternate: alt-c\n");
-		var errors = new java.util.ArrayList<String>();
+		var errors = new ArrayList<String>();
 		var settings = loader(Map.of()).settingsForInteractive(errors::add);
 		assertThat(errors).singleElement().asString().contains("config.yaml", "newline", name);
 		assertThat(settings.keyBindings()).isEqualTo(KeyBindings.defaults());
@@ -197,7 +211,7 @@ class ConfigTest {
 		assertThat(settings.nullMarker()).isEqualTo("∅");
 		assertThat(settings.multilineMarker()).isEqualTo("<nl>");
 		assertThat(settings.maxWidth()).isEqualTo(20);
-		assertThat(settings.timezone()).isEqualTo(java.time.ZoneId.of("Europe/Berlin"));
+		assertThat(settings.timezone()).isEqualTo(ZoneId.of("Europe/Berlin"));
 	}
 
 	@Test
