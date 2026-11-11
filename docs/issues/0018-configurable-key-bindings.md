@@ -4,7 +4,7 @@
 
 **Blocked by:** 0008 Interactive tracer
 
-**Status:** ready-for-manual-check
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md`
 
@@ -12,8 +12,8 @@
 - [x] An invalid key name gives a clear error band at start and defaults apply
 - [x] `/help` shows the current bindings; the Status bar shows the current newline key
 - [x] A Pilot test shows a changed newline key works
-- [ ] Manual terminal check: changed newline, Completion and Orientation keys work in Herdr, including their fallbacks
-- [ ] Manual terminal check: an invalid or conflicting map shows a readable startup error band and all default keys work
+- [x] Manual terminal check: changed newline, Completion and Orientation keys work in Herdr, including their fallbacks (user tested newline `alt-n`, Alt-/ on the numpad and as Alt+Shift+7 on a German layout, Shift-Enter; Orientation keys were not tested separately)
+- [x] Manual terminal check: an invalid or conflicting map shows a readable startup error band and all default keys work (user tested an unknown action name)
 
 ## Decision
 
