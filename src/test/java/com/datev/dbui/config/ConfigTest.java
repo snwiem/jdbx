@@ -6,10 +6,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Locale;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /** Seam 1: loading Settings and Profiles, ${ENV} resolution, validation and override order. */
 class ConfigTest {
@@ -79,6 +85,77 @@ class ConfigTest {
 	// --- Settings ---
 
 	@Test
+	void editorBindingsUseTabForCompletionAndKeepLegacyFallbacks() {
+		var keys = loader(Map.of()).settings().keyBindings();
+		assertThat(keys.newline().name()).isEqualTo("ctrl-j");
+		assertThat(keys.complete().name()).isEqualTo("tab");
+		assertThat(keys.completeAlternate().name()).isEqualTo("alt-/");
+		assertThat(keys.orientationCycle().name()).isEqualTo("shift-tab");
+		assertThat(keys.orientationFallback().name()).isEqualTo("ctrl-o");
+	}
+
+	@Test
+	void keyBindingsOverrideDefaultsAndSurviveOutputChangesAndResume() throws Exception {
+		write("config.yaml", "key-bindings:\n  newline: ALT-N\n");
+		var settings = loader(Map.of()).settings().withOutput("csv", "vertical").withExecution(12, null, true);
+		assertThat(settings.keyBindings().newline().name()).isEqualTo("alt-n");
+		assertThat(settings.keyBindings().complete().name()).isEqualTo("tab");
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"not-a-key", "ctrl-", "ctrl-alt-j", "shift-a", "f99", ""})
+	void invalidKeyNamesIdentifyTheConfigFieldAndValue(String name) throws Exception {
+		write("config.yaml", "key-bindings:\n  newline: '" + name + "'\n");
+		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
+			.hasMessageContaining("config.yaml").hasMessageContaining("key-bindings.newline")
+			.hasMessageContaining("'" + name + "'").hasMessageContaining("ctrl-j");
+	}
+
+	@ParameterizedTest
+	@CsvSource({
+		"tab, complete", "ALT-N, complete", "ctrl-o, orientation-fallback",
+		"enter, send", "ctrl-c, cancel", "ctrl-d, ignore", "ctrl-r, search"
+	})
+	void conflictingBindingsIdentifyBothActionsAndTheKey(String name, String otherAction) throws Exception {
+		write("config.yaml", "key-bindings:\n  newline: '" + name + "'\n"
+			+ (otherAction.equals("complete") && !name.equals("tab") ? "  complete: alt-n\n" : ""));
+		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
+			.hasMessageContaining("config.yaml").hasMessageContaining("newline")
+			.hasMessageContaining(otherAction).hasMessageContaining(name.toLowerCase(Locale.ROOT));
+	}
+
+	@Test
+	void ctrlWIsReservedForDeletingThePreviousWord() throws Exception {
+		write("config.yaml", "key-bindings:\n  newline: ctrl-w\n");
+		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
+			.hasMessageContaining("key-bindings.newline").hasMessageContaining("ctrl-w")
+			.hasMessageContaining("delete-previous-word");
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {
+		"key-bindings: off", "key-bindings: [tab]", "key-bindings: {newlien: alt-n}",
+		"key-bindings: {newline: null}", "key-bindings: {newline: 42}", "key-bindings: {newline: [alt-n]}",
+		"key-bindings: {null: alt-n}"
+	})
+	void malformedBindingConfigurationGivesAConfigError(String yaml) throws Exception {
+		write("config.yaml", yaml);
+		assertThatThrownBy(() -> loader(Map.of()).settings()).isInstanceOf(ConfigException.class)
+			.hasMessageContaining("config.yaml").hasMessageContaining("key-bindings");
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"invalid", "tab"})
+	void interactiveStartupRejectsAnInvalidMapAndReportsItWhileUsingAllDefaultBindings(String name) throws Exception {
+		write("config.yaml", "row-limit: 17\nkey-bindings:\n  newline: " + name + "\n  complete-alternate: alt-c\n");
+		var errors = new ArrayList<String>();
+		var settings = loader(Map.of()).settingsForInteractive(errors::add);
+		assertThat(errors).singleElement().asString().contains("config.yaml", "newline", name);
+		assertThat(settings.keyBindings()).isEqualTo(KeyBindings.defaults());
+		assertThat(settings.rowLimit()).isEqualTo(17);
+	}
+
+	@Test
 	void missingConfigFileGivesDefaults() {
 		Settings settings = loader(Map.of()).settings();
 
@@ -134,7 +211,7 @@ class ConfigTest {
 		assertThat(settings.nullMarker()).isEqualTo("∅");
 		assertThat(settings.multilineMarker()).isEqualTo("<nl>");
 		assertThat(settings.maxWidth()).isEqualTo(20);
-		assertThat(settings.timezone()).isEqualTo(java.time.ZoneId.of("Europe/Berlin"));
+		assertThat(settings.timezone()).isEqualTo(ZoneId.of("Europe/Berlin"));
 	}
 
 	@Test

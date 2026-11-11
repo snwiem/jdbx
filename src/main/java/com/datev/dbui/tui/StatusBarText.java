@@ -1,7 +1,10 @@
 package com.datev.dbui.tui;
 
+import java.util.List;
 import java.util.Locale;
 
+import com.datev.dbui.config.KeyBindings;
+import com.datev.dbui.config.Settings;
 import com.datev.dbui.session.ExecutionStatus;
 
 /** Plain Status bar text; the terminal adapter only draws it. */
@@ -9,7 +12,7 @@ final class StatusBarText {
 
 	private StatusBarText() { }
 
-	static String output(com.datev.dbui.config.Settings settings) {
+	static String output(Settings settings) {
 		return "Format: " + settings.format() + " · Orientation: " + settings.orientation();
 	}
 
@@ -19,18 +22,22 @@ final class StatusBarText {
 	}
 
 	/** A one-line terminal keeps the mode first, even during Completion loading. */
-	static java.util.List<String> lines(ExecutionStatus status, com.datev.dbui.config.Settings settings,
+	static List<String> lines(ExecutionStatus status, Settings settings,
 			String connection, String note, int height) {
 		String mode = mode(status);
-		String detail = of(status).substring(mode.length() + " · ".length());
+		String detail = of(status, settings.keyBindings()).substring(mode.length() + " · ".length());
 		String prefix = mode + (note == null ? "" : " · " + note);
 		if (height == 1) {
-			return java.util.List.of(prefix + " · " + output(settings) + " · " + detail + " · " + connection);
+			return List.of(prefix + " · " + output(settings) + " · " + detail + " · " + connection);
 		}
-		return java.util.List.of(connection + " · " + output(settings), prefix + " · " + detail);
+		return List.of(connection + " · " + output(settings), prefix + " · " + detail);
 	}
 
 	static String of(ExecutionStatus status) {
+		return of(status, KeyBindings.defaults());
+	}
+
+	private static String of(ExecutionStatus status, KeyBindings keys) {
 		String text = mode(status) + " · Row limit: " + status.rowLimit();
 		if (status.running()) {
 			text += " · running… " + status.elapsed().toSeconds() + " s";
@@ -42,7 +49,7 @@ final class StatusBarText {
 				+ (last.truncated() ? " · truncated" : "");
 		}
 		else if (!status.running()) {
-			text += " · Enter sends · Ctrl-J newline · /quit exits";
+			text += " · Enter sends · " + keys.newline().display() + " newline · /quit exits";
 		}
 		return text;
 	}

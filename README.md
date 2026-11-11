@@ -84,6 +84,56 @@ Dump streams horizontal Results; horizontal `table` samples 1000 rows for column
 
 The Transcript retains the newest 200 Message blocks. Earlier retained Results keep frozen text, but only the newest Result keeps row data for `/save`. The held Result survives even if its block leaves the Transcript; an empty Result replaces it. History and Resume remain independent of this retention rule. The default Dump input is the last ordinary SQL submission in this running Session, even if it failed; Slash commands and explicit Dump SQL do not replace it. Resume does not load SQL or Result rows from the earlier Session.
 
+## Configurable editor keys
+
+Editor keys come from `key-bindings` in the hand-edited `config.yaml`. dbui never writes this file.
+The config directory is `--config-dir <directory>`, then `DBUI_CONFIG_DIR`, then `$XDG_CONFIG_HOME/dbui`, then `~/.config/dbui`.
+Omitted actions keep these defaults:
+
+```yaml
+key-bindings:
+  newline: ctrl-j
+  complete: tab
+  complete-alternate: alt-/
+  orientation-cycle: shift-tab
+  orientation-fallback: ctrl-o
+```
+
+For example, set only `newline: alt-n` under `key-bindings` to use Alt-N for newlines.
+`complete-alternate` and `orientation-fallback` are configurable fallback keys, not extra actions.
+`Ctrl-Space` is no longer a default; use `complete: ctrl-space` if your terminal supports it.
+`/help` shows the bindings that apply to the current Session. The Status bar's newline hint also uses the configured key.
+
+Key names are case-insensitive, with surrounding whitespace ignored. Supported names are:
+
+- `tab` and `enter`.
+- `shift-tab` and `shift-enter`.
+- `ctrl-` or `alt-` followed by one letter `a`–`z`, `/`, `space`, `tab` or `enter`, for example `ctrl-j`, `alt-/`, `ctrl-space`.
+
+Combined modifiers, function keys and unmodified printable characters are not supported.
+Tab and Enter match Shift exactly: plain Tab does not also consume Shift-Tab.
+Character bindings allow layout-required Shift, for example Alt+Shift+7 for Alt-/ on a German keyboard.
+Enter always sends input. `enter`, `ctrl-c`, `ctrl-d`, `ctrl-r` and `ctrl-w` are reserved for send, cancel/clear, ignore, history search and delete previous word.
+Every configured binding must be different, including unchanged defaults and fallback keys.
+To reuse a default key for another action, also change the action that currently uses it.
+
+An invalid name, unknown action or conflict rejects the **whole key map**, not just one entry.
+Interactive mode shows a startup error Message block naming the action and key, and uses all default bindings.
+That error stays at the top of the Transcript for the Session; it does not disappear after connecting or running input.
+Other valid settings still apply. Batch mode instead reports the config error on stderr and exits before connecting.
+Fix the file and restart to apply changes.
+
+Dialog keys and popup acceptance keys do not change: Tab or Enter accepts an open Completion candidate without sending input.
+Shift-Enter inserts a newline without sending when the terminal distinguishes it, unless it is configured for another action.
+This differs from the behavior before configurable keys, when Shift-Enter also sent input.
+
+Some terminals intercept modified keys or send the same bytes for different keys.
+Without Kitty keyboard support, the legacy aliases are `ctrl-h` = Backspace (byte 8), `ctrl-i` = Tab (9), `ctrl-j` = LF (10, normally parsed as Enter), and `ctrl-m` = Enter (13).
+Configured Ctrl-H, Ctrl-I and Ctrl-M cannot be distinguished from those fixed keys on legacy terminals.
+**Ctrl-J exception:** dbui preserves a bare LF as Ctrl-J outside bracketed paste, so the default newline key still works if the terminal sends LF.
+If the terminal sends Enter instead, Ctrl-J or Ctrl-M can send input rather than run the configured action.
+Use a distinct key, Kitty keyboard support, or bracketed paste for multi-line input on legacy terminals. Bracketed paste never sends input by itself.
+
 ## Profiles in Interactive mode
 
 Start `dbui` in a terminal without complete connection options to open **Edit Connection Profile**.
@@ -117,9 +167,9 @@ Existing Profile password references such as `${PG_PASSWORD}` stay literal.
 Slash commands do not accept inline credentials. Credential-like `/connect` and `/profile` inputs are rejected before echo or history.
 Names such as `api-token` work normally. Credential-shaped names containing a URL or password assignment must be renamed or selected by number.
 
-Use `/help` for the combined Slash command and key list. `Tab` requests Completion; `Alt-/` is the fallback.
+Use `/help` for the combined Slash command and key list. By default, `Tab` requests Completion and `Alt-/` is the fallback.
 Completion includes Slash command names and registry argument values. Enter accepts an open Completion candidate without sending input.
-Shift-Tab cycles Orientation in the editor, but moves between fields while the Profile dialog is open.
+By default, Shift-Tab cycles Orientation in the editor. It always moves between fields while the Profile dialog is open.
 
 Profiles live under the `profiles:` root in `profiles.yaml`, separate from `config.yaml`.
 Use `--config-dir <directory>` to select a temporary config directory for testing.

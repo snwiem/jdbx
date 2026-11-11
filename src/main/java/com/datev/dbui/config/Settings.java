@@ -13,9 +13,11 @@ import java.time.ZoneId;
  * @param timezone time zone for {@code timestamptz} values, or {@code null} for the JVM default
  * @param historyEnabled whether the input history is saved ({@code history.enabled})
  * @param sessionsKeep how many Session directories to keep ({@code sessions.keep})
+ * @param keyBindings editor keys from the current config file; not restored by Resume
  */
 public record Settings(int rowLimit, Duration timeout, String format, String orientation, boolean readOnly,
-		String nullMarker, String multilineMarker, int maxWidth, ZoneId timezone, boolean historyEnabled, int sessionsKeep) {
+		String nullMarker, String multilineMarker, int maxWidth, ZoneId timezone, boolean historyEnabled, int sessionsKeep,
+		KeyBindings keyBindings) {
 
 	public static final int DEFAULT_SESSIONS_KEEP = 50;
 
@@ -34,16 +36,28 @@ public record Settings(int rowLimit, Duration timeout, String format, String ori
 				DEFAULT_SESSIONS_KEEP);
 	}
 
+	public Settings(int rowLimit, Duration timeout, String format, String orientation, boolean readOnly,
+			String nullMarker, String multilineMarker, int maxWidth, ZoneId timezone, boolean historyEnabled, int sessionsKeep) {
+		this(rowLimit, timeout, format, orientation, readOnly, nullMarker, multilineMarker, maxWidth, timezone,
+			historyEnabled, sessionsKeep, KeyBindings.defaults());
+	}
+
 	/** The same Settings with other values for the settings that Resume restores. */
 	public Settings withExecution(int rowLimit, Duration timeout, boolean readOnly) {
 		return new Settings(rowLimit, timeout, format, orientation, readOnly, nullMarker, multilineMarker, maxWidth,
-				timezone, historyEnabled, sessionsKeep);
+				timezone, historyEnabled, sessionsKeep, keyBindings);
 	}
 
 	/** The same Settings with another Format and Orientation for subsequent Results. */
 	public Settings withOutput(String format, String orientation) {
 		return new Settings(rowLimit, timeout, format, orientation, readOnly, nullMarker, multilineMarker, maxWidth,
-				timezone, historyEnabled, sessionsKeep);
+				timezone, historyEnabled, sessionsKeep, keyBindings);
+	}
+
+	/** The same Settings with another editor key map. */
+	public Settings withKeyBindings(KeyBindings keyBindings) {
+		return new Settings(rowLimit, timeout, format, orientation, readOnly, nullMarker, multilineMarker, maxWidth,
+			timezone, historyEnabled, sessionsKeep, keyBindings);
 	}
 
 	public static Settings defaults() {

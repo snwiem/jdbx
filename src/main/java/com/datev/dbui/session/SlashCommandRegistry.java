@@ -3,6 +3,9 @@ package com.datev.dbui.session;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
+
+import com.datev.dbui.config.KeyBindings;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Model.CommandSpec;
@@ -81,6 +84,10 @@ public final class SlashCommandRegistry {
 	}
 
 	public String help() {
+		return help(KeyBindings.defaults());
+	}
+
+	public String help(KeyBindings keys) {
 		var text = new StringBuilder("Slash commands\n");
 		for (var command : commands) {
 			var subcommand = line.getSubcommands().get("/" + command.name());
@@ -90,14 +97,14 @@ public final class SlashCommandRegistry {
 		text.append('\n').append("""
 			Key bindings
 			Enter                     Send input; accept a Ctrl-R match without sending
-			Ctrl-J                    Insert a newline (Kitty); use bracketed paste on legacy terminals
+			%-26sInsert a newline; some modified keys need Kitty keyboard support
 			Up / Down                 History at the first / last editor line; otherwise move the cursor
 			Ctrl-R                    Search history; press again for an older match
 			Esc                       Cancel history search and restore the draft
 			Ctrl-C                    Cancel a running Statement, cancel search, or clear idle input; never exit
 			Ctrl-D                    Ignore; never exit (use /quit)
-			Shift-Tab / Ctrl-O        Cycle Orientation; Ctrl-O is the legacy terminal fallback
-			Tab / Alt-/               Request Completion; Alt-/ is the fallback
+			%-26sCycle Orientation (primary / fallback)
+			%-26sRequest Completion (primary / fallback)
 			Completion Up / Down      Select a candidate
 			Completion Tab / Enter    Accept a candidate without sending input
 			Completion Esc            Close Completion
@@ -115,8 +122,20 @@ public final class SlashCommandRegistry {
 			Backspace / Delete        Delete before / after the cursor
 			Ctrl-W / Ctrl-Backspace   Delete the previous word
 			Ctrl-Delete               Delete the next word
-			Shift-Enter               Insert a newline when the terminal distinguishes it from Enter
 			Keypad navigation keys    Same cursor actions as the main navigation keys
+			""".formatted(keys.newline().display(),
+				keys.orientationCycle().display() + " / " + keys.orientationFallback().display(),
+				keys.complete().display() + " / " + keys.completeAlternate().display()));
+		if (Stream.of(keys.newline(), keys.orientationCycle(), keys.orientationFallback(), keys.complete(), keys.completeAlternate())
+				.noneMatch(key -> key.name().equals("shift-enter"))) {
+			text.append("Shift-Enter               Insert a newline when the terminal distinguishes it from Enter\n");
+		}
+		text.append("""
+
+			Legacy terminals: Ctrl-H = Backspace, Ctrl-I = Tab, Ctrl-J = LF, Ctrl-M = Enter.
+			Without Kitty these are not distinct keys; dbui preserves bare LF as Ctrl-J.
+			If the terminal sends Enter instead, Ctrl-J / Ctrl-M can send input. Use a distinct key
+			or bracketed paste for multi-line input on legacy terminals.
 			""");
 		return text.toString().stripTrailing();
 	}

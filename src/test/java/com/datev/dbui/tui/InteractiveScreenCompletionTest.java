@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
@@ -13,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import com.datev.dbui.completion.Candidate;
 import com.datev.dbui.completion.Candidate.Kind;
 import com.datev.dbui.completion.Completion;
+import com.datev.dbui.config.KeyBindings;
+import com.datev.dbui.config.Settings;
 
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.layout.Rect;
@@ -101,9 +105,9 @@ class InteractiveScreenCompletionTest {
 
 	@Test
 	void shiftTabDoesNotRequestCompletion() {
-		var cycles = new java.util.concurrent.atomic.AtomicInteger();
+		var cycles = new AtomicInteger();
 		var screen = new InteractiveScreen("connection", sent::add, () -> { },
-			com.datev.dbui.config.Settings.defaults(), cycles::incrementAndGet);
+			Settings.defaults(), cycles::incrementAndGet);
 		screen.completion((text, cursor) -> {
 			requests.add(text);
 			return CompletableFuture.completedFuture(three());
@@ -111,6 +115,53 @@ class InteractiveScreenCompletionTest {
 		screen.handle(KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.SHIFT));
 		assertThat(cycles.get()).isEqualTo(1);
 		assertThat(requests).isEmpty();
+	}
+
+	@Test
+	void configuredCompletionAndOrientationKeysReplaceTheDefaults() {
+		var bindings = KeyBindings.from(Map.of("orientation-cycle", "alt-o", "orientation-fallback", "ctrl-t",
+			"complete", "ctrl-space", "complete-alternate", "alt-c"));
+		var cycles = new AtomicInteger();
+		var screen = new InteractiveScreen("connection", sent::add, () -> { },
+			Settings.defaults().withKeyBindings(bindings), cycles::incrementAndGet);
+		screen.completion((text, cursor) -> {
+			requests.add(text);
+			return CompletableFuture.completedFuture(three());
+		});
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB));
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.SHIFT));
+		screen.handle(KeyEvent.ofChar('/', KeyModifiers.ALT));
+		screen.handle(KeyEvent.ofChar('o', KeyModifiers.CTRL));
+		assertThat(requests).isEmpty();
+		assertThat(cycles.get()).isZero();
+		screen.handle(KeyEvent.ofChar(' ', KeyModifiers.CTRL));
+		assertThat(requests).hasSize(1);
+		screen.handle(KeyEvent.ofChar('o', KeyModifiers.ALT)); // closes the popup and cycles
+		screen.handle(KeyEvent.ofChar('t', KeyModifiers.CTRL));
+		assertThat(cycles.get()).isEqualTo(2);
+		screen.handle(KeyEvent.ofChar('c', KeyModifiers.ALT));
+		assertThat(requests).hasSize(2);
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB)); // popup Tab stays fixed
+		assertThat(requests).hasSize(2);
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(sent).singleElement().asString().endsWith("alpha");
+	}
+
+	@Test
+	void configuredShiftTabCanRequestCompletionWhenOrientationUsesAnotherKey() {
+		var bindings = KeyBindings.from(Map.of("orientation-cycle", "alt-o", "complete", "shift-tab"));
+		var cycles = new AtomicInteger();
+		var screen = new InteractiveScreen("connection", sent::add, () -> { },
+			Settings.defaults().withKeyBindings(bindings), cycles::incrementAndGet);
+		screen.completion((text, cursor) -> {
+			requests.add(text);
+			return CompletableFuture.completedFuture(three());
+		});
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB));
+		assertThat(requests).isEmpty();
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.SHIFT));
+		assertThat(requests).hasSize(1);
+		assertThat(cycles.get()).isZero();
 	}
 
 	@Test
@@ -158,9 +209,9 @@ class InteractiveScreenCompletionTest {
 
 	@Test
 	void shiftTabClosesCompletionAndCyclesOrientationInsteadOfAccepting() {
-		var cycles = new java.util.concurrent.atomic.AtomicInteger();
+		var cycles = new AtomicInteger();
 		var screen = new InteractiveScreen("connection", sent::add, () -> { },
-			com.datev.dbui.config.Settings.defaults(), cycles::incrementAndGet);
+			Settings.defaults(), cycles::incrementAndGet);
 		screen.completion((text, cursor) -> CompletableFuture.completedFuture(three()));
 		tab();
 		screen.handle(KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.SHIFT));

@@ -1,7 +1,12 @@
 package com.datev.dbui.tui;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import com.datev.dbui.FormatOptions;
 import com.datev.dbui.completion.Completion;
@@ -9,6 +14,8 @@ import com.datev.dbui.completion.CompletionEngine;
 import com.datev.dbui.completion.SchemaModel;
 import com.datev.dbui.session.ExecutionStatus;
 import com.datev.dbui.session.MessageBlock;
+import com.datev.dbui.session.SessionInteraction;
+import com.datev.dbui.config.KeyBindings;
 import com.datev.dbui.config.Settings;
 
 import dev.tamboui.buffer.Buffer;
@@ -39,10 +46,11 @@ public final class InteractiveScreen {
 	private final Style statusStyle;
 	private final Style warningStyle;
 	private final Transcript transcript;
+	private List<MessageBlock> startupErrors = List.of();
 	private final ScrollbarState scrollbar = new ScrollbarState();
 	private int transcriptHeight;
 	private boolean busy;
-	private com.datev.dbui.session.SessionInteraction interaction;
+	private SessionInteraction interaction;
 	private ConnectionModal modal;
 	private final boolean dialogColor;
 	private Consumer<Boolean> saveDialog = ignored -> { };
@@ -60,9 +68,9 @@ public final class InteractiveScreen {
 	private List<String> historyEntries = List.of();
 	private ReverseSearch search;
 	private String searchDraft = "";
-	private CompletionBackend completionBackend = (text, cursor) -> java.util.concurrent.CompletableFuture
+	private CompletionBackend completionBackend = (text, cursor) -> CompletableFuture
 		.completedFuture(CompletionEngine.standard().complete(text, cursor, SchemaModel.EMPTY));
-	private java.util.concurrent.CompletableFuture<Completion> pendingCompletion;
+	private CompletableFuture<Completion> pendingCompletion;
 	private String pendingText;
 	private int pendingCursor;
 	private CompletionPopup popup;
@@ -73,16 +81,16 @@ public final class InteractiveScreen {
 	private final TextArea editorWidget = TextArea.builder().overflow(Overflow.WRAP_WORD).build();
 
 	public InteractiveScreen(String connection, Consumer<String> send) {
-		this(connection, send, EditorKeys.defaults());
+		this(connection, send, KeyBindings.defaults());
 	}
 
-	public InteractiveScreen(String connection, Consumer<String> send, EditorKeys keys) {
-		this(connection, send, keys, MessageBlockRenderer.colorEnabled(System.getenv()));
+	public InteractiveScreen(String connection, Consumer<String> send, KeyBindings bindings) {
+		this(connection, send, bindings, MessageBlockRenderer.colorEnabled(System.getenv()));
 	}
 
 	/** With {@code color == false} (NO_COLOR) the screen uses no color codes; the Status bar is reversed instead. */
-	InteractiveScreen(String connection, Consumer<String> send, EditorKeys keys, boolean color) {
-		this(connection, send, keys, color, () -> { }, Settings.defaults(), () -> { });
+	InteractiveScreen(String connection, Consumer<String> send, KeyBindings bindings, boolean color) {
+		this(connection, send, color, () -> { }, Settings.defaults().withKeyBindings(bindings), () -> { });
 	}
 
 	public InteractiveScreen(String connection, Consumer<String> send, Runnable cancel, Settings settings) {
@@ -90,16 +98,16 @@ public final class InteractiveScreen {
 	}
 
 	public InteractiveScreen(String connection, Consumer<String> send, Runnable cancel, Settings settings, Runnable cycleOrientation) {
-		this(connection, send, EditorKeys.defaults(), MessageBlockRenderer.colorEnabled(System.getenv()), cancel, settings, cycleOrientation);
+		this(connection, send, MessageBlockRenderer.colorEnabled(System.getenv()), cancel, settings, cycleOrientation);
 	}
 
-	private InteractiveScreen(String connection, Consumer<String> send, EditorKeys keys, boolean color, Runnable cancel, Settings settings,
+	private InteractiveScreen(String connection, Consumer<String> send, boolean color, Runnable cancel, Settings settings,
 			Runnable cycleOrientation) {
 		this.dialogColor = color;
 		this.cancel = cancel;
 		this.cycleOrientation = cycleOrientation;
 		this.settings = settings;
-		this.status = new ExecutionStatus(settings.rowLimit(), false, java.time.Duration.ZERO, null, settings.readOnly(), true);
+		this.status = new ExecutionStatus(settings.rowLimit(), false, Duration.ZERO, null, settings.readOnly(), true);
 		this.renderer = new MessageBlockRenderer(color, FormatOptions.from(settings));
 		this.transcript = new Transcript(renderer);
 		this.rule = color ? Style.EMPTY.fg(Color.indexed(244)) : Style.EMPTY;
@@ -110,14 +118,14 @@ public final class InteractiveScreen {
 		this.noteStyle = color ? Style.EMPTY.fg(Color.YELLOW).bg(Color.indexed(236)) : Style.EMPTY.reversed();
 		this.connection = connection;
 		this.send = send;
-		this.keys = keys;
+		this.keys = EditorKeys.from(settings.keyBindings());
 	}
 
 	public void onInteraction(Consumer<Boolean> save, Consumer<String> password, Runnable cancel) {
 		saveDialog = save; answerPassword = password; cancelDialog = cancel;
 	}
 
-	public void interaction(com.datev.dbui.session.SessionInteraction interaction) {
+	public void interaction(SessionInteraction interaction) {
 		if (this.interaction == interaction) return;
 		this.interaction = interaction;
 		if (modal != null && modal.reopenedBy(interaction)) return;
@@ -125,8 +133,14 @@ public final class InteractiveScreen {
 		modal = interaction == null ? null : new ConnectionModal(interaction, saveDialog, answerPassword, cancelDialog);
 	}
 
+	/** Startup config errors precede Session messages and survive its refreshes. */
+	public void startupErrors(List<String> errors) {
+		startupErrors = errors.stream().map(MessageBlock::error).toList();
+	}
+
 	public void update(List<MessageBlock> blocks) {
-		transcript.replace(blocks);
+		transcript.replace(startupErrors.isEmpty() ? blocks
+			: Stream.concat(startupErrors.stream(), blocks.stream()).toList());
 		if (modal != null) modal.error(!blocks.isEmpty() && blocks.getLast().kind() == MessageBlock.Kind.ERROR ? blocks.getLast().text() : null);
 	}
 
@@ -312,7 +326,7 @@ public final class InteractiveScreen {
 				completionNote = outcome.note();
 			}
 		}
-		catch (java.util.concurrent.CancellationException e) {
+		catch (CancellationException e) {
 			// The request was dropped.
 		}
 		catch (RuntimeException e) {
@@ -352,7 +366,7 @@ public final class InteractiveScreen {
 			for (int row = 0; row < rows; row++) {
 				var candidate = visible.get(row);
 				var style = row == popup.selectedRow() ? popupSelectedStyle : popupStyle;
-				String kind = candidate.kind().name().toLowerCase(java.util.Locale.ROOT);
+				String kind = candidate.kind().name().toLowerCase(Locale.ROOT);
 				String mark = more && row == 0 && popup.firstVisible() > 0 ? "▲" : more && row == rows - 1 && popup.hasMoreBelow() ? "▼" : " ";
 				String line = " " + candidate.label() + " ".repeat(Math.max(1, labelWidth - CharWidth.of(candidate.label()) + 2)) + kind;
 				line += " ".repeat(Math.max(0, popupWidth - 1 - CharWidth.of(line))) + mark;
