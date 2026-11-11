@@ -411,6 +411,11 @@ class BatchEntryPointIT {
 	}
 
 	@Test
+	void writesMillionsOfRowsWithLeadingCommentsAndSmallHeap() throws Exception {
+		assertThat(countLines("--format", "csv", "-c", "-- export\n/* a /* nested */ b */\n" + MANY)).isEqualTo(MANY_ROWS + 1L);
+	}
+
+	@Test
 	void writesMillionsOfRowsAsJsonWithSmallHeap() throws Exception {
 		assertThat(countLines("--format", "json", "-c", MANY)).isEqualTo(MANY_ROWS + 2L);
 	}

@@ -4,11 +4,11 @@
 
 **Blocked by:** none
 
-**Status:** open
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md`
 
-- [ ] Unit test: `isQuery` is true for a Statement with leading line comments, block comments, and mixed whitespace before `select`, `with`, `values`, `table`, `show`
-- [ ] Unit test: a comment-only Statement, or a comment before `vacuum`, is not a query
-- [ ] Integration test: a multi-million-row `SELECT` with a leading comment runs under the low heap limit used for issue 0021
-- [ ] The Known limits note in issue 0021 stays true
+- [x] Unit test: `isQuery` is true for a Statement with leading line comments, block comments, and mixed whitespace before `select`, `with`, `values`, `table`, `show`
+- [x] Unit test: a comment-only Statement, or a comment before `vacuum`, is not a query
+- [x] Integration test: a multi-million-row `SELECT` with a leading comment runs under the low heap limit used for issue 0021
+- [x] The Known limits note in issue 0021 stays true
