@@ -59,8 +59,12 @@ public final class Session implements AutoCloseable {
 	private boolean running;
 	private volatile boolean cancelRequested;
 	private Statement activeStatement;
+	private boolean streamingStatement;
+	private final Object cancelLock = new Object();
 	private long startedAt;
 	private ExecutionStatus.ResultSummary lastResult;
+	private boolean heldResultTruncated;
+	private String lastSqlInput;
 
 	/** Direct Interactive startup uses the same checked opener as /connect, Resume and reconnect. */
 	public static Session connect(SessionDirectory directory, SessionContext context) throws SQLException {
@@ -284,6 +288,7 @@ public final class Session implements AutoCloseable {
 			};
 			return invocation.background() ? run(work) : CompletableFuture.completedFuture(work.get());
 		}
+		lastSqlInput = input;
 		return runOnConnection(() -> execute(input));
 	}
 
@@ -334,11 +339,13 @@ public final class Session implements AutoCloseable {
 		}
 		cancelRequested = true;
 		Statement statement = activeStatement;
+		boolean streaming = streamingStatement;
 		return CompletableFuture.runAsync(() -> {
 			// pgjdbc ignores cancel while idle. Retry across its idle-to-executing window, but never target a later input.
 			while (statement != null && isActive(statement)) {
 				try {
-					statement.cancel();
+					if (streaming) cancelStreaming(statement);
+					else statement.cancel();
 					Thread.sleep(50);
 				}
 				catch (SQLException e) {
@@ -351,6 +358,15 @@ public final class Session implements AutoCloseable {
 				}
 			}
 		}, cancellations);
+	}
+
+	/** pgjdbc Statement.cancel ignores cursor fetches. Its connection-level cancellation covers those too. */
+	private void cancelStreaming(Statement statement) throws SQLException {
+		// finished() takes this same lock before ending the input, so the packet cannot reach a later input.
+		// Do not hold the Session monitor during socket I/O: status and Ctrl-C must remain responsive.
+		synchronized (cancelLock) {
+			if (isActive(statement)) connection.unwrap(org.postgresql.PGConnection.class).cancelQuery();
+		}
 	}
 
 	private synchronized boolean isActive(Statement statement) {
@@ -425,6 +441,16 @@ public final class Session implements AutoCloseable {
 				updateSettings(settings().withOutput(settings().format(), argument));
 				return List.of(MessageBlock.info("Orientation: " + argument));
 			}));
+		commands.add(new SlashCommand("save", "Write the held Result in the current Format and Orientation.",
+			SlashCommand.argument("<file>", "1", List.of()), true, argument -> {
+				saveResult(argument);
+				return List.of();
+			}));
+		commands.add(new SlashCommand("dump", "Run all query Statements in READ ONLY transactions; write every row without the Row limit.",
+			SlashCommand.argument("<file> [sql]", "1", List.of()), true, argument -> {
+				dumpResults(argument);
+				return List.of();
+			}));
 		commands.add(new SlashCommand("help", "List Slash commands and key bindings.", null, false,
 			argument -> List.of(MessageBlock.info(slashCommands.help()))));
 		return commands;
@@ -438,6 +464,46 @@ public final class Session implements AutoCloseable {
 				}
 				return List.of();
 			});
+	}
+
+	private void dumpResults(String argument) {
+		try {
+			var request = FileCommandLine.parse(argument, true);
+			String sql = request.sql();
+			var statements = com.datev.dbui.ResultFiles.queries(sql.isEmpty() ? (lastSqlInput == null ? "" : lastSqlInput) : sql);
+			if (!ensureConnected()) return;
+			try (var statement = connection.createStatement()) {
+				statement.setQueryTimeout(controls.timeoutSeconds());
+				activeStreaming(statement);
+				long rows = com.datev.dbui.ResultFiles.dump(connection, statement, statements, settings(), request.file(), () -> cancelRequested);
+				add(MessageBlock.info("Dumped " + rows + " rows to " + request.file() + "."));
+			}
+		}
+		catch (SQLException e) { add(sqlError(e)); }
+		catch (IOException | IllegalArgumentException e) { add(MessageBlock.error("Cannot dump: " + e.getMessage())); }
+		catch (RuntimeException | Error e) { unexpectedError(e); }
+	}
+
+	private void saveResult(String argument) {
+		var result = transcript.heldResult();
+		if (result == null || result.rows().isEmpty()) {
+			add(MessageBlock.info("No non-empty Result is held. No file was written."));
+			return;
+		}
+		try {
+			com.datev.dbui.ResultFiles.save(result, settings(), FileCommandLine.parse(argument, false).file(), () -> cancelRequested);
+			add(MessageBlock.info("Saved " + result.rows().size() + " rows to " + argument
+				+ (heldResultTruncated ? ". Warning: the held Result was truncated." : ".")));
+		}
+		catch (IOException | SQLException | IllegalArgumentException e) {
+			add(MessageBlock.error("Cannot save " + argument + ": " + e.getMessage()));
+		}
+		catch (RuntimeException | Error e) { unexpectedError(e); }
+	}
+
+	private void unexpectedError(Throwable error) {
+		add(MessageBlock.error("Unexpected error: " + error.getMessage() + (logFile() == null ? "" : ". Details: " + logFile())));
+		writeLog(error);
 	}
 
 	private Update resume(String argument) { return resume(argument, null); }
@@ -550,13 +616,23 @@ public final class Session implements AutoCloseable {
 		return new Update(messageBlocks(), ended);
 	}
 
-	private synchronized void finished() {
-		activeStatement = null;
-		running = false;
+	private void finished() {
+		synchronized (cancelLock) {
+			synchronized (this) {
+				activeStatement = null;
+				streamingStatement = false;
+				running = false;
+			}
+		}
 	}
 
 	private synchronized void active(Statement statement) {
 		activeStatement = statement;
+	}
+
+	private synchronized void activeStreaming(Statement statement) {
+		activeStatement = statement;
+		streamingStatement = true;
 	}
 
 	private synchronized void resultSummary(int rows, long statementStartedAt, boolean truncated) {
@@ -729,6 +805,7 @@ public final class Session implements AutoCloseable {
 				var read = JdbcResultReader.read(rows, rowLimit);
 				resultSummary(read.result().rows().size(), statementStartedAt, read.truncated());
 				add(MessageBlock.result(read.result()));
+				heldResultTruncated = read.truncated();
 				if (read.truncated()) {
 					add(MessageBlock.info("truncated at " + rowLimit + " rows"));
 				}
@@ -754,6 +831,7 @@ public final class Session implements AutoCloseable {
 	}
 
 	private synchronized void add(MessageBlock block) {
+		if (block.kind() == MessageBlock.Kind.RESULT) heldResultTruncated = false;
 		transcript.add(block.kind() == MessageBlock.Kind.RESULT ? MessageBlock.result(block.result(), settings()) : block);
 	}
 

@@ -62,7 +62,7 @@ public class CsvFormatter implements ResultFormatter {
 		out.append(line).append('\n');
 	}
 
-	private static String quote(String cell) {
+	static String quote(String cell) {
 		if (cell.contains(",") || cell.contains("\"") || cell.contains("\n") || cell.contains("\r")) {
 			return "\"" + cell.replace("\"", "\"\"") + "\"";
 		}

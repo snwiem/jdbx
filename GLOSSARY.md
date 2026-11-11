@@ -69,7 +69,7 @@ Writing the Result that is currently held in memory to a file.
 _Avoid_: export
 
 **Dump**:
-Running a Statement again and writing all its rows to a file, without the Row limit.
+Running all Statements of an input again and writing all their rows to a file, without the Row limit. A Dump accepts only queries.
 _Avoid_: export, backup
 
 ## Screen

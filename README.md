@@ -56,6 +56,34 @@ With `--format json` or `--format json-pretty`, Batch mode writes each Result as
 Orientation is `horizontal` (default) or `vertical`. Set it with `--orientation`, or with `orientation` in `config.yaml`.
 In Batch mode, `vertical` holds the whole Result in memory. Always add `--limit N` for large Results, as in the example above.
 
+## Save and Dump in Interactive mode
+
+| Slash command | Action |
+|---|---|
+| `/save <file>` | Write the newest Result held in memory, using the current Format and Orientation. |
+| `/dump <file> [sql]` | Run every Statement of `sql`, or of the last submitted SQL input, and write all rows without the Row limit. |
+
+`/save` warns if the held Result was truncated. With no Result, or an empty Result, it shows an info Message block and writes nothing. Later Format and Orientation changes apply to the saved file, not to earlier Transcript text. A Dump does not replace the held Result.
+
+File names are literal paths, relative to the current directory unless absolute. Quote a name with single or double quotes if it contains spaces. The matching quote cannot occur inside that quoted name. There is no shell expansion. SQL after the file name keeps its quotes, comments and whitespace.
+
+```text
+/save "my result.json"
+/dump "all results.json" select * from first_table; select * from second_table;
+```
+
+A Dump checks **all Statements before running any**. It accepts `SELECT`, query-only `WITH`, `VALUES`, `TABLE` and `SHOW`, including leading comments and parenthesized queries. It rejects writes, writing CTEs, `SELECT INTO`, `EXPLAIN` and other non-query Statements. The conservative word check also rejects unquoted identifiers named `insert`, `update`, `delete`, `merge` or `into`; quote these identifiers. It also rejects row-locking clauses (`FOR UPDATE`, `FOR NO KEY UPDATE`, `FOR SHARE` and `FOR KEY SHARE`).
+
+Every Dump Statement runs in its own READ ONLY transaction, even in a read-write Session, and rolls back afterward. The Session mode stays unchanged. Finish an open user transaction with `COMMIT` or `ROLLBACK` before `/dump`. This is a guard against mistakes, not a security boundary: functions that affect other connections or non-transactional state can still have side effects (ADR 0007).
+
+Both commands write a temporary file in the target directory and replace the target atomically only on success. A failure or cancellation before publication removes the temporary file and keeps an existing target unchanged. The directory must exist and support atomic replacement. The completed file has mode `600` on POSIX systems; replacement does not preserve old permissions and replaces a target symlink rather than following it. Timeout and Ctrl-C apply to Dump execution, including later cursor fetches; success reports the total row count and file name.
+
+With `json` or `json-pretty`, `/save` writes one Result array. `/dump` writes **one JSON document with an outer array of Result arrays**, including for one Result. Other Formats separate Results with one blank line. Several CSV, TSV or Markdown Results in one file are separate tables, not one table.
+
+Dump streams horizontal Results; horizontal `table` samples 1000 rows for column widths. Vertical Dump transposes through temporary column files, not memory. It needs extra disk space proportional to the Result and one open file per column. A single very large cell can still need large memory. Vertical Batch output keeps its existing memory limit described above.
+
+The Transcript retains the newest 200 Message blocks. Earlier retained Results keep frozen text, but only the newest Result keeps row data for `/save`. The held Result survives even if its block leaves the Transcript; an empty Result replaces it. History and Resume remain independent of this retention rule. The default Dump input is the last ordinary SQL submission in this running Session, even if it failed; Slash commands and explicit Dump SQL do not replace it. Resume does not load SQL or Result rows from the earlier Session.
+
 ## Profiles in Interactive mode
 
 Start `dbui` in a terminal without complete connection options to open **Edit Connection Profile**.
