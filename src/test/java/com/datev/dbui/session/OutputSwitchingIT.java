@@ -33,7 +33,8 @@ class OutputSwitchingIT {
 
 	@org.junit.jupiter.params.ParameterizedTest
 	@org.junit.jupiter.params.provider.CsvSource({ "csv,'id,name\n7,Alice\n'", "tsv,'id\tname\n7\tAlice\n'",
-		"markdown,'| id | name |\n| --- | --- |\n| 7 | Alice |\n'" })
+		"markdown,'| id | name |\n| --- | --- |\n| 7 | Alice |\n'",
+		"json-pretty,'[\n  {\n    \"id\": 7,\n    \"name\": \"Alice\"\n  }\n]\n'" })
 	void everyFormatUsesTheSharedFormatterForTheNextResult(String format, String expected) throws Exception {
 		try (Session session = session()) {
 			assertThat(submit(session, "/format " + format).kind()).isEqualTo(MessageBlock.Kind.INFO);
@@ -48,7 +49,7 @@ class OutputSwitchingIT {
 			var band = submit(session, input);
 			assertThat(band.kind()).isEqualTo(MessageBlock.Kind.ERROR);
 			if (input.startsWith("/format")) {
-				assertThat(band.text()).contains("table", "markdown", "csv", "tsv", "json");
+				assertThat(band.text()).contains("table", "markdown", "csv", "tsv", "json", "json-pretty");
 			}
 			else {
 				assertThat(band.text()).contains("horizontal", "vertical");

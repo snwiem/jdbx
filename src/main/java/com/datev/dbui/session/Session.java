@@ -414,12 +414,12 @@ public final class Session implements AutoCloseable {
 				return List.of();
 			}));
 		commands.add(new SlashCommand("format", "Change the Format for new Results.",
-			SlashCommand.argument("<table|markdown|csv|tsv|json>", "1", List.of("table", "markdown", "csv", "tsv", "json"),
+			SlashCommand.argument("<table|markdown|csv|tsv|json|json-pretty>", "1", List.of("table", "markdown", "csv", "tsv", "json", "json-pretty"),
 				value -> com.datev.dbui.Format.parse(value).id()), false, argument -> {
 				updateSettings(settings().withOutput(argument, settings().orientation()));
 				return List.of(MessageBlock.info("Format: " + argument));
 			}));
-		commands.add(new SlashCommand("orientation", "Change the Orientation for new Results (json ignores it).",
+		commands.add(new SlashCommand("orientation", "Change the Orientation for new Results (json and json-pretty ignore it).",
 			SlashCommand.argument("<horizontal|vertical>", "1", List.of("horizontal", "vertical"),
 				value -> com.datev.dbui.Orientation.parse(value).id()), false, argument -> {
 				updateSettings(settings().withOutput(settings().format(), argument));

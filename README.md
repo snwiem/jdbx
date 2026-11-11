@@ -47,7 +47,9 @@ dbui --host localhost --db dbui --user dbui --password dbui --orientation vertic
 
 ## JSON output for several Results
 
-With `--format json`, Batch mode writes each Result as its own JSON array. The arrays follow each other directly, with no blank line. This is a stream of concatenated JSON documents. It is not one document and not strict JSON Lines. `jq` and similar tools read it. If you need one valid JSON document, run one Statement per call.
+With `--format json` or `--format json-pretty`, Batch mode writes each Result as its own JSON array. The arrays follow each other directly, with no blank line. This is a stream of concatenated JSON documents. It is not one document and not strict JSON Lines. `jq` and similar tools read it. If you need one valid JSON document, run one Statement per call.
+
+`json` writes one compact object per row. `json-pretty` writes the same data with two-space indent and one key per line. Both ignore the Orientation and stream row by row. In Interactive mode, `/format json-pretty` selects it.
 
 ## Orientation
 

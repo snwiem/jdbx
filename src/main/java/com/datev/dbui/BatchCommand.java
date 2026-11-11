@@ -50,7 +50,7 @@ class BatchCommand implements Callable<Integer> {
 	List<String> files = new ArrayList<>();
 
 	@Option(names = "--format", converter = FormatConverter.class,
-			description = "Output Format: table, markdown, csv, tsv or json (default: 'format' in config.yaml, else table). Several Results with json are written as concatenated JSON documents without a blank line; for one document run one Statement per call")
+			description = "Output Format: table, markdown, csv, tsv, json or json-pretty (default: 'format' in config.yaml, else table). Several Results with json or json-pretty are written as concatenated JSON documents without a blank line; for one document run one Statement per call")
 	Format format;
 
 	@Option(names = "--orientation", converter = OrientationConverter.class,

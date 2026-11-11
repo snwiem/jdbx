@@ -1,6 +1,7 @@
 package com.datev.dbui;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -191,6 +192,67 @@ class FormatterTest {
 	@Test
 	void jsonWritesBinaryAsFullHexString() {
 		assertThat(render(Format.JSON, one(new byte[] { 0x0a, (byte) 0xff }))).contains("{\"v\":\"\\\\x0aff\"}");
+	}
+
+	// json-pretty
+
+	@Test
+	void jsonPrettyWritesEachKeyOnItsOwnLine() {
+		assertThat(render(Format.JSON_PRETTY, mixed())).isEqualTo("""
+				[
+				  {
+				    "id": 1,
+				    "name": "alice",
+				    "flag": null
+				  },
+				  {
+				    "id": 22,
+				    "name": "bob",
+				    "flag": true
+				  }
+				]
+				""");
+	}
+
+	@Test
+	void jsonPrettyParsesAsTheSameDataAsJson() throws Exception {
+		var pretty = new org.json.JSONArray(render(Format.JSON_PRETTY, mixed()));
+		var compact = new org.json.JSONArray(render(Format.JSON, mixed()));
+		assertThat(pretty.toString()).isEqualTo(compact.toString());
+	}
+
+	@Test
+	void jsonPrettyWritesEmptyResultAsEmptyArray() {
+		assertThat(render(Format.JSON_PRETTY, new Result(List.of("x"), List.of()))).isEqualTo("[]\n");
+	}
+
+	@Test
+	void jsonPrettyRendersValuesLikeJson() {
+		Result result = new Result(List.of("s", "n", "b", "z", "d", "j"), List.<List<Object>>of(
+				Arrays.asList("q\"b\\n\n\u0001", new java.math.BigDecimal("1E+3"), true, null, Double.NaN,
+						new JsonValue("{\"k\": [1, 2]}"))));
+
+		assertThat(render(Format.JSON_PRETTY, result)).isEqualTo("""
+				[
+				  {
+				    "s": "q\\"b\\\\n\\n\\u0001",
+				    "n": 1000,
+				    "b": true,
+				    "z": null,
+				    "d": "NaN",
+				    "j": {"k": [1, 2]}
+				  }
+				]
+				""");
+	}
+
+	@Test
+	void jsonPrettyIdUsesAHyphenAndOnlyTheHyphenFormIsParsed() {
+		assertThat(Format.JSON_PRETTY.id()).isEqualTo("json-pretty");
+		assertThat(Format.parse("json-pretty")).isEqualTo(Format.JSON_PRETTY);
+		assertThat(Format.parse(" JSON-Pretty ")).isEqualTo(Format.JSON_PRETTY);
+		assertThatThrownBy(() -> Format.parse("json_pretty")).isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("table, markdown, csv, tsv, json, json-pretty");
 	}
 
 	@Test

@@ -341,6 +341,13 @@ class BatchEntryPointIT {
 	}
 
 	@Test
+	void writesSeveralJsonPrettyResultsAsConcatenatedDocumentsWithoutBlankLine() {
+		Outcome outcome = run(connection("--format", "json-pretty", "-c", "select 1 as id; select 2 as id"));
+
+		assertThat(outcome.stdout()).isEqualTo("[\n  {\n    \"id\": 1\n  }\n]\n[\n  {\n    \"id\": 2\n  }\n]\n");
+	}
+
+	@Test
 	void rejectsUnknownFormat() {
 		Outcome outcome = run(connection("--format", "xml", "-c", "select 1"));
 
@@ -441,6 +448,11 @@ class BatchEntryPointIT {
 	@Test
 	void writesMillionsOfRowsAsJsonWithSmallHeap() throws Exception {
 		assertThat(countLines("--format", "json", "-c", MANY)).isEqualTo(MANY_ROWS + 2L);
+	}
+
+	@Test
+	void writesMillionsOfRowsAsJsonPrettyWithSmallHeap() throws Exception {
+		assertThat(countLines("--format", "json-pretty", "-c", MANY)).isEqualTo(MANY_ROWS * 4L + 2L);
 	}
 
 	@Test
