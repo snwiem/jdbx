@@ -50,7 +50,7 @@ class BatchCommand implements Callable<Integer> {
 	List<String> files = new ArrayList<>();
 
 	@Option(names = "--format", converter = FormatConverter.class,
-			description = "Output Format: table, markdown, csv, tsv or json (default: 'format' in config.yaml, else table)")
+			description = "Output Format: table, markdown, csv, tsv, json or json-pretty (default: 'format' in config.yaml, else table). Several Results with json or json-pretty are written as concatenated JSON documents without a blank line; for one document run one Statement per call")
 	Format format;
 
 	@Option(names = "--orientation", converter = OrientationConverter.class,
@@ -151,7 +151,7 @@ class BatchCommand implements Callable<Integer> {
 					if (jdbcStatement.execute(statement)) {
 						try (ResultSet resultSet = jdbcStatement.getResultSet()) {
 							PrintWriter out = spec.commandLine().getOut();
-							if (!first) {
+							if (!first && !effectiveFormat.isDocumentStream()) {
 								out.print('\n');
 							}
 							JdbcRowSource source = new JdbcRowSource(resultSet, limit);

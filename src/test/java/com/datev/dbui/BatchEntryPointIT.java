@@ -318,6 +318,36 @@ class BatchEntryPointIT {
 	}
 
 	@Test
+	void writesSeveralJsonResultsAsConcatenatedDocumentsWithoutBlankLine() throws Exception {
+		Outcome outcome = run(connection("--format", "json", "-c", "select 1 as id; select 'a' as name, 2 as n"));
+
+		assertThat(outcome.stdout()).isEqualTo("""
+				[
+				{"id":1}
+				]
+				[
+				{"name":"a","n":2}
+				]
+				""");
+		// JSONTokener reads one document after the other, as jq does.
+		var tokener = new org.json.JSONTokener(outcome.stdout());
+		var all = new java.util.ArrayList<org.json.JSONArray>();
+		while (tokener.nextClean() != 0) {
+			tokener.back();
+			all.add((org.json.JSONArray) tokener.nextValue());
+		}
+		assertThat(all).hasSize(2);
+		assertThat(all.get(1).getJSONObject(0).getInt("n")).isEqualTo(2);
+	}
+
+	@Test
+	void writesSeveralJsonPrettyResultsAsConcatenatedDocumentsWithoutBlankLine() {
+		Outcome outcome = run(connection("--format", "json-pretty", "-c", "select 1 as id; select 2 as id"));
+
+		assertThat(outcome.stdout()).isEqualTo("[\n  {\n    \"id\": 1\n  }\n]\n[\n  {\n    \"id\": 2\n  }\n]\n");
+	}
+
+	@Test
 	void rejectsUnknownFormat() {
 		Outcome outcome = run(connection("--format", "xml", "-c", "select 1"));
 
@@ -418,6 +448,11 @@ class BatchEntryPointIT {
 	@Test
 	void writesMillionsOfRowsAsJsonWithSmallHeap() throws Exception {
 		assertThat(countLines("--format", "json", "-c", MANY)).isEqualTo(MANY_ROWS + 2L);
+	}
+
+	@Test
+	void writesMillionsOfRowsAsJsonPrettyWithSmallHeap() throws Exception {
+		assertThat(countLines("--format", "json-pretty", "-c", MANY)).isEqualTo(MANY_ROWS * 4L + 2L);
 	}
 
 	@Test

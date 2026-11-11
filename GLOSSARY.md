@@ -57,11 +57,11 @@ The maximum number of rows dbui reads for one Result in Interactive mode. dbui a
 _Avoid_: max rows, LIMIT clause
 
 **Format**:
-How a Result is written: `table`, `markdown`, `csv`, `tsv` or `json`.
+How a Result is written: `table`, `markdown`, `csv`, `tsv`, `json` or `json-pretty`.
 _Avoid_: output type, mode
 
 **Orientation**:
-Whether a Result is laid out horizontally (one row per line) or vertically (one column per line). It applies to `table`, `markdown`, `csv` and `tsv`, not to `json`.
+Whether a Result is laid out horizontally (one row per line) or vertically (one column per line). It applies to `table`, `markdown`, `csv` and `tsv`, not to `json` or `json-pretty`.
 _Avoid_: layout, transpose, view
 
 **Save**:

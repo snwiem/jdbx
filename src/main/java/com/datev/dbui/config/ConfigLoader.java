@@ -24,7 +24,7 @@ public class ConfigLoader {
 
 	private static final Pattern ENV_REFERENCE = Pattern.compile("\\$\\{([A-Za-z_][A-Za-z0-9_]*)}");
 
-	private static final Set<String> FORMATS = Set.of("table", "markdown", "csv", "tsv", "json");
+	private static final Set<String> FORMATS = Set.of("table", "markdown", "csv", "tsv", "json", "json-pretty");
 
 	private static final Set<String> ORIENTATIONS = Set.of("horizontal", "vertical");
 

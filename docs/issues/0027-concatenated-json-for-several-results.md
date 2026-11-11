@@ -4,7 +4,7 @@
 
 **Blocked by:** none
 
-**Status:** open
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md`
 
@@ -19,7 +19,7 @@
 
 ## Acceptance criteria
 
-- [ ] Integration test: two Statements with `--format json` give two arrays with no blank line; a test reads them with a JSON parser that accepts concatenated documents
-- [ ] A single Result gives exactly the same output as before
-- [ ] Streaming of horizontal JSON stays row by row (the small-heap test still passes)
-- [ ] `--help` and `README.md` describe the output for several Results and the one-Statement-per-call advice
+- [x] Integration test: two Statements with `--format json` give two arrays with no blank line; a test reads them with a JSON parser that accepts concatenated documents
+- [x] A single Result gives exactly the same output as before
+- [x] Streaming of horizontal JSON stays row by row (the small-heap test still passes)
+- [x] `--help` and `README.md` describe the output for several Results and the one-Statement-per-call advice

@@ -313,7 +313,7 @@ class FeatureIntegrationIT {
 			assertThat(session.complete("/for", 4).get(10, TimeUnit.SECONDS).candidates())
 				.extracting(Candidate::insert).containsExactly("/format");
 			assertThat(session.complete("/format ", 8).get(10, TimeUnit.SECONDS).candidates())
-				.extracting(Candidate::insert).containsExactly("table", "markdown", "csv", "tsv", "json");
+				.extracting(Candidate::insert).containsExactly("table", "markdown", "csv", "tsv", "json", "json-pretty");
 		}
 	}
 }
