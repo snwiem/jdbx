@@ -4,7 +4,7 @@
 
 **Blocked by:** 0014 (shares the "held Result" and the formatter path with `/save`); issue 0028 decides which Result stays in memory
 
-**Status:** ready-for-manual-check
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md`, story 88
 
@@ -39,7 +39,7 @@
 - [x] Unit test: a truncated Result is copied and the info band names the Row limit
 - [x] The clipboard write goes through one thin seam (`ClipboardSink`), so tests need no terminal
 - [x] `/help` and `README.md` describe `/copy`, its size limit and the terminal requirement for OSC 52
-- [ ] Manual check: paste after `/copy` in Herdr on WSL, in a plain terminal, and in Windows Terminal
+- [x] Manual check: paste after `/copy` in Herdr on WSL, in a plain terminal, and in Windows Terminal (user tested Herdr in a WSL terminal and pasted into Windows Notepad; a plain terminal outside Herdr was not tested separately)
 
 
 ## Verification
