@@ -141,7 +141,7 @@ public final class InteractiveScreen {
 		this.connection = connection;
 	}
 
-	/** Where Ctrl-Space gets its candidates. The default knows keywords only. */
+	/** Where Tab gets its candidates. The default knows keywords only. */
 	public void completion(CompletionBackend backend) {
 		this.completionBackend = backend;
 	}
@@ -208,7 +208,7 @@ public final class InteractiveScreen {
 			if (handleCompletionKey(key)) {
 				return true;
 			}
-			if (keys.complete().matches(key) || keys.completeAlternate().matches(key)) {
+			if (keys.requestsCompletion(key)) {
 				requestCompletion();
 				return true;
 			}
@@ -269,7 +269,7 @@ public final class InteractiveScreen {
 			return escape;
 		}
 		if (pendingCompletion != null) {
-			if (keys.complete().matches(key) || keys.completeAlternate().matches(key)) {
+			if (keys.requestsCompletion(key)) {
 				return true;
 			}
 			closeCompletion();

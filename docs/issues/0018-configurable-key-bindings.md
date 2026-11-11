@@ -12,3 +12,5 @@
 - [ ] An invalid key name gives a clear error band at start and defaults apply
 - [ ] `/help` shows the current bindings
 - [ ] A Pilot test shows a changed newline key works
+
+> Note (issue 0031): the default Completion key is now `Tab`, not `Ctrl-Space`. `Alt-/` stays as the fallback.

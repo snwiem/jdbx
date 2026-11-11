@@ -32,6 +32,6 @@ class SlashCommandSourceTest {
 		assertThat(engine.complete("/unknown ", 9, SchemaModel.EMPTY).candidates()).isEmpty();
 		assertThat(engine.complete("/format json ", 13, SchemaModel.EMPTY).candidates()).isEmpty();
 		assertThat(engine.complete("sel", 3, SchemaModel.EMPTY).candidates()).extracting(Candidate::insert).containsExactly("select");
-		assertThat(registry.help()).contains("Ctrl-Space / Alt-/", "Completion Tab / Enter", "Shift-Tab / Ctrl-O");
+		assertThat(registry.help()).contains("Tab / Alt-/", "Completion Tab / Enter", "Shift-Tab / Ctrl-O");
 	}
 }
