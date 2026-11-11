@@ -4,11 +4,11 @@
 
 **Blocked by:** none
 
-**Status:** open
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md`
 
-- [ ] The `--orientation` option help text says that `vertical` buffers the whole Result in Batch mode, and names `--limit` as the bound
-- [ ] `README.md` has the same warning in the Batch and Orientation sections, with an example using `--limit`
-- [ ] Issue 0021 `## Decision` stays as is; this issue only adds the user-facing text
-- [ ] No behaviour change; existing tests still pass (including `batchModeHasNoRowLimitByDefaultEvenWithRowLimitInSettings`)
+- [x] The `--orientation` option help text says that `vertical` buffers the whole Result in Batch mode, and names `--limit` as the bound
+- [x] `README.md` has the same warning in the Batch and Orientation sections, with an example using `--limit`
+- [x] Issue 0021 `## Decision` stays as is; this issue only adds the user-facing text
+- [x] No behaviour change; existing tests still pass (including `batchModeHasNoRowLimitByDefaultEvenWithRowLimitInSettings`)
