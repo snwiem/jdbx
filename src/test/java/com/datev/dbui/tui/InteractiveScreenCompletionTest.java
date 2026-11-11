@@ -50,8 +50,8 @@ class InteractiveScreenCompletionTest {
 		return new Completion(0, 0, List.of(column("alpha"), column("beta"), column("gamma")));
 	}
 
-	private void ctrlSpace() {
-		screen.handle(KeyEvent.ofChar(' ', KeyModifiers.CTRL));
+	private void tab() {
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB));
 	}
 
 	private static Buffer draw(InteractiveScreen screen) {
@@ -78,22 +78,62 @@ class InteractiveScreenCompletionTest {
 		for (char c : "ord".toCharArray()) {
 			screen.handle(KeyEvent.ofChar(c));
 		}
-		screen.handle(KeyEvent.ofKey(KeyCode.TAB));
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.SHIFT));
 		screen.handle(KeyEvent.ofKey(KeyCode.DOWN));
 		screen.handle(KeyEvent.ofChar(' '));
+		screen.handle(KeyEvent.ofChar(' ', KeyModifiers.CTRL));
 		screen.handle(KeyEvent.ofChar('/', KeyModifiers.CTRL));
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.CTRL));
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.ALT));
 		assertThat(requests).isEmpty();
 		assertThat(screenText(draw(screen))).doesNotContain("alpha", "beta");
 	}
 
 	@Test
-	void ctrlSpaceAsksForCompletionWithTextAndCursorOffsetAndOpensThePopup() {
+	void tabAsksForCompletionWithTextAndCursorOffsetAndOpensThePopup() {
 		backendAnswers(three());
 		screen.handle(new PasteEvent("select\n1 f"));
 		screen.handle(KeyEvent.ofKey(KeyCode.LEFT));
-		ctrlSpace();
+		tab();
 		assertThat(requests).containsExactly("select\n1 f@9");
 		assertThat(screenText(draw(screen))).contains("alpha", "beta", "gamma");
+	}
+
+	@Test
+	void shiftTabDoesNotRequestCompletion() {
+		var cycles = new java.util.concurrent.atomic.AtomicInteger();
+		var screen = new InteractiveScreen("connection", sent::add, () -> { },
+			com.datev.dbui.config.Settings.defaults(), cycles::incrementAndGet);
+		screen.completion((text, cursor) -> {
+			requests.add(text);
+			return CompletableFuture.completedFuture(three());
+		});
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.SHIFT));
+		assertThat(cycles.get()).isEqualTo(1);
+		assertThat(requests).isEmpty();
+	}
+
+	@Test
+	void tabWithAnOpenPopupAcceptsAndDoesNotRequestAgain() {
+		backendAnswers(new Completion(0, 0, List.of(column("alpha"), column("beta"))));
+		tab();
+		tab();
+		assertThat(requests).hasSize(1);
+		assertThat(screenText(draw(screen))).contains("alpha").doesNotContain("beta");
+	}
+
+	@Test
+	void aPastedTabDoesNotRequestCompletion() {
+		backendAnswers(three());
+		screen.handle(new PasteEvent("a\tb"));
+		assertThat(requests).isEmpty();
+	}
+
+	@Test
+	void ctrlSpaceIsNoLongerADefaultKey() {
+		backendAnswers(three());
+		screen.handle(KeyEvent.ofChar(' ', KeyModifiers.CTRL));
+		assertThat(requests).isEmpty();
 	}
 
 	@Test
@@ -109,7 +149,7 @@ class InteractiveScreenCompletionTest {
 		backendAnswers(three());
 		screen.handle(new PasteEvent("x "));
 		backendAnswers(new Completion(2, 2, List.of(column("alpha"), column("beta"), column("gamma"))));
-		ctrlSpace();
+		tab();
 		screen.handle(KeyEvent.ofKey(KeyCode.DOWN));
 		screen.handle(KeyEvent.ofKey(KeyCode.TAB));
 		screen.handle(KeyEvent.ofChar('!'));
@@ -122,7 +162,7 @@ class InteractiveScreenCompletionTest {
 		var screen = new InteractiveScreen("connection", sent::add, () -> { },
 			com.datev.dbui.config.Settings.defaults(), cycles::incrementAndGet);
 		screen.completion((text, cursor) -> CompletableFuture.completedFuture(three()));
-		screen.handle(KeyEvent.ofChar(' ', KeyModifiers.CTRL));
+		tab();
 		screen.handle(KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.SHIFT));
 		assertThat(cycles.get()).isEqualTo(1);
 		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
@@ -132,7 +172,7 @@ class InteractiveScreenCompletionTest {
 	@Test
 	void enterAcceptsAndDoesNotSendWhileThePopupIsOpen() {
 		backendAnswers(new Completion(0, 0, List.of(column("alpha"), column("beta"))));
-		ctrlSpace();
+		tab();
 		screen.handle(KeyEvent.ofKey(KeyCode.UP));
 		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
 		assertThat(sent).isEmpty();
@@ -145,7 +185,7 @@ class InteractiveScreenCompletionTest {
 	void escapeClosesThePopupWithoutChangingTheText() {
 		backendAnswers(three());
 		screen.handle(new PasteEvent("ab"));
-		ctrlSpace();
+		tab();
 		screen.handle(KeyEvent.ofKey(KeyCode.ESCAPE));
 		var text = screenText(draw(screen));
 		assertThat(text).doesNotContain("alpha").contains("ab");
@@ -156,7 +196,7 @@ class InteractiveScreenCompletionTest {
 	@Test
 	void anyOtherKeyClosesThePopupAndEditsNormally() {
 		backendAnswers(three());
-		ctrlSpace();
+		tab();
 		screen.handle(KeyEvent.ofChar('q'));
 		var text = screenText(draw(screen));
 		assertThat(text).doesNotContain("alpha").contains("q");
@@ -166,7 +206,7 @@ class InteractiveScreenCompletionTest {
 	void aSingleCandidateIsInsertedWithoutAPopup() {
 		backendAnswers(new Completion(0, 2, List.of(column("customers"))));
 		screen.handle(new PasteEvent("cu"));
-		ctrlSpace();
+		tab();
 		var text = screenText(draw(screen));
 		assertThat(text).contains("customers");
 		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
@@ -177,7 +217,7 @@ class InteractiveScreenCompletionTest {
 	void theCommonPrefixIsInsertedFirstAndThePopupListsTheCandidates() {
 		backendAnswers(new Completion(0, 1, List.of(column("customers"), column("customer_notes"))));
 		screen.handle(new PasteEvent("c"));
-		ctrlSpace();
+		tab();
 		var text = screenText(draw(screen));
 		assertThat(text).contains("customer_notes", "customers");
 		screen.handle(KeyEvent.ofKey(KeyCode.DOWN));
@@ -189,7 +229,7 @@ class InteractiveScreenCompletionTest {
 	@Test
 	void noCandidatesShowANoteInTheStatusBarUntilTheNextKey() {
 		backendAnswers(new Completion(0, 0, List.of()));
-		ctrlSpace();
+		tab();
 		assertThat(screenText(draw(screen))).contains("no completions");
 		screen.handle(KeyEvent.ofChar('a'));
 		assertThat(screenText(draw(screen))).doesNotContain("no completions");
@@ -199,7 +239,7 @@ class InteractiveScreenCompletionTest {
 	void whileTheSchemaLoadsTheStatusBarSaysSoAndTheListAppearsWhenItIsReady() {
 		backendAnswers(three());
 		answer = new CompletableFuture<>();
-		ctrlSpace();
+		tab();
 		assertThat(screenText(draw(screen))).contains("loading schema…").doesNotContain("alpha");
 		screen.handle(TickEvent.of(0));
 		assertThat(screenText(draw(screen))).contains("loading schema…");
@@ -212,7 +252,7 @@ class InteractiveScreenCompletionTest {
 	void aKeyWhileLoadingCancelsTheRequestAndALateAnswerIsIgnored() {
 		backendAnswers(three());
 		answer = new CompletableFuture<>();
-		ctrlSpace();
+		tab();
 		screen.handle(KeyEvent.ofChar('z'));
 		answer.complete(three());
 		screen.handle(TickEvent.of(1));
@@ -222,16 +262,16 @@ class InteractiveScreenCompletionTest {
 	@Test
 	void popupShowsEightRowsAtMost() {
 		backendAnswers(new Completion(0, 0, IntStream.range(0, 12).mapToObj(i -> column("c" + (10 + i))).toList()));
-		ctrlSpace();
+		tab();
 		var text = screenText(draw(screen));
 		assertThat(text).contains("c17").doesNotContain("c18");
 	}
 
 	@Test
-	void ctrlSpaceThroughThePilotOpensThePopupAndEscapeClosesIt() throws Exception {
+	void tabThroughThePilotOpensThePopupAndEscapeClosesIt() throws Exception {
 		backendAnswers(three());
 		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(60, 20))) {
-			terminal.pilot().press(' ', KeyModifiers.CTRL);
+			terminal.pilot().press(KeyCode.TAB);
 			terminal.pilot().pause();
 			assertThat(requests).hasSize(1);
 			terminal.pilot().press(KeyCode.ESCAPE);
@@ -244,7 +284,7 @@ class InteractiveScreenCompletionTest {
 	void ctrlCClosesThePopupAndClearsTheEditor() {
 		backendAnswers(three());
 		screen.handle(new PasteEvent("abc"));
-		ctrlSpace();
+		tab();
 		screen.handle(KeyEvent.ofChar('c', KeyModifiers.CTRL));
 		assertThat(screenText(draw(screen))).doesNotContain("alpha", "abc");
 	}

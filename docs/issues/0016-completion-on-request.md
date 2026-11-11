@@ -34,3 +34,5 @@
 ## Known limits
 
 - The popup does not filter while the user types (a key closes it; request again). Cursor positions count UTF-16 characters. Candidates for `INSERT INTO t (` column lists and for subquery aliases are not offered.
+
+> Note (issue 0031): the default Completion key is now `Tab`, not `Ctrl-Space`. `Alt-/` stays as the fallback.

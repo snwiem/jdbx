@@ -35,12 +35,12 @@ class ConnectionModalTest {
 				List.of(new com.datev.dbui.completion.Candidate("alpha", "alpha", com.datev.dbui.completion.Candidate.Kind.TABLE),
 					new com.datev.dbui.completion.Candidate("beta", "beta", com.datev.dbui.completion.Candidate.Kind.TABLE))));
 		});
-		screen.handle(KeyEvent.ofChar(' ', KeyModifiers.CTRL));
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB));
 		var model = new ProfileDialogModel(new Profile(null, null, "localhost", null, "db", "alice", null, null, null, Map.of()), null);
 		screen.interaction(new SessionInteraction.Dialog(model, true, null));
 		screen.handle(KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.SHIFT));
 		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
-		screen.handle(KeyEvent.ofChar(' ', KeyModifiers.CTRL));
+		screen.handle(KeyEvent.ofKey(KeyCode.TAB));
 		assertThat(cycles.get()).isZero();
 		assertThat(requests.get()).isEqualTo(1);
 		assertThat(inputs).isEmpty();

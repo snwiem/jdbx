@@ -89,7 +89,7 @@ Existing Profile password references such as `${PG_PASSWORD}` stay literal.
 Slash commands do not accept inline credentials. Credential-like `/connect` and `/profile` inputs are rejected before echo or history.
 Names such as `api-token` work normally. Credential-shaped names containing a URL or password assignment must be renamed or selected by number.
 
-Use `/help` for the combined Slash command and key list. `Ctrl-Space` requests Completion; `Alt-/` is the fallback.
+Use `/help` for the combined Slash command and key list. `Tab` requests Completion; `Alt-/` is the fallback.
 Completion includes Slash command names and registry argument values. Enter accepts an open Completion candidate without sending input.
 Shift-Tab cycles Orientation in the editor, but moves between fields while the Profile dialog is open.
 

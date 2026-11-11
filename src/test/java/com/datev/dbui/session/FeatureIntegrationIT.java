@@ -216,7 +216,7 @@ class FeatureIntegrationIT {
 	@Test
 	void profileRegistryHelpAndCandidatesFollowTheCurrentProfileFile() throws Exception {
 		try (Session current = session()) {
-			assertThat(last(current, "/help").text()).contains("/readonly", "/connect", "/profile", "Ctrl-Space / Alt-/", "Dialog Tab / Shift-Tab");
+			assertThat(last(current, "/help").text()).contains("/readonly", "/connect", "/profile", "Tab / Alt-/", "Dialog Tab / Shift-Tab");
 			assertThat(current.slashCommands().parse("/connect").background()).isTrue();
 			assertThat(current.slashCommands().parse("/profile list").background()).isTrue();
 			assertThat(current.slashCommands().completionCandidates("profile")).containsExactly("list", "add", "edit", "remove");

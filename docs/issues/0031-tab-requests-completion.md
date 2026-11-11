@@ -4,7 +4,7 @@
 
 **Blocked by:** none (the default key map is in `EditorKeys`; issue 0018 makes it configurable)
 
-**Status:** open
+**Status:** ready-for-manual-check
 
 **Parent:** `docs/prd/mvp-1.0.md` (user story 64: Completion only on a key; the default key changes from `Ctrl-Space` to `Tab`)
 
@@ -26,12 +26,16 @@ A plain switch works. Facts found in the code:
 - Docs and text change from `Ctrl-Space` to `Tab`: `/help` (`SlashCommandRegistry`), `README.md`, the `InteractiveScreen` comments, `GLOSSARY.md` if it names the key, issue 0016 and 0018 (a short note), PRD story 64.
 - Completion still never opens by itself.
 
+## Findings
+
+`KeyTrigger.key(TAB)` ignores Shift unless the trigger requires it, so it also matches Shift-Tab. `EditorKeys.requestsCompletion` excludes Shift-Tab; a unit test proves it.
+
 ## Acceptance criteria
 
-- [ ] Unit test: plain Tab in the editor requests Completion (candidates or popup as before with Ctrl-Space)
-- [ ] Unit test: Shift-Tab still cycles Orientation and does not request Completion
-- [ ] Unit test: with the popup open, Tab accepts the candidate and does not request again
-- [ ] Unit test: a pasted Tab (`PasteEvent`) does not request Completion
-- [ ] Unit test: Tab in the Profile dialog still moves between fields
-- [ ] `/help` and `README.md` name Tab as the Completion key and `Alt-/` as the fallback
+- [x] Unit test: plain Tab in the editor requests Completion (candidates or popup as before with Ctrl-Space)
+- [x] Unit test: Shift-Tab still cycles Orientation and does not request Completion
+- [x] Unit test: with the popup open, Tab accepts the candidate and does not request again
+- [x] Unit test: a pasted Tab (`PasteEvent`) does not request Completion
+- [x] Unit test: Tab in the Profile dialog still moves between fields
+- [x] `/help` and `README.md` name Tab as the Completion key and `Alt-/` as the fallback
 - [ ] Manual check in a real terminal (Herdr) that Tab completes
