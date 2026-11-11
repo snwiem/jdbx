@@ -23,6 +23,7 @@ for a in "\$@"; do
 done
 for a in "\$@"; do printf '%s\n' "\$a"; done >"\$STUB_OUT"
 cat >"\$STUB_IN"
+printf '%s\n' "\$DBUI_CONFIG_DIR" "\$DBUI_STATE_DIR" "\$XDG_CONFIG_HOME" "\$XDG_STATE_HOME" "\$HOME" >"\$STUB_ENV"
 exit \${STUB_EXIT:-0}
 STUB
 	chmod +x "$1/java"
@@ -38,8 +39,12 @@ contains() { grep -F -- "$2" "$1" >/dev/null 2>&1; }
 make_java "$tmp/j25" 25.0.1
 make_java "$tmp/j21" 21.0.5
 touch "$tmp/app.jar"
-export STUB_OUT=$tmp/out STUB_IN=$tmp/in
+export STUB_OUT=$tmp/out STUB_IN=$tmp/in STUB_ENV=$tmp/env
 unset JAVA_HOME DBUI_OPTS DBUI_JAR DBUI_JAVA
+# Do not inherit the caller's config, Profiles (including locks), Session state or home.
+export DBUI_CONFIG_DIR=$tmp/config DBUI_STATE_DIR=$tmp/state
+export XDG_CONFIG_HOME=$tmp/xdg-config XDG_STATE_HOME=$tmp/xdg-state HOME=$tmp/home
+mkdir -p "$DBUI_CONFIG_DIR" "$DBUI_STATE_DIR" "$XDG_CONFIG_HOME" "$XDG_STATE_HOME" "$HOME"
 
 run() { # runs wrapper with minimal PATH (system tools only), stderr to $tmp/err
 	env PATH=/usr/bin:/bin "$@" 2>"$tmp/err"
@@ -49,6 +54,10 @@ run() { # runs wrapper with minimal PATH (system tools only), stderr to $tmp/err
 printf 'x' | STUB_EXIT=7 DBUI_JAVA=$tmp/j25/java DBUI_JAR=$tmp/app.jar run "$wrapper" a >/dev/null 2>&1
 rc=$?
 [ $rc -eq 7 ]; check "exit code passes through" $?
+
+# Every wrapper invocation uses our temporary config, Profiles, state and home.
+printf '%s\n' "$tmp/config" "$tmp/state" "$tmp/xdg-config" "$tmp/xdg-state" "$tmp/home" >"$tmp/expected-env"
+cmp -s "$tmp/env" "$tmp/expected-env"; check "config and state are isolated from the caller" $?
 
 # arguments incl. spaces and quotes, with -jar
 printf 'x' | DBUI_JAVA=$tmp/j25/java DBUI_JAR=$tmp/app.jar run "$wrapper" -c "select 'a b'" '"q"' ''

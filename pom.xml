@@ -114,9 +114,39 @@
 					</archive>
 				</configuration>
 			</plugin>
+			<!-- Keep default config, Profiles, locks and Session state out of the user's home.
+			     Environment variables also reach child JVMs started by tests. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<environmentVariables>
+						<DBUI_CONFIG_DIR>${project.build.directory}/test-environment/config</DBUI_CONFIG_DIR>
+						<DBUI_STATE_DIR>${project.build.directory}/test-environment/state</DBUI_STATE_DIR>
+						<XDG_CONFIG_HOME>${project.build.directory}/test-environment/xdg-config</XDG_CONFIG_HOME>
+						<XDG_STATE_HOME>${project.build.directory}/test-environment/xdg-state</XDG_STATE_HOME>
+						<HOME>${project.build.directory}/test-environment/home</HOME>
+					</environmentVariables>
+					<systemPropertyVariables>
+						<user.home>${project.build.directory}/test-environment/home</user.home>
+					</systemPropertyVariables>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-failsafe-plugin</artifactId>
+				<configuration>
+					<environmentVariables>
+						<DBUI_CONFIG_DIR>${project.build.directory}/test-environment/config</DBUI_CONFIG_DIR>
+						<DBUI_STATE_DIR>${project.build.directory}/test-environment/state</DBUI_STATE_DIR>
+						<XDG_CONFIG_HOME>${project.build.directory}/test-environment/xdg-config</XDG_CONFIG_HOME>
+						<XDG_STATE_HOME>${project.build.directory}/test-environment/xdg-state</XDG_STATE_HOME>
+						<HOME>${project.build.directory}/test-environment/home</HOME>
+					</environmentVariables>
+					<systemPropertyVariables>
+						<user.home>${project.build.directory}/test-environment/home</user.home>
+					</systemPropertyVariables>
+				</configuration>
 				<executions>
 					<execution>
 						<goals>
