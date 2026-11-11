@@ -4,10 +4,14 @@
 
 **Blocked by:** none
 
-**Status:** open
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md`
 
-- [ ] Unit test: passwords of different lengths give the same rendered mask (the old test in `ConnectionModalTest` expects 12 stars and changes)
-- [ ] Cursor and editing (backspace) still work
-- [ ] The real password never appears in the rendered output
+- [x] Unit test: passwords of different lengths give the same rendered mask (the old test in `ConnectionModalTest` expects 12 stars and changes)
+- [x] Cursor and editing (backspace) still work
+- [x] The real password never appears in the rendered output
+
+## Decision
+
+A non-empty password field shows a constant mask of 8 `*` (`DialogRenderer.MASK`), whatever the length. An empty field shows nothing. The cursor sits at the end of the mask. Dialog and password prompt share this rule. Tests: `ConnectionModalTest`, `ProfileDialogScreenTest`.
