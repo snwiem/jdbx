@@ -207,7 +207,9 @@ final class SessionState {
 			}
 			var fork = store.fork(chosen.id(), stored.withConnection(newInfo));
 			metadata = SessionMetadata.read(fork.metadataFile());
+			var previous = directory;
 			directory = fork;
+			previous.release(); // the earlier Session directory is no longer in use
 		}
 		catch (SQLException | IOException e) {
 			if (restoreReadOnly) {

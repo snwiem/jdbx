@@ -61,14 +61,15 @@ public final class SessionStore {
 	}
 
 	/**
-	 * Removes the oldest Session directories so that at most {@code keep} Sessions remain, the current one included. Never touches the current
-	 * Session, a directory without {@code session.yaml}, a name that is not a Session id, or a symbolic link.
+	 * Removes the oldest inactive Session directories so that at most {@code keep} Sessions remain, the current one included. Never
+	 * touches the current Session, a live Session (see {@link SessionDirectory#isLocked}; it does not count against {@code keep}), a
+	 * directory without {@code session.yaml}, a name that is not a Session id, or a symbolic link.
 	 */
 	public void cleanup(int keep, String currentId) {
 		List<String> ids = ids();
 		int kept = ids.contains(currentId) ? 1 : 0; // the current Session always stays and counts
 		for (String id : ids) {
-			if (id.equals(currentId) || ++kept <= keep) {
+			if (id.equals(currentId) || SessionDirectory.isLocked(sessions.resolve(id)) || ++kept <= keep) {
 				continue;
 			}
 			try {
