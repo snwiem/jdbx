@@ -45,7 +45,7 @@ public final class Session implements AutoCloseable {
 	private Consumer<SessionDirectory> directoryListener = directory -> { };
 	private final ExecutorService executor = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dbui-statement").factory());
 	private final ExecutorService cancellations = Executors.newVirtualThreadPerTaskExecutor();
-	private final List<MessageBlock> messageBlocks = new ArrayList<>();
+	private final TranscriptMemory transcript = new TranscriptMemory();
 	private final ExecutionControls controls;
 	private SchemaCommands schemaCommands;
 	private final SlashCommandRegistry slashCommands;
@@ -110,7 +110,7 @@ public final class Session implements AutoCloseable {
 			connection.setReadOnly(settings.readOnly());
 		}
 		if (directory.disabledReason() != null) {
-			messageBlocks.add(MessageBlock.info("history and Session log are disabled: " + directory.disabledReason()));
+			add(MessageBlock.info("history and Session log are disabled: " + directory.disabledReason()));
 		}
 	}
 
@@ -237,7 +237,7 @@ public final class Session implements AutoCloseable {
 	}
 
 	public synchronized List<MessageBlock> messageBlocks() {
-		return List.copyOf(messageBlocks);
+		return transcript.blocks();
 	}
 
 	public synchronized ExecutionStatus status() {
@@ -271,7 +271,7 @@ public final class Session implements AutoCloseable {
 		if (HistoryStore.containsProfileCredentials(input)) {
 			return CompletableFuture.completedFuture(errorUpdate("Inline Profile credentials are not accepted. Use the dialog or masked password prompt."));
 		}
-		messageBlocks.add(MessageBlock.input(input));
+		add(MessageBlock.input(input));
 		if (state != null) {
 			state.submitted(input);
 		}
@@ -754,7 +754,7 @@ public final class Session implements AutoCloseable {
 	}
 
 	private synchronized void add(MessageBlock block) {
-		messageBlocks.add(block.kind() == MessageBlock.Kind.RESULT ? MessageBlock.result(block.result(), settings()) : block);
+		transcript.add(block.kind() == MessageBlock.Kind.RESULT ? MessageBlock.result(block.result(), settings()) : block);
 	}
 
 	@Override

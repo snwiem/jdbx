@@ -102,7 +102,8 @@ class OutputSwitchingIT {
 			assertThat(submit(session, "select 8 as id").text()).isEqualTo("[\n{\"id\":8}\n]\n");
 			assertThat(session.settings().format()).isEqualTo("json");
 			assertThat(earlier.text()).isEqualTo("id\n--\n7\n");
-			assertThat(session.messageBlocks().get(1)).isEqualTo(earlier);
+			assertThat(session.messageBlocks().get(1).text()).isEqualTo(earlier.text());
+			assertThat(session.messageBlocks().get(1).result()).isNull();
 		}
 	}
 }
