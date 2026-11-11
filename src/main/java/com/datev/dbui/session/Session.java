@@ -64,6 +64,8 @@ public final class Session implements AutoCloseable {
 	private long startedAt;
 	private ExecutionStatus.ResultSummary lastResult;
 	private boolean heldResultTruncated;
+	private boolean heldQueryResult;
+	private CopyCommand copy = new CopyCommand(sequence -> { throw new IOException("Terminal clipboard is unavailable."); });
 	private String lastSqlInput;
 
 	/** Direct Interactive startup uses the same checked opener as /connect, Resume and reconnect. */
@@ -124,6 +126,9 @@ public final class Session implements AutoCloseable {
 		String warning = profiles.warning();
 		if (warning != null) add(MessageBlock.info(warning));
 	}
+
+	/** Installed by the terminal adapter; no terminal is needed to exercise /copy. */
+	public void clipboard(ClipboardSink sink) { copy = new CopyCommand(sink); }
 
 	public SessionInteraction interaction() { return interaction; }
 
@@ -441,6 +446,10 @@ public final class Session implements AutoCloseable {
 				updateSettings(settings().withOutput(settings().format(), argument));
 				return List.of(MessageBlock.info("Orientation: " + argument));
 			}));
+		commands.add(new SlashCommand("copy", "Send the held query Result in the current Format and Orientation to the terminal clipboard; "
+			+ "requires OSC 52 support. Limit: 64 KB of formatted UTF-8 text; use /save for larger Results.", null, false,
+			argument -> List.of(copy.execute(heldQueryResult ? transcript.heldResult() : null, settings(),
+				heldResultTruncated ? transcript.heldResult().rows().size() : null))));
 		commands.add(new SlashCommand("save", "Write the held Result in the current Format and Orientation.",
 			SlashCommand.argument("<file>", "1", List.of()), true, argument -> {
 				saveResult(argument);
@@ -807,12 +816,14 @@ public final class Session implements AutoCloseable {
 				resultSummary(read.result().rows().size(), statementStartedAt, read.truncated());
 				add(MessageBlock.result(read.result()));
 				heldResultTruncated = read.truncated();
+				heldQueryResult = true;
 				if (read.truncated()) {
 					add(MessageBlock.info("truncated at " + rowLimit + " rows"));
 				}
 			}
 		}
 		else {
+			heldQueryResult = false;
 			add(MessageBlock.info(CommandTag.of(sql, statement.getLargeUpdateCount())));
 		}
 	}
@@ -832,7 +843,10 @@ public final class Session implements AutoCloseable {
 	}
 
 	private synchronized void add(MessageBlock block) {
-		if (block.kind() == MessageBlock.Kind.RESULT) heldResultTruncated = false;
+		if (block.kind() == MessageBlock.Kind.RESULT) {
+			heldResultTruncated = false;
+			heldQueryResult = false; // Ordinary SQL marks its Result after adding it; schema Results are Save-only.
+		}
 		transcript.add(block.kind() == MessageBlock.Kind.RESULT ? MessageBlock.result(block.result(), settings()) : block);
 	}
 
