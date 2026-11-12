@@ -104,6 +104,30 @@
 	<build>
 		<plugins>
 			<plugin>
+				<groupId>io.github.git-commit-id</groupId>
+				<artifactId>git-commit-id-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>initialize</phase>
+						<goals>
+							<goal>revision</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<verbose>false</verbose>
+					<generateGitPropertiesFile>true</generateGitPropertiesFile>
+					<generateGitPropertiesFilename>${project.build.outputDirectory}/git.properties</generateGitPropertiesFilename>
+					<failOnNoGitDirectory>false</failOnNoGitDirectory>
+					<failOnUnableToExtractRepoInfo>false</failOnUnableToExtractRepoInfo>
+					<includeOnlyProperties>
+						<includeOnlyProperty>^git\.build\.version$</includeOnlyProperty>
+						<includeOnlyProperty>^git\.commit\.id\.abbrev$</includeOnlyProperty>
+						<includeOnlyProperty>^git\.dirty$</includeOnlyProperty>
+					</includeOnlyProperties>
+				</configuration>
+			</plugin>
+			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
 				<configuration>
@@ -129,6 +153,7 @@
 					</environmentVariables>
 					<systemPropertyVariables>
 						<user.home>${project.build.directory}/test-environment/home</user.home>
+						<dbui.project.version>${project.version}</dbui.project.version>
 					</systemPropertyVariables>
 				</configuration>
 			</plugin>
@@ -162,5 +187,31 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>git-worktree-metadata</id>
+			<activation>
+				<file>
+					<exists>.git</exists>
+				</file>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>io.github.git-commit-id</groupId>
+						<artifactId>git-commit-id-maven-plugin</artifactId>
+						<configuration>
+							<!-- Native git runs in the parent of dotGitDirectory. Anchor it to this
+							     worktree, not the common .git directory that the locator resolves.
+							     Without .git, keep the default locator so source archives also build. -->
+							<useNativeGit>true</useNativeGit>
+							<dotGitDirectory>${project.basedir}/.</dotGitDirectory>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 
 </project>

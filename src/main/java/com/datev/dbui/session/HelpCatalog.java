@@ -21,10 +21,12 @@ final class HelpCatalog {
 
 	private final List<Command> commands;
 	private final KeyBindings keys;
+	private final String versionText;
 
-	HelpCatalog(List<Command> commands, KeyBindings keys) {
+	HelpCatalog(List<Command> commands, KeyBindings keys, String versionText) {
 		this.commands = List.copyOf(commands);
 		this.keys = keys;
+		this.versionText = versionText;
 	}
 
 	/** One row of the key bindings. {@code key} is the text of the first column. */
@@ -160,7 +162,7 @@ final class HelpCatalog {
 		}
 		names.values().removeIf(List::isEmpty);
 		int width = names.keySet().stream().mapToInt(String::length).max().orElse(0) + 1;
-		var text = new StringBuilder("dbui help. Use /help commands, /help keys, or /help <word>.\n\n");
+		var text = new StringBuilder("dbui " + versionText + ". Use /help commands, /help keys, or /help <word>.\n\n");
 		names.forEach((group, list) -> text.append(String.format("%-" + width + "s %s%n", group, String.join(" ", list))));
 		text.append("\nEssential keys\n");
 		text.append(keyRow("Enter", "Send input")).append('\n');

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import com.datev.dbui.BuildInfo;
 import com.datev.dbui.config.KeyBindings;
 
 import picocli.CommandLine;
@@ -105,6 +106,6 @@ public final class SlashCommandRegistry {
 			list.add(new HelpCatalog.Command(command.name(), synopsis, subcommand.getCommandSpec().usageMessage().description()[0],
 				command.group()));
 		}
-		return new HelpCatalog(list, keys);
+		return new HelpCatalog(list, keys, BuildInfo.current().versionText());
 	}
 }

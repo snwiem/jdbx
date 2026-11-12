@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.datev.dbui.BuildInfo;
 import com.datev.dbui.completion.Candidate;
 import com.datev.dbui.config.Settings;
 
@@ -29,7 +30,9 @@ class HelpCommandSessionTest {
 		try (Session session = session()) {
 			var help = last(session, "/help");
 			assertThat(help.kind()).isEqualTo(MessageBlock.Kind.INFO);
-			assertThat(help.text()).startsWith("dbui help. Use /help commands, /help keys, or /help <word>.")
+			// Issue 0040 wires the current build version into the overview; command and key topics do not change.
+			assertThat(help.text()).startsWith("dbui " + BuildInfo.current().versionText()
+				+ ". Use /help commands, /help keys, or /help <word>.")
 				.contains("Essential keys", "Enter", "Ctrl-R");
 			for (var command : session.slashCommands().commands()) {
 				assertThat(help.text()).contains("/" + command.name());

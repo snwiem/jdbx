@@ -21,13 +21,14 @@ class HelpCatalogTest {
 		new Command("future", "/future", "A newly registered command.", "Other"));
 
 	private static HelpCatalog catalog(KeyBindings keys) {
-		return new HelpCatalog(COMMANDS, keys);
+		return new HelpCatalog(COMMANDS, keys, "0.0.1-SNAPSHOT (f9a81f5)");
 	}
 
 	@Test
-	void theOverviewListsEveryCommandNameUnderItsGroupAndFiveEssentialKeys() {
+	void theOverviewStartsWithTheVersionAndListsEveryCommandNameUnderItsGroupAndFiveEssentialKeys() {
+		// Issue 0040 replaces the generic title with the supplied build version; the overview body stays unchanged.
 		assertThat(catalog(KeyBindings.defaults()).topic("")).isEqualTo(String.join("\n",
-			"dbui help. Use /help commands, /help keys, or /help <word>.",
+			"dbui 0.0.1-SNAPSHOT (f9a81f5). Use /help commands, /help keys, or /help <word>.",
 			"",
 			"Query and results     /format",
 			"Schema                /describe",

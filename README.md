@@ -35,6 +35,17 @@ dbui --host localhost --db dbui --user dbui --password dbui
 
 Test the wrapper script with `sh bin/test-dbui.sh`. It is not part of `./mvnw verify`.
 
+## Version
+
+`dbui --version` prints the project version and short git commit, then exits with code 0 without connecting:
+
+```text
+$ dbui --version
+dbui 0.0.1-SNAPSHOT (f9a81f5)
+```
+
+The first line of `/help` shows the same version. A build with uncommitted changes adds `-dirty`, for example `dbui 0.0.1-SNAPSHOT (f9a81f5-dirty)`. This metadata describes the sources at build time; rebuild after changes. Builds from source archives without git information show `0.0.1-SNAPSHOT (unknown)`. If the metadata file or project version is missing, dbui shows `unknown version` instead. No build time is included.
+
 ## Batch output and memory
 
 Batch mode streams rows and has no default row limit. Horizontal output uses constant memory.

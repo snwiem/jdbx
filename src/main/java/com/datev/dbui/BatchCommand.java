@@ -24,6 +24,7 @@ import com.datev.dbui.tui.InteractiveMode;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ITypeConverter;
+import picocli.CommandLine.IVersionProvider;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
@@ -33,9 +34,16 @@ import picocli.CommandLine.Spec;
  * Connects, then selects Interactive mode (no -c, no -f, stdin is a terminal) or Batch mode (Statements to stdout,
  * never prompts).
  */
-@Command(name = "dbui", mixinStandardHelpOptions = true,
+@Command(name = "dbui", mixinStandardHelpOptions = true, versionProvider = BatchCommand.VersionProvider.class,
 		description = "Runs SQL in Interactive mode, or in Batch mode with -c, -f or stdin.")
 class BatchCommand implements Callable<Integer> {
+
+	static class VersionProvider implements IVersionProvider {
+		@Override
+		public String[] getVersion() {
+			return new String[] { "dbui " + BuildInfo.current().versionText() };
+		}
+	}
 
 	@Spec
 	CommandSpec spec;
