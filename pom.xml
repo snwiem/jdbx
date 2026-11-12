@@ -8,10 +8,10 @@
 		<version>4.1.2</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.datev</groupId>
-	<artifactId>dbui</artifactId>
+	<groupId>org.syracus</groupId>
+	<artifactId>jdbx</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>dbui</name>
+	<name>jdbx</name>
 	<description/>
 	<url/>
 	<licenses>
@@ -145,15 +145,15 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<environmentVariables>
-						<DBUI_CONFIG_DIR>${project.build.directory}/test-environment/config</DBUI_CONFIG_DIR>
-						<DBUI_STATE_DIR>${project.build.directory}/test-environment/state</DBUI_STATE_DIR>
+						<JDBX_CONFIG_DIR>${project.build.directory}/test-environment/config</JDBX_CONFIG_DIR>
+						<JDBX_STATE_DIR>${project.build.directory}/test-environment/state</JDBX_STATE_DIR>
 						<XDG_CONFIG_HOME>${project.build.directory}/test-environment/xdg-config</XDG_CONFIG_HOME>
 						<XDG_STATE_HOME>${project.build.directory}/test-environment/xdg-state</XDG_STATE_HOME>
 						<HOME>${project.build.directory}/test-environment/home</HOME>
 					</environmentVariables>
 					<systemPropertyVariables>
 						<user.home>${project.build.directory}/test-environment/home</user.home>
-						<dbui.project.version>${project.version}</dbui.project.version>
+						<jdbx.project.version>${project.version}</jdbx.project.version>
 					</systemPropertyVariables>
 				</configuration>
 			</plugin>
@@ -162,8 +162,8 @@
 				<artifactId>maven-failsafe-plugin</artifactId>
 				<configuration>
 					<environmentVariables>
-						<DBUI_CONFIG_DIR>${project.build.directory}/test-environment/config</DBUI_CONFIG_DIR>
-						<DBUI_STATE_DIR>${project.build.directory}/test-environment/state</DBUI_STATE_DIR>
+						<JDBX_CONFIG_DIR>${project.build.directory}/test-environment/config</JDBX_CONFIG_DIR>
+						<JDBX_STATE_DIR>${project.build.directory}/test-environment/state</JDBX_STATE_DIR>
 						<XDG_CONFIG_HOME>${project.build.directory}/test-environment/xdg-config</XDG_CONFIG_HOME>
 						<XDG_STATE_HOME>${project.build.directory}/test-environment/xdg-state</XDG_STATE_HOME>
 						<HOME>${project.build.directory}/test-environment/home</HOME>

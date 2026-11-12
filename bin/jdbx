@@ -1,18 +1,18 @@
 #!/bin/sh
-# dbui wrapper: finds a Java 25+ and the dbui jar, then execs the jar.
+# jdbx wrapper: finds a Java 25+ and the jdbx jar, then execs the jar.
 # Arguments, stdin, signals and exit code are those of the jar.
 #
-# Jar lookup:  $DBUI_JAR, <script dir>/dbui.jar, <script dir>/../lib/dbui.jar,
-#              <repo root>/target/dbui-*.jar
-# Java lookup: $DBUI_JAVA, $JAVA_HOME/bin/java, java on PATH (must be >= 25)
-# JVM options: $DBUI_OPTS (split at whitespace, placed before -jar)
+# Jar lookup:  $JDBX_JAR, <script dir>/jdbx.jar, <script dir>/../lib/jdbx.jar,
+#              <repo root>/target/jdbx-*.jar
+# Java lookup: $JDBX_JAVA, $JAVA_HOME/bin/java, java on PATH (must be >= 25)
+# JVM options: $JDBX_OPTS (split at whitespace, placed before -jar)
 # Exit codes of the wrapper itself: 127 no suitable Java, 1 jar not found.
 
 REQUIRED_JAVA=25
 
 die() { # exit-code message...
 	code=$1; shift
-	printf 'dbui: %s\n' "$*" >&2
+	printf 'jdbx: %s\n' "$*" >&2
 	exit "$code"
 }
 
@@ -47,32 +47,32 @@ java_ok() {
 }
 
 java=
-if [ -n "$DBUI_JAVA" ]; then
-	java_ok "$DBUI_JAVA" && java=$DBUI_JAVA
+if [ -n "$JDBX_JAVA" ]; then
+	java_ok "$JDBX_JAVA" && java=$JDBX_JAVA
 elif [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ]; then
 	java_ok "$JAVA_HOME/bin/java" && java=$JAVA_HOME/bin/java
 else
 	path_java=$(command -v java 2>/dev/null)
 	[ -n "$path_java" ] && java_ok "$path_java" && java=$path_java
 fi
-[ -n "$java" ] || die 127 "no suitable Java found. dbui needs Java $REQUIRED_JAVA or newer. Set DBUI_JAVA to a java executable, or JAVA_HOME to a JDK $REQUIRED_JAVA+ directory, or put java $REQUIRED_JAVA+ on PATH."
+[ -n "$java" ] || die 127 "no suitable Java found. jdbx needs Java $REQUIRED_JAVA or newer. Set JDBX_JAVA to a java executable, or JAVA_HOME to a JDK $REQUIRED_JAVA+ directory, or put java $REQUIRED_JAVA+ on PATH."
 
 jar=
-if [ -n "$DBUI_JAR" ]; then
-	jar=$DBUI_JAR
+if [ -n "$JDBX_JAR" ]; then
+	jar=$JDBX_JAR
 else
-	for candidate in "$script_dir/dbui.jar" "$script_dir/../lib/dbui.jar"; do
+	for candidate in "$script_dir/jdbx.jar" "$script_dir/../lib/jdbx.jar"; do
 		if [ -f "$candidate" ]; then jar=$candidate; break; fi
 	done
 	if [ -z "$jar" ]; then
-		for candidate in "$script_dir"/../target/dbui-*.jar; do
+		for candidate in "$script_dir"/../target/jdbx-*.jar; do
 			case $candidate in *-sources.jar | *-javadoc.jar | *.original) continue ;; esac
 			if [ -f "$candidate" ]; then jar=$candidate; break; fi
 		done
 	fi
-	[ -n "$jar" ] || jar=$script_dir/../target/dbui-*.jar
+	[ -n "$jar" ] || jar=$script_dir/../target/jdbx-*.jar
 fi
-[ -f "$jar" ] || die 1 "jar not found: $jar. Build it with './mvnw -DskipTests package' or set DBUI_JAR."
+[ -f "$jar" ] || die 1 "jar not found: $jar. Build it with './mvnw -DskipTests package' or set JDBX_JAR."
 
-# shellcheck disable=SC2086  # DBUI_OPTS is word-split on purpose
-exec "$java" $DBUI_OPTS -jar "$jar" "$@"
+# shellcheck disable=SC2086  # JDBX_OPTS is word-split on purpose
+exec "$java" $JDBX_OPTS -jar "$jar" "$@"

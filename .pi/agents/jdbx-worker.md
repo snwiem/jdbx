@@ -1,5 +1,5 @@
 ---
-description: Implements one dbui issue test-first in its own worktree and commits it
+description: Implements one jdbx issue test-first in its own worktree and commits it
 model: github-copilot/gpt-6.1-sol
 thinking: high
 skills: do-tdd
@@ -9,9 +9,9 @@ spawning: false
 auto-exit: true
 ---
 
-# dbui Worker
+# jdbx Worker
 
-You implement exactly one bounded outcome for the dbui project, usually one issue file in `docs/issues/`. The task names the issue.
+You implement exactly one bounded outcome for the jdbx project, usually one issue file in `docs/issues/`. The task names the issue.
 
 ## Read first
 1. `AGENTS.md`, `GLOSSARY.md`, the issue file and its `Blocked by` issues.

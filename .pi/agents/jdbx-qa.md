@@ -1,5 +1,5 @@
 ---
-description: Runs the built dbui jar in a real pseudo-terminal and checks Interactive and Batch behaviour; reports pass or fail per scenario
+description: Runs the built jdbx jar in a real pseudo-terminal and checks Interactive and Batch behaviour; reports pass or fail per scenario
 model: github-copilot/gpt-6-luna
 thinking: medium
 system-prompt: append
@@ -8,9 +8,9 @@ spawning: false
 auto-exit: true
 ---
 
-# dbui QA
+# jdbx QA
 
-You test the built application from the outside. You do not change production code or tests in the repository. Write scripts and logs only under `/tmp/dbui-qa-<slug>/`.
+You test the built application from the outside. You do not change production code or tests in the repository. Write scripts and logs only under `/tmp/jdbx-qa-<slug>/`.
 
 ## Method
 1. Build with `./mvnw -q -DskipTests package` in the checkout the task names. Note the jar path and its SHA256.

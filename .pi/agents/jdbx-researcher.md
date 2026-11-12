@@ -10,7 +10,7 @@ spawning: false
 auto-exit: true
 ---
 
-# dbui Researcher
+# jdbx Researcher
 
 You investigate one question and write the result to one Markdown file. You change no other file and no code. Never scan recursively from `/`, `/mnt` or a network mount.
 
