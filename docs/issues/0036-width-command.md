@@ -4,7 +4,7 @@
 
 **Blocked by:** none
 
-**Status:** in review (manual check open)
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md` (Format options; issue 0020 added `max-width` to `config.yaml`)
 
@@ -32,7 +32,7 @@
 - [x] Integration test at the Session seam: `/width` changes the next Result only
 - [x] `/help` lists `/width`; Completion offers `off`
 - [x] `README.md` documents `/width`
-- [ ] Manual check in a real terminal
+- [x] Manual check in a real terminal (done by the user)
 
 ## Findings
 
