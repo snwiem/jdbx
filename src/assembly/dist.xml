@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Distribution archive: bin/ (wrapper scripts), lib/jdbx.jar (the executable jar), documents. -->
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.2.0"
+		  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		  xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0 https://maven.apache.org/xsd/assembly-2.2.0.xsd">
+	<id>dist</id>
+	<formats>
+		<format>tar.gz</format>
+		<format>zip</format>
+	</formats>
+	<includeBaseDirectory>true</includeBaseDirectory>
+	<baseDirectory>${project.artifactId}-${project.version}</baseDirectory>
+	<fileSets>
+		<fileSet>
+			<directory>${project.basedir}/bin</directory>
+			<outputDirectory>bin</outputDirectory>
+			<includes>
+				<include>jdbx</include>
+				<include>jdbx.cmd</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<lineEnding>keep</lineEnding>
+		</fileSet>
+	</fileSets>
+	<files>
+		<file>
+			<source>${project.build.directory}/${project.build.finalName}.jar</source>
+			<outputDirectory>lib</outputDirectory>
+			<destName>jdbx.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
+		<file><source>${project.basedir}/LICENSE</source><fileMode>0644</fileMode></file>
+		<file><source>${project.basedir}/NOTICE</source><fileMode>0644</fileMode></file>
+		<file><source>${project.basedir}/README.md</source><fileMode>0644</fileMode></file>
+	</files>
+</assembly>

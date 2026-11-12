@@ -44,6 +44,16 @@ jobs:
       - name: Build, unit tests and integration tests
         run: ./mvnw --batch-mode --no-transfer-progress verify
 
+      # The archive from the package phase: extract it, start it through a symlink from another directory.
+      - name: Smoke test the archive (tar.gz)
+        run: |
+          mkdir smoke
+          tar -xzf target/jdbx-*-dist.tar.gz -C smoke
+          ln -s "$PWD"/smoke/jdbx-*/bin/jdbx smoke/jdbx
+          out=$(cd / && "$GITHUB_WORKSPACE/smoke/jdbx" --version)
+          echo "$out"
+          case "$out" in "jdbx "*) ;; *) echo "unexpected output"; exit 1 ;; esac
+
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -54,3 +64,51 @@ jobs:
             target/failsafe-reports
           if-no-files-found: ignore
           retention-days: 7
+
+  # macOS and Windows: build the archive and start it. Unit and integration tests run on Linux only:
+  # the integration tests need Linux containers, and some tests check POSIX file modes.
+  package:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - name: Check out the sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Java 25
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Build the archives
+        shell: bash
+        run: ./mvnw --batch-mode --no-transfer-progress -DskipTests package
+
+      - name: Smoke test the archive (tar.gz)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir smoke
+          tar -xzf target/jdbx-*-dist.tar.gz -C smoke
+          ln -s "$PWD"/smoke/jdbx-*/bin/jdbx smoke/jdbx
+          out=$(cd / && "$GITHUB_WORKSPACE/smoke/jdbx" --version)
+          echo "$out"
+          case "$out" in "jdbx "*) ;; *) echo "unexpected output"; exit 1 ;; esac
+
+      - name: Smoke test the archive (zip)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Expand-Archive -Path (Get-ChildItem target\jdbx-*-dist.zip).FullName -DestinationPath smoke
+          $cmd = (Get-ChildItem smoke\jdbx-*\bin\jdbx.cmd).FullName
+          $out = & $cmd --version
+          Write-Host $out
+          if ($LASTEXITCODE -ne 0 -or "$out" -notmatch '^jdbx ') { exit 1 }
