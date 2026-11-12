@@ -4,7 +4,7 @@
 
 **Blocked by:** 0035 (merged to `main`; this issue changes its `/tables` Completion branch)
 
-**Status:** in review (manual check open)
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md`; replaces parts of issue 0015
 
@@ -37,7 +37,7 @@
 - [x] Unit test: `/tables` and `/schema` are unknown Slash commands; `/describe` Completion no longer shows `all`
 - [x] Integration test at the Session seam with a small test schema
 - [x] `/help` and `README.md` list `/describe` and not the removed commands
-- [ ] Manual check in a real terminal
+- [x] Manual check in a real terminal (done by the user)
 
 ## Findings
 
