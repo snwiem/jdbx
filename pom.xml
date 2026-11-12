@@ -116,10 +116,6 @@
 				</executions>
 				<configuration>
 					<verbose>false</verbose>
-					<!-- Native git runs in the parent of dotGitDirectory. Anchor it to this
-					     worktree, not the common .git directory that the locator resolves. -->
-					<useNativeGit>true</useNativeGit>
-					<dotGitDirectory>${project.basedir}/.</dotGitDirectory>
 					<generateGitPropertiesFile>true</generateGitPropertiesFile>
 					<generateGitPropertiesFilename>${project.build.outputDirectory}/git.properties</generateGitPropertiesFilename>
 					<failOnNoGitDirectory>false</failOnNoGitDirectory>
@@ -191,5 +187,31 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>git-worktree-metadata</id>
+			<activation>
+				<file>
+					<exists>.git</exists>
+				</file>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>io.github.git-commit-id</groupId>
+						<artifactId>git-commit-id-maven-plugin</artifactId>
+						<configuration>
+							<!-- Native git runs in the parent of dotGitDirectory. Anchor it to this
+							     worktree, not the common .git directory that the locator resolves.
+							     Without .git, keep the default locator so source archives also build. -->
+							<useNativeGit>true</useNativeGit>
+							<dotGitDirectory>${project.basedir}/.</dotGitDirectory>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 
 </project>

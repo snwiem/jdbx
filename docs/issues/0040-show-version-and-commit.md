@@ -4,7 +4,7 @@
 
 **Blocked by:** none
 
-**Status:** open
+**Status:** in review (manual check open)
 
 **Parent:** `docs/prd/mvp-1.0.md` (`/help`, issue 0039; the Batch command line)
 
@@ -35,7 +35,8 @@
 ## Decision (implementation)
 
 - A missing or blank project version gives `unknown version`, even if a commit is present. A missing commit never gets a dirty suffix.
-- Use the Spring Boot-managed plugin version 9.2.0. In this worktree the default JGit provider read the common repository and reported `git.dirty=false` while `git status --porcelain` showed changes. Native git alone also resolved the common repository (verbose output: `dotGitDirectory '/home/snwiem/src/github/sebastian-wiemer_datev/dbui'`). Use native git with `dotGitDirectory=${project.basedir}/.`: the native provider runs in its parent, which keeps it in the current worktree. A build check then matched the commit and dirty flag against native git in this worktree.
+- Use the Spring Boot-managed plugin version 9.2.0. In this worktree the default JGit provider read the common repository and reported `git.dirty=false` while `git status --porcelain` showed changes. Native git alone also resolved the common repository (verbose output named the main checkout). Use native git with `dotGitDirectory=${project.basedir}/.`: the native provider runs in its parent, which keeps it in the current worktree. A build check then matched the commit and dirty flag against native git in this worktree.
+- Activate that native-git setting only when `.git` exists. With the forced directory in a Git-free copy, the plugin failed on `git rev-parse HEAD` (exit 128), despite the two failure flags being false. Without `.git`, use the default locator instead: it generates only `git.build.version`, so source archives still build and show an unknown commit.
 
 ## Proposed test seams (agreed before work)
 
@@ -47,9 +48,24 @@
 ## Acceptance criteria
 
 - [x] Unit test: clean, dirty, no-commit and no-file texts
-- [ ] Unit test: `/help` overview starts with `dbui <version text>.`
-- [ ] Test: `dbui --version` prints `dbui <version text>` and needs no connection
+- [x] Unit test: `/help` overview starts with `dbui <version text>.`
+- [x] Test: `dbui --version` prints `dbui <version text>` and needs no connection
 - [x] Test: the generated `git.properties` is found and has the project version
-- [ ] `./mvnw -q verify` passes with the plugin; a build without git information still works
-- [ ] `README.md` documents the version output
+- [x] `./mvnw -q verify` passes with the plugin; a build without git information still works
+- [x] `README.md` documents the version output
 - [ ] Manual check: `dbui --version` and `/help` from the built jar, also with an uncommitted change
+
+## Findings
+
+- `BuildInfoTest`: observed red before green for all seven tests (clean, dirty, no commit, no file, blank commit, blank project version, generated project version). The real-build test also failed with `unknown version` before adding the plugin, not only with missing methods.
+- `HelpCatalogTest`: observed red for the adapted overview expectation before adding the injected version text. Only its first line changes; the remaining overview and other topic expectations stay intact.
+- `BatchCommandVersionTest`: observed red (empty stdout) before adding the picocli version provider. The test passes a JDBC URL with no suitable driver, so it cannot need a successful connection.
+- The existing Session overview assertion now expects the current build text instead of `dbui help`. Its updated assertion passed at once: it is a wiring regression guard, not a new red-before-green test.
+- `./mvnw -q verify` passed: 527 unit tests and 256 integration tests, no failures, errors or skips. The first run exceeded the command's 120-second limit; the rerun with a longer limit passed.
+- Packaged a fresh copy containing `pom.xml`, the Maven wrapper and `src`, but neither `.git` nor `target`. The seven `BuildInfoTest` cases and the help/CLI test suites passed in it. The generated file contained only `git.build.version=0.0.1-SNAPSHOT`.
+
+## Manual check
+
+1. Build from the clean branch with `./mvnw -DskipTests package`, then run `bin/dbui --version`. Expect the project version and the short commit of this branch, without `-dirty`, and exit code 0 without connection options.
+2. Start Interactive mode from the same jar and run `/help`. Its first line must show the same version, followed by the help-topic hint. Check `/help commands` and `/help keys` for unchanged content.
+3. Make a harmless uncommitted change to a tracked file, rebuild, and repeat both checks. Expect `-dirty` inside the parentheses. Restore the change afterward.
