@@ -4,7 +4,7 @@
 
 **Blocked by:** none
 
-**Status:** open
+**Status:** in review (manual check open)
 
 **Parent:** `docs/prd/mvp-1.0.md` (Format options; issue 0020 added `max-width` to `config.yaml`)
 
@@ -27,9 +27,16 @@
 
 ## Acceptance criteria
 
-- [ ] Unit test: a number sets `maxWidth`; `0` and `off` both set 0; a negative value, text or a missing argument gives an error and keeps the setting
-- [ ] Unit test: after `/width off` a long text value shows in full in `table`; after `/width 10` it is cut with `…`
-- [ ] Integration test at the Session seam: `/width` changes the next Result only
-- [ ] `/help` lists `/width`; Completion offers `off`
-- [ ] `README.md` documents `/width`
+- [x] Unit test: a number sets `maxWidth`; `0` and `off` both set 0; a negative value, text or a missing argument gives an error and keeps the setting
+- [x] Unit test: after `/width off` a long text value shows in full in `table`; after `/width 10` it is cut with `…`
+- [x] Integration test at the Session seam: `/width` changes the next Result only
+- [x] `/help` lists `/width`; Completion offers `off`
+- [x] `README.md` documents `/width`
 - [ ] Manual check in a real terminal
+
+## Findings
+
+- Tests: `ExecutionControlsWidthTest` (parsing and Settings, no Session), `WidthCommandSessionTest` (Session without a database: setting, errors, `/help`, Completion) and one case in `OutputSwitchingIT` (cut or not cut, earlier Results unchanged).
+- The static converter is `ExecutionControls.widthArgument`; the instance method is `width`. They cannot share a name.
+- `/width` with no argument is an error, like `/timeout`.
+- The `OutputSwitchingIT` case passed on its first run: it is a regression guard, not a red-before-green test.

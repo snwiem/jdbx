@@ -106,4 +106,26 @@ class OutputSwitchingIT {
 			assertThat(session.messageBlocks().get(1).result()).isNull();
 		}
 	}
+
+	@Test
+	void widthCutsOrShowsTextInTheTableFormatForTheNextResultOnly() throws Exception {
+		try (Session session = session()) {
+			String text = "x".repeat(100);
+			var cutByDefault = submit(session, "select '" + text + "' as t");
+			assertThat(cutByDefault.text()).contains("x".repeat(59) + "…").doesNotContain(text);
+
+			submit(session, "/width off");
+			var whole = submit(session, "select '" + text + "' as t");
+			assertThat(whole.text()).contains(text).doesNotContain("…");
+
+			submit(session, "/width 10");
+			var narrow = submit(session, "select '" + text + "' as t");
+			assertThat(narrow.text()).contains("x".repeat(9) + "…").doesNotContain("x".repeat(10));
+
+			// The earlier Results keep their text.
+			var blocks = session.messageBlocks();
+			assertThat(blocks.stream().filter(b -> b.kind() == MessageBlock.Kind.RESULT).map(MessageBlock::text).toList())
+				.hasSize(3).contains(cutByDefault.text(), whole.text(), narrow.text());
+		}
+	}
 }
