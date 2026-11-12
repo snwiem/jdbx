@@ -31,7 +31,7 @@ final class HelpCatalog {
 	record KeyRow(String group, String key, String description) {
 	}
 
-	private static final List<String> KEY_GROUP_ORDER = List.of("Editing", "History", "Completion", "Results and screen", "Dialogs");
+	private static final List<String> KEY_GROUP_ORDER = List.of("Editing", "History", "Completion", "Copy and paste", "Results and screen", "Dialogs");
 
 	private static final String LEGACY_NOTES = """
 		Legacy terminals: Ctrl-H = Backspace, Ctrl-I = Tab, Ctrl-J = LF, Ctrl-M = Enter.
@@ -128,6 +128,12 @@ final class HelpCatalog {
 		rows.add(new KeyRow("Completion", "Completion Up / Down", "Select a candidate"));
 		rows.add(new KeyRow("Completion", "Completion Tab / Enter", "Accept a candidate without sending input"));
 		rows.add(new KeyRow("Completion", "Completion Esc", "Close Completion"));
+		rows.add(new KeyRow("Copy and paste", "Shift + mouse drag",
+			"Select text; dbui captures the mouse. Some terminals use another key (iTerm2: Option)"));
+		rows.add(new KeyRow("Copy and paste", "Ctrl-Shift-C", "Copy the selection. A terminal key, not a dbui key (macOS: Cmd-C)"));
+		rows.add(new KeyRow("Copy and paste", "Ctrl-Shift-V",
+			"Paste. A terminal key; dbui reads it as a bracketed paste and never sends it"));
+		rows.add(new KeyRow("Copy and paste", "/copy", "Copy the held query Result to the clipboard (a command, not a key)"));
 		rows.add(new KeyRow("Results and screen", "Ctrl-C", "Cancel a running Statement, cancel search, or clear idle input; never exit"));
 		rows.add(new KeyRow("Results and screen", "Ctrl-D", "Ignore; never exit (use /quit)"));
 		rows.add(new KeyRow("Results and screen", keys.orientationCycle().display() + " / " + keys.orientationFallback().display(),

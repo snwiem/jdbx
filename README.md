@@ -138,6 +138,16 @@ Use a distinct key, Kitty keyboard support, or bracketed paste for multi-line in
 
 `/help` shows a short overview: every Slash command name under its group, and five essential keys (as configured). `/help commands` lists all commands with their descriptions, under group headings. `/help keys` lists all key bindings under group headings, then notes about legacy terminals. `/help <word>` shows the commands and key rows whose name or description contains the word, for example `/help history` or `/help ctrl-r`. The word is plain text and ignores case; a leading `/` is allowed. Tab after `/help ` completes `commands`, `keys` and the command names.
 
+## Copy and paste
+
+`Ctrl-Shift-C` and `Ctrl-Shift-V` are keys of the terminal, not of dbui, and dbui cannot change them. Most terminals use them for copy and paste (on macOS usually `Cmd-C` and `Cmd-V`).
+
+- **Paste:** dbui turns on bracketed paste, so a paste arrives as one block. A paste never sends the input, also when it contains line breaks. Press Enter to send.
+- **Select and copy:** dbui captures the mouse for scrolling the Transcript, so a plain mouse drag does not select text. Hold **Shift** while you drag to let the terminal select (Windows Terminal documents this for applications that use the mouse; iTerm2 uses **Option**). Then press `Ctrl-Shift-C`. Inside a multiplexer such as tmux or Herdr, selection can differ; check its own documentation.
+- **Copy a Result:** `/copy` sends the held query Result to the clipboard with OSC 52, see below. `/save <file>` writes it to a file.
+
+These terminal behaviors are not checked by dbui's tests. `/help keys` lists them under **Copy and paste**.
+
 ## Cell width
 
 In the `table` Format, a cell that is longer than `max-width` characters is cut and ends with `…`. The default is 60. Set `max-width` in `config.yaml`; `0` means no cut. Other Formats do not cut.

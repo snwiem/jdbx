@@ -77,7 +77,7 @@ class HelpCatalogTest {
 		String keys = catalog(KeyBindings.defaults()).topic("keys");
 		assertThat(keys).startsWith("Key bindings\n\nEditing\n  Enter                     Send input; accept a Ctrl-R match without sending\n"
 			+ "  Ctrl-J                    Insert a newline; some modified keys need Kitty keyboard support\n");
-		var headings = List.of("\nEditing\n", "\nHistory\n", "\nCompletion\n", "\nResults and screen\n", "\nDialogs\n", "\nLegacy terminals:");
+		var headings = List.of("\nEditing\n", "\nHistory\n", "\nCompletion\n", "\nCopy and paste\n", "\nResults and screen\n", "\nDialogs\n", "\nLegacy terminals:");
 		int last = -1;
 		for (String heading : headings) {
 			int at = keys.indexOf(heading);
@@ -88,11 +88,16 @@ class HelpCatalogTest {
 			"  Up / Down                 History at the first / last editor line; otherwise move the cursor",
 			"  Ctrl-R                    Search history; press again for an older match",
 			"  Esc                       Cancel history search and restore the draft");
-		assertThat(section(keys, "Completion", "Results and screen")).containsExactly(
+		assertThat(section(keys, "Completion", "Copy and paste")).containsExactly(
 			"  Tab / Alt-/               Request Completion (primary / fallback)",
 			"  Completion Up / Down      Select a candidate",
 			"  Completion Tab / Enter    Accept a candidate without sending input",
 			"  Completion Esc            Close Completion");
+		assertThat(section(keys, "Copy and paste", "Results and screen")).containsExactly(
+			"  Shift + mouse drag        Select text; dbui captures the mouse. Some terminals use another key (iTerm2: Option)",
+			"  Ctrl-Shift-C              Copy the selection. A terminal key, not a dbui key (macOS: Cmd-C)",
+			"  Ctrl-Shift-V              Paste. A terminal key; dbui reads it as a bracketed paste and never sends it",
+			"  /copy                     Copy the held query Result to the clipboard (a command, not a key)");
 		assertThat(section(keys, "Results and screen", "Dialogs")).containsExactly(
 			"  Ctrl-C                    Cancel a running Statement, cancel search, or clear idle input; never exit",
 			"  Ctrl-D                    Ignore; never exit (use /quit)",
@@ -133,6 +138,15 @@ class HelpCatalogTest {
 			"",
 			"Dialogs",
 			"  Password Enter            Connect with the masked password; never store it in history"));
+	}
+
+	@Test
+	void copyAndPasteAreFoundByWordAndNameTheTerminalKeys() {
+		var catalog = catalog(KeyBindings.defaults());
+		assertThat(catalog.topic("paste")).contains("Copy and paste", "Ctrl-Shift-V").doesNotContain("Ctrl-Shift-C");
+		assertThat(catalog.topic("ctrl-shift-c")).contains("Ctrl-Shift-C              Copy the selection");
+		assertThat(catalog.topic("select")).contains("Shift + mouse drag");
+		assertThat(catalog.topic("clipboard")).contains("/copy                     Copy the held query Result");
 	}
 
 	@Test
