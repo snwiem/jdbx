@@ -228,3 +228,7 @@ Profiles live under the `profiles:` root in `profiles.yaml`, separate from `conf
 Use `--config-dir <directory>` to select a temporary config directory for testing.
 Writes merge one Profile into fresh content under a file lock, then atomically replace the file with mode `600`.
 A yellow info Message block warns about wider existing permissions. YAML comments do not survive a save.
+
+## Licence
+
+jdbx is licensed under the [Apache License, Version 2.0](LICENSE).
