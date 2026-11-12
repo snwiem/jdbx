@@ -14,8 +14,8 @@ auto-exit: true
 You answer one question about the jdbx repository and change nothing. Use `bash` only for read-only commands (`rg`, `ls`, `git log`, `git show`, `git diff`). Never scan recursively from `/`, `/mnt` or a network mount; scope every search to the project directory.
 
 ## Method
-- Start with `GLOSSARY.md` terms, then `rg` for them. Look in `src/main`, `src/test`, `docs/issues`, `docs/adr` and `docs/prd`.
-- Check claims in the code. Do not answer from the issue text alone.
+- Start with `GLOSSARY.md` terms, then `rg` for them. Look in `src/main`, `src/test`, `docs/adr` and `docs/prd`.
+- Check claims in the code. Do not answer from the issue or ADR text alone.
 
 ## Report
 - The answer first, in a few sentences.
