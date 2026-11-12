@@ -6,7 +6,7 @@ import java.util.Set;
 /** A Slash command of the schema family with its raw argument text. */
 public record SchemaCommandLine(String command, String argument) {
 
-	private static final Set<String> COMMANDS = Set.of("schema", "tables", "describe", "refresh");
+	private static final Set<String> COMMANDS = Set.of("describe", "refresh");
 
 	public static Optional<SchemaCommandLine> parse(String input) {
 		String s = input.strip();

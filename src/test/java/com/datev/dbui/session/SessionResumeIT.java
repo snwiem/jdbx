@@ -427,14 +427,14 @@ class SessionResumeIT {
 			null, null, Map.of("readOnlyMode", "always"));
 		try (Session current = session(Settings.defaults(), null, elsewhere, name -> profile)) {
 			Object oldPid = submit(current, "select pg_backend_pid()").messageBlocks().getLast().result().rows().getFirst().getFirst();
-			submit(current, "/tables public");
+			submit(current, "/describe public");
 			submit(current, "create table resume_cache_rebound (id int)");
-			assertThat(submit(current, "/tables public").messageBlocks().getLast().result().rows())
+			assertThat(submit(current, "/describe public").messageBlocks().getLast().result().rows())
 				.extracting(row -> row.getFirst()).doesNotContain("resume_cache_rebound");
 			assertThat(submit(current, "/resume " + earlier).messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.INFO);
 			assertThat(submit(current, "select pg_backend_pid()").messageBlocks().getLast().result().rows().getFirst().getFirst())
 				.isNotEqualTo(oldPid);
-			assertThat(submit(current, "/tables public").messageBlocks().getLast().result().rows())
+			assertThat(submit(current, "/describe public").messageBlocks().getLast().result().rows())
 				.extracting(row -> row.getFirst()).contains("resume_cache_rebound");
 			assertThat(submit(current, "show transaction_read_only").messageBlocks().getLast().result().rows())
 				.containsExactly(List.of("on"));
@@ -461,14 +461,14 @@ class SessionResumeIT {
 	void schemaAndExecutionSlashCommandsShareHistoryButQuitAndResumeAreExcluded() throws Exception {
 		try (Session current = session()) {
 			submit(current, "create table resume_command_history (id int)");
-			for (String command : List.of("/limit 3", "/timeout 7", "/schema", "/tables", "/describe resume_command_history", "/refresh")) {
+			for (String command : List.of("/limit 3", "/timeout 7", "/describe", "/describe public", "/describe resume_command_history", "/refresh")) {
 				assertThat(submit(current, command).messageBlocks().getLast().kind()).isNotEqualTo(MessageBlock.Kind.ERROR);
 			}
 			assertThat(submit(current, "/unknown").messageBlocks().getLast().text()).isEqualTo("Unknown Slash command: /unknown");
 			assertThat(submit(current, "/resume").messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.ERROR);
 			assertThat(submit(current, "/quit").ended()).isTrue();
 			assertThat(current.history()).containsExactly("create table resume_command_history (id int)", "/limit 3", "/timeout 7",
-				"/schema", "/tables", "/describe resume_command_history", "/refresh", "/unknown");
+				"/describe", "/describe public", "/describe resume_command_history", "/refresh", "/unknown");
 		}
 	}
 

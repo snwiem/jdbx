@@ -63,7 +63,7 @@ class FeatureIntegrationIT {
 			assertThat(current.complete("select * from ", 14).get(10, TimeUnit.SECONDS).candidates()).isEmpty();
 			assertThat(current.complete("/for", 4).get(10, TimeUnit.SECONDS).candidates())
 				.extracting(Candidate::insert).containsExactly("/format");
-			assertThat(last(current, "/tables").text()).contains("Not connected");
+			assertThat(last(current, "/describe").text()).contains("Not connected");
 			assertThat(last(current, "/readonly on").text()).contains("Not connected");
 		}
 	}
@@ -237,7 +237,7 @@ class FeatureIntegrationIT {
 				.extracting(Candidate::insert).containsExactly("dc_public");
 			assertThat(current.complete("/describe describe_sch.dc", 25).get(10, TimeUnit.SECONDS).candidates())
 				.extracting(Candidate::insert).containsExactly("dc_target");
-			assertThat(current.complete("/tables describe_", 17).get(10, TimeUnit.SECONDS).candidates())
+			assertThat(current.complete("/describe describe_", 19).get(10, TimeUnit.SECONDS).candidates())
 				.extracting(Candidate::insert).containsExactly("describe_sch");
 		}
 	}

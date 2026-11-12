@@ -32,24 +32,13 @@ class SchemaCommandsIT {
 	}
 
 	@Test
-	void schemaListsSchemasAndHidesSystemSchemasUnlessAllIsGiven() throws Exception {
-		try (Session session = session()) {
-			var plain = last(session.submit("/schema").get(5, TimeUnit.SECONDS)).result();
-			assertThat(plain.columns()).containsExactly("schema");
-			assertThat(plain.rows()).extracting(r -> r.getFirst()).contains("public").doesNotContain("pg_catalog");
-			var all = last(session.submit("/schema all").get(5, TimeUnit.SECONDS)).result();
-			assertThat(all.rows()).extracting(r -> r.getFirst()).contains("public", "pg_catalog", "information_schema");
-		}
-	}
-
-	@Test
-	void tablesAndDescribeShowTheTableOfTheCurrentSchema() throws Exception {
+	void describeShowsTheTablesOfTheCurrentSchemaAndOneTable() throws Exception {
 		try (Session session = session()) {
 			session.submit("create table sc_t (id integer primary key, label text not null default 'x')").get(5, TimeUnit.SECONDS);
-			var tables = session.submit("/tables").get(5, TimeUnit.SECONDS);
+			var tables = session.submit("/describe").get(5, TimeUnit.SECONDS);
 			assertThat(tables.messageBlocks()).extracting(MessageBlock::kind).endsWith(MessageBlock.Kind.INPUT, MessageBlock.Kind.RESULT);
-			assertThat(last(tables).result().columns()).containsExactly("name", "type", "remarks");
-			assertThat(last(tables).result().rows()).contains(java.util.Arrays.asList("sc_t", "TABLE", ""));
+			assertThat(last(tables).result().columns()).containsExactly("name", "type");
+			assertThat(last(tables).result().rows()).contains(java.util.Arrays.asList("sc_t", "table"));
 
 			var described = session.submit("/describe SC_T").get(5, TimeUnit.SECONDS);
 			var blocks = described.messageBlocks();
@@ -66,7 +55,7 @@ class SchemaCommandsIT {
 	void quotedSchemaAndTableNamesKeepTheirSqlQuotesAndInternalWhitespace() throws Exception {
 		try (Session session = session()) {
 			session.submit("create schema \"Mixed Schema\"; create table \"Mixed Schema\".\"Order  Items\" (\"a\"\"b\" int)").get(5, TimeUnit.SECONDS);
-			assertThat(last(session.submit("/tables \"Mixed Schema\"").get(5, TimeUnit.SECONDS)).result().rows())
+			assertThat(last(session.submit("/describe \"Mixed Schema\"").get(5, TimeUnit.SECONDS)).result().rows())
 				.extracting(row -> row.getFirst()).containsExactly("Order  Items");
 			var described = last(session.submit("/describe \"Mixed Schema\".\"Order  Items\"").get(5, TimeUnit.SECONDS));
 			assertThat(described.kind()).isEqualTo(MessageBlock.Kind.RESULT);
@@ -77,12 +66,12 @@ class SchemaCommandsIT {
 	@Test
 	void refreshReloadsTheCache() throws Exception {
 		try (Session session = session()) {
-			session.submit("/tables").get(5, TimeUnit.SECONDS);
+			session.submit("/describe").get(5, TimeUnit.SECONDS);
 			session.submit("create table sc_late (id integer)").get(5, TimeUnit.SECONDS);
-			assertThat(last(session.submit("/tables").get(5, TimeUnit.SECONDS)).result().rows())
+			assertThat(last(session.submit("/describe").get(5, TimeUnit.SECONDS)).result().rows())
 				.extracting(r -> r.getFirst()).doesNotContain("sc_late");
 			assertThat(last(session.submit("/refresh").get(5, TimeUnit.SECONDS)).kind()).isEqualTo(MessageBlock.Kind.INFO);
-			assertThat(last(session.submit("/tables").get(5, TimeUnit.SECONDS)).result().rows())
+			assertThat(last(session.submit("/describe").get(5, TimeUnit.SECONDS)).result().rows())
 				.extracting(r -> r.getFirst()).contains("sc_late");
 		}
 	}
@@ -93,7 +82,7 @@ class SchemaCommandsIT {
 			var unknown = last(session.submit("/describe no_such").get(5, TimeUnit.SECONDS));
 			assertThat(unknown.kind()).isEqualTo(MessageBlock.Kind.ERROR);
 			assertThat(unknown.text()).isEqualTo("Unknown table: no_such");
-			assertThat(last(session.submit("/tables nowhere").get(5, TimeUnit.SECONDS)).text()).isEqualTo("Unknown schema: nowhere");
+			assertThat(last(session.submit("/describe nowhere").get(5, TimeUnit.SECONDS)).text()).isEqualTo("Unknown table: nowhere");
 			assertThat(last(session.submit("/describe \"open").get(5, TimeUnit.SECONDS)).kind()).isEqualTo(MessageBlock.Kind.ERROR);
 			assertThat(last(session.submit("select 1").get(5, TimeUnit.SECONDS)).kind()).isEqualTo(MessageBlock.Kind.RESULT);
 		}
@@ -144,6 +133,19 @@ class SchemaCommandsIT {
 			assertThat(last(session.submit("/describe public.dup").get(5, TimeUnit.SECONDS)).kind()).isEqualTo(MessageBlock.Kind.RESULT);
 			assertThat(last(session.submit("/describe dup.").get(5, TimeUnit.SECONDS)).result().rows())
 				.extracting(r -> r.getFirst()).containsExactly("inside");
+		}
+	}
+
+	@Test
+	void tablesAndSchemaAreUnknownSlashCommands() throws Exception {
+		try (Session session = session()) {
+			for (String input : new String[] { "/tables", "/tables public", "/schema", "/schema all" }) {
+				var answer = last(session.submit(input).get(5, TimeUnit.SECONDS));
+				assertThat(answer.kind()).isEqualTo(MessageBlock.Kind.ERROR);
+				assertThat(answer.text()).startsWith("Unknown Slash command");
+			}
+			assertThat(session.slashCommands().commands()).extracting(SlashCommand::name).doesNotContain("tables", "schema")
+				.contains("describe", "refresh");
 		}
 	}
 }

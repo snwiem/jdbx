@@ -422,9 +422,10 @@ class SessionIT {
 		try (Session session = session()) {
 			var help = session.submit("/help").get(5, TimeUnit.SECONDS).messageBlocks().getLast();
 			assertThat(help.kind()).isEqualTo(MessageBlock.Kind.INFO);
-			for (String name : java.util.List.of("quit", "limit", "timeout", "schema", "tables", "describe", "refresh", "resume", "format", "orientation", "help")) {
+			for (String name : java.util.List.of("quit", "limit", "timeout", "describe", "refresh", "resume", "format", "orientation", "help")) {
 				assertThat(help.text()).contains("/" + name);
 			}
+			assertThat(help.text()).doesNotContain("/tables", "/schema");
 		}
 	}
 

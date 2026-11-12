@@ -77,7 +77,7 @@ class CopyCommandIT {
 		try (Session session = session()) {
 			session.clipboard(sent::add);
 			submit(session, "select 7 as id");
-			assertThat(submit(session, "/schema").kind()).isEqualTo(MessageBlock.Kind.RESULT);
+			assertThat(submit(session, "/describe").kind()).isEqualTo(MessageBlock.Kind.RESULT);
 
 			var feedback = submit(session, "/copy");
 

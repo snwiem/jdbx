@@ -33,8 +33,6 @@ public final class SchemaCommands {
 	public List<MessageBlock> run(String command, String argument) throws SQLException {
 		try {
 			return switch (command) {
-				case "schema" -> schemas(argument);
-				case "tables" -> tables(argument);
 				case "describe" -> describe(argument);
 				default -> refresh();
 			};
@@ -47,36 +45,6 @@ public final class SchemaCommands {
 	private List<MessageBlock> refresh() {
 		provider.refresh();
 		return List.of(MessageBlock.info("Schema cache cleared. It reloads on next use."));
-	}
-
-	private List<MessageBlock> schemas(String argument) throws SQLException {
-		if (!argument.isEmpty() && !argument.equals("all")) {
-			return List.of(MessageBlock.error("Usage: /schema [all]"));
-		}
-		List<List<Object>> rows = new ArrayList<>();
-		for (String schema : provider.schemas(argument.equals("all"))) {
-			rows.add(row(schema));
-		}
-		return List.of(MessageBlock.result(new Result(List.of("schema"), rows)));
-	}
-
-	private List<MessageBlock> tables(String argument) throws SQLException {
-		String schema = provider.currentSchema();
-		if (!argument.isEmpty()) {
-			var name = QualifiedName.parse(argument);
-			if (name.schema() != null) {
-				return List.of(MessageBlock.error("Usage: /tables [schema]"));
-			}
-			schema = name.name();
-			if (!provider.schemas(true).contains(schema)) {
-				return List.of(MessageBlock.error("Unknown schema: " + argument));
-			}
-		}
-		List<List<Object>> rows = new ArrayList<>();
-		for (var table : provider.tables(schema)) {
-			rows.add(row(table.name(), table.type(), table.remarks()));
-		}
-		return List.of(MessageBlock.result(new Result(List.of("name", "type", "remarks"), rows)));
 	}
 
 	/** The schemas, then the tables and views of the current schema, one row each with its kind. */

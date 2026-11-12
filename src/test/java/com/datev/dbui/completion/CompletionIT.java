@@ -64,7 +64,6 @@ class CompletionIT {
 		assertThat(inserts(model, "/describe cust|")).containsExactly("customer_names", "customers");
 		assertThat(inserts(model, "/describe sch.|")).containsExactly("targets");
 		assertThat(inserts(model, "/describe my|")).containsExactly("\"My Table\"");
-		assertThat(inserts(model, "/tables s|")).containsExactly("sch");
 
 		// The cache answers now: with the connection closed, completing again must not need the database.
 		connection.close();

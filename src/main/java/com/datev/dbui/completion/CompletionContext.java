@@ -179,7 +179,7 @@ public final class CompletionContext {
 	}
 
 	/**
-	 * The argument of {@code /describe} and {@code /tables} is one raw text, so a quoted name may hold spaces.
+	 * The argument of {@code /describe} is one raw text, so a quoted name may hold spaces.
 	 * Finds the command, the last dot outside quotes and the word after it. False when the cursor is not in such an argument.
 	 */
 	private boolean analyzeSchemaArgument(int cursor) {
@@ -189,7 +189,7 @@ public final class CompletionContext {
 			commandEnd++;
 		}
 		String command = text.substring(slash + 1, commandEnd);
-		if (cursor <= commandEnd || !(command.equals("describe") || command.equals("tables"))) {
+		if (cursor <= commandEnd || !command.equals("describe")) {
 			return false;
 		}
 		slashCommand = command;
