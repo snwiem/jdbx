@@ -23,7 +23,7 @@ import dev.tamboui.style.Modifier;
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.tui.event.*;
 
-/** Screen tests of the Profile dialog, the password prompt and the removal confirmation (issue 0022). */
+/** Screen tests of the Profile dialog, the password prompt and the removal confirmation. */
 class ProfileDialogScreenTest {
 	private final List<Boolean> saved = new ArrayList<>();
 	private final List<String> passwords = new ArrayList<>();
