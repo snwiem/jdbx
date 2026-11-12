@@ -28,7 +28,7 @@ class HelpCatalogTest {
 	void theOverviewStartsWithTheVersionAndListsEveryCommandNameUnderItsGroupAndFiveEssentialKeys() {
 		// Issue 0040 replaces the generic title with the supplied build version; the overview body stays unchanged.
 		assertThat(catalog(KeyBindings.defaults()).topic("")).isEqualTo(String.join("\n",
-			"dbui 0.0.1-SNAPSHOT (f9a81f5). Use /help commands, /help keys, or /help <word>.",
+			"jdbx 0.0.1-SNAPSHOT (f9a81f5). Use /help commands, /help keys, or /help <word>.",
 			"",
 			"Query and results     /format",
 			"Schema                /describe",
@@ -95,9 +95,9 @@ class HelpCatalogTest {
 			"  Completion Tab / Enter    Accept a candidate without sending input",
 			"  Completion Esc            Close Completion");
 		assertThat(section(keys, "Copy and paste", "Results and screen")).containsExactly(
-			"  Shift + mouse drag        Select text; dbui captures the mouse. Some terminals use another key (iTerm2: Option)",
-			"  Ctrl-Shift-C              Copy the selection. A terminal key, not a dbui key (macOS: Cmd-C)",
-			"  Ctrl-Shift-V              Paste. A terminal key; dbui reads it as a bracketed paste and never sends it",
+			"  Shift + mouse drag        Select text; jdbx captures the mouse. Some terminals use another key (iTerm2: Option)",
+			"  Ctrl-Shift-C              Copy the selection. A terminal key, not a jdbx key (macOS: Cmd-C)",
+			"  Ctrl-Shift-V              Paste. A terminal key; jdbx reads it as a bracketed paste and never sends it",
 			"  /copy                     Copy the held query Result to the clipboard (a command, not a key)");
 		assertThat(section(keys, "Results and screen", "Dialogs")).containsExactly(
 			"  Ctrl-C                    Cancel a running Statement, cancel search, or clear idle input; never exit",
@@ -109,7 +109,7 @@ class HelpCatalogTest {
 			"  Dialog Tab / Shift-Tab    Move between fields and Save (not Orientation)",
 			"  Confirmation y / other    Confirm Profile removal / cancel it");
 		assertThat(keys).endsWith("Legacy terminals: Ctrl-H = Backspace, Ctrl-I = Tab, Ctrl-J = LF, Ctrl-M = Enter.\n"
-			+ "Without Kitty these are not distinct keys; dbui preserves bare LF as Ctrl-J.\n"
+			+ "Without Kitty these are not distinct keys; jdbx preserves bare LF as Ctrl-J.\n"
 			+ "If the terminal sends Enter instead, Ctrl-J / Ctrl-M can send input. Use a distinct key\n"
 			+ "or bracketed paste for multi-line input on legacy terminals.");
 	}

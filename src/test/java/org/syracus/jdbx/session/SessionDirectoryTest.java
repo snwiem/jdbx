@@ -12,13 +12,13 @@ import org.junit.jupiter.api.io.TempDir;
 class SessionDirectoryTest {
 
 	@Test
-	void stateBaseOrderIsDbuiStateDirThenXdgStateHomeThenHome() {
-		assertThat(SessionDirectory.stateBase(Map.of("DBUI_STATE_DIR", "/s", "XDG_STATE_HOME", "/x"), Path.of("/home/u")))
+	void stateBaseOrderIsJdbxStateDirThenXdgStateHomeThenHome() {
+		assertThat(SessionDirectory.stateBase(Map.of("JDBX_STATE_DIR", "/s", "XDG_STATE_HOME", "/x"), Path.of("/home/u")))
 			.isEqualTo(Path.of("/s"));
-		assertThat(SessionDirectory.stateBase(Map.of("XDG_STATE_HOME", "/x"), Path.of("/home/u"))).isEqualTo(Path.of("/x/dbui"));
-		assertThat(SessionDirectory.stateBase(Map.of(), Path.of("/home/u"))).isEqualTo(Path.of("/home/u/.local/state/dbui"));
+		assertThat(SessionDirectory.stateBase(Map.of("XDG_STATE_HOME", "/x"), Path.of("/home/u"))).isEqualTo(Path.of("/x/jdbx"));
+		assertThat(SessionDirectory.stateBase(Map.of(), Path.of("/home/u"))).isEqualTo(Path.of("/home/u/.local/state/jdbx"));
 		assertThat(SessionDirectory.stateBase(Map.of("XDG_STATE_HOME", ""), Path.of("/home/u")))
-			.isEqualTo(Path.of("/home/u/.local/state/dbui"));
+			.isEqualTo(Path.of("/home/u/.local/state/jdbx"));
 	}
 
 	@Test

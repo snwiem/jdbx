@@ -55,7 +55,7 @@ class ProfileCommandsIT {
 		var stateBase = directory.resolve("failed-startup");
 		try (Session current = new Session(SessionDirectory.create(stateBase), Settings.defaults())) {
 			current.configureProfiles(directory, Map.of());
-			var model = new ProfileDialogModel(new Profile(null, "jdbc:postgresql://127.0.0.1:1/dbui?connectTimeout=1", null, null, null,
+			var model = new ProfileDialogModel(new Profile(null, "jdbc:postgresql://127.0.0.1:1/jdbx?connectTimeout=1", null, null, null,
 				POSTGRES.getUsername(), POSTGRES.getPassword(), null, null, Map.of()), null);
 			current.openConnectionDialog(model, stateBase);
 			assertThat(current.saveDialog(false).get(10, TimeUnit.SECONDS).messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.ERROR);

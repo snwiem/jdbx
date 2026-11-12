@@ -85,7 +85,7 @@ class SlashCommandRegistryTest {
 	void helpExplainsLegacyControlAliasesAndBracketedPaste() {
 		var help = new SlashCommandRegistry(List.of()).help();
 		assertThat(help).contains("Ctrl-H = Backspace", "Ctrl-I = Tab", "Ctrl-J = LF", "Ctrl-M = Enter",
-			"Kitty", "dbui preserves bare LF as Ctrl-J", "bracketed paste");
+			"Kitty", "jdbx preserves bare LF as Ctrl-J", "bracketed paste");
 	}
 
 	@Test

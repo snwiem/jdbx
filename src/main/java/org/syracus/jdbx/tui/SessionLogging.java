@@ -25,7 +25,7 @@ final class SessionLogging implements AutoCloseable {
 			encoder.start();
 			appender = new FileAppender<>();
 			appender.setContext(context);
-			appender.setName("dbui-session-log");
+			appender.setName("jdbx-session-log");
 			appender.setFile(file.toString());
 			appender.setAppend(true);
 			appender.setEncoder(encoder);

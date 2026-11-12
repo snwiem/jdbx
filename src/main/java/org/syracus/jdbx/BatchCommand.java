@@ -34,14 +34,14 @@ import picocli.CommandLine.Spec;
  * Connects, then selects Interactive mode (no -c, no -f, stdin is a terminal) or Batch mode (Statements to stdout,
  * never prompts).
  */
-@Command(name = "dbui", mixinStandardHelpOptions = true, versionProvider = BatchCommand.VersionProvider.class,
+@Command(name = "jdbx", mixinStandardHelpOptions = true, versionProvider = BatchCommand.VersionProvider.class,
 		description = "Runs SQL in Interactive mode, or in Batch mode with -c, -f or stdin.")
 class BatchCommand implements Callable<Integer> {
 
 	static class VersionProvider implements IVersionProvider {
 		@Override
 		public String[] getVersion() {
-			return new String[] { "dbui " + BuildInfo.current().versionText() };
+			return new String[] { "jdbx " + BuildInfo.current().versionText() };
 		}
 	}
 

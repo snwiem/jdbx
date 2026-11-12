@@ -68,7 +68,7 @@ class SaveAndDumpIT {
 			assertThat(submit(session, "select is_called from nonstandard_probe").result().rows()).containsExactly(java.util.List.of(false));
 			assertThat(submit(session, "select to_regclass('dump_bypass') is null").result().rows()).containsExactly(java.util.List.of(true));
 			assertThat(Files.readString(target)).isEqualTo("original");
-			try (var files = Files.list(directory)) { assertThat(files.map(p -> p.getFileName().toString())).noneMatch(n -> n.startsWith(".dbui-")); }
+			try (var files = Files.list(directory)) { assertThat(files.map(p -> p.getFileName().toString())).noneMatch(n -> n.startsWith(".jdbx-")); }
 		}
 	}
 
@@ -223,7 +223,7 @@ class SaveAndDumpIT {
 			submit(session, "/orientation vertical");
 			assertThat(submit(session, "/dump " + target + " select null::text as \"a,b\", E'a,\"b\\nc' as value").kind()).isEqualTo(MessageBlock.Kind.INFO);
 			assertThat(Files.readString(target)).isEqualTo("\"a,b\",\nvalue,\"a,\"\"b\nc\"\n");
-			try (var files = Files.list(directory)) { assertThat(files.map(p -> p.getFileName().toString())).noneMatch(n -> n.startsWith(".dbui-")); }
+			try (var files = Files.list(directory)) { assertThat(files.map(p -> p.getFileName().toString())).noneMatch(n -> n.startsWith(".jdbx-")); }
 		}
 	}
 
@@ -239,14 +239,14 @@ class SaveAndDumpIT {
 			long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
 			boolean spooling = false;
 			while (!spooling && System.nanoTime() < deadline) {
-				try (var files = Files.list(directory)) { spooling = files.anyMatch(p -> p.getFileName().toString().startsWith(".dbui-columns-")); }
+				try (var files = Files.list(directory)) { spooling = files.anyMatch(p -> p.getFileName().toString().startsWith(".jdbx-columns-")); }
 				if (!spooling) Thread.sleep(10);
 			}
 			assertThat(spooling).isTrue();
 			session.cancel();
 			assertThat(pending.get(5, TimeUnit.SECONDS).messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.ERROR);
 			assertThat(Files.readString(target)).isEqualTo("original");
-			try (var files = Files.list(directory)) { assertThat(files.map(p -> p.getFileName().toString())).noneMatch(n -> n.startsWith(".dbui-")); }
+			try (var files = Files.list(directory)) { assertThat(files.map(p -> p.getFileName().toString())).noneMatch(n -> n.startsWith(".jdbx-")); }
 		}
 	}
 
@@ -324,7 +324,7 @@ class SaveAndDumpIT {
 			assertThat(band.text()).contains(target.toString(), "directory");
 			assertThat(submit(session, "select is_called from directory_probe").result().rows()).containsExactly(java.util.List.of(false));
 			assertThat(target).isDirectory();
-			try (var files = Files.list(directory)) { assertThat(files.map(p -> p.getFileName().toString())).noneMatch(n -> n.startsWith(".dbui-")); }
+			try (var files = Files.list(directory)) { assertThat(files.map(p -> p.getFileName().toString())).noneMatch(n -> n.startsWith(".jdbx-")); }
 		}
 	}
 
@@ -338,7 +338,7 @@ class SaveAndDumpIT {
 			assertThat(band.text()).contains(target.toString());
 			assertThat(submit(session, "select is_called from missing_directory_probe").result().rows()).containsExactly(java.util.List.of(false));
 			assertThat(target).doesNotExist();
-			try (var files = Files.list(directory)) { assertThat(files.map(p -> p.getFileName().toString())).noneMatch(n -> n.startsWith(".dbui-")); }
+			try (var files = Files.list(directory)) { assertThat(files.map(p -> p.getFileName().toString())).noneMatch(n -> n.startsWith(".jdbx-")); }
 		}
 	}
 
@@ -413,7 +413,7 @@ class SaveAndDumpIT {
 			assertThat(pending.get(5, TimeUnit.SECONDS).messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.ERROR);
 			assertUnchanged(target, existing);
 			assertThat(submit(session, "select 42 as id").result().rows()).containsExactly(java.util.List.of(42));
-			try (var files = Files.list(directory)) { assertThat(files.map(p -> p.getFileName().toString())).noneMatch(n -> n.startsWith(".dbui-")); }
+			try (var files = Files.list(directory)) { assertThat(files.map(p -> p.getFileName().toString())).noneMatch(n -> n.startsWith(".jdbx-")); }
 		}
 	}
 

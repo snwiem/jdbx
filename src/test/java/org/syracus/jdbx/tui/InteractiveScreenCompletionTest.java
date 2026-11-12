@@ -35,7 +35,7 @@ class InteractiveScreenCompletionTest {
 	private final List<String> sent = new CopyOnWriteArrayList<>();
 	private final List<String> requests = new ArrayList<>();
 	private CompletableFuture<Completion> answer;
-	private final InteractiveScreen screen = new InteractiveScreen("dbui@localhost:5432/dbui", sent::add);
+	private final InteractiveScreen screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", sent::add);
 
 	private static Candidate column(String name) {
 		return new Candidate(name, name, Kind.COLUMN);

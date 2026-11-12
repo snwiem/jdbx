@@ -63,7 +63,7 @@ class BuildInfoTest {
 
 	@Test
 	void theCurrentBuildFindsTheGeneratedProjectVersion() {
-		String projectVersion = System.getProperty("dbui.project.version");
+		String projectVersion = System.getProperty("jdbx.project.version");
 		assertThat(projectVersion).as("Maven project version supplied by Surefire").isNotBlank();
 		assertThat(BuildInfo.current().version()).isEqualTo(projectVersion);
 	}

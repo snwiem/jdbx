@@ -100,7 +100,7 @@ final class DiskVerticalFormatter implements ResultFormatter {
 		private final List<Path> paths = new ArrayList<>();
 		private final List<DataOutputStream> streams = new ArrayList<>();
 
-		Spool(Path parent) throws IOException { directory = Files.createTempDirectory(parent, ".dbui-columns-"); }
+		Spool(Path parent) throws IOException { directory = Files.createTempDirectory(parent, ".jdbx-columns-"); }
 
 		DataOutputStream open() throws IOException {
 			Path path = Files.createTempFile(directory, "column-", ".tmp");

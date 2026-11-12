@@ -39,7 +39,7 @@ class BatchEntryPointIT {
 			System.setIn(new java.io.ByteArrayInputStream(stdin.getBytes(StandardCharsets.UTF_8)));
 			System.setOut(new PrintStream(out, true, StandardCharsets.UTF_8));
 			System.setErr(new PrintStream(err, true, StandardCharsets.UTF_8));
-			int exitCode = DbuiApplication.run(args);
+			int exitCode = JdbxApplication.run(args);
 			return new Outcome(exitCode, out.toString(StandardCharsets.UTF_8), err.toString(StandardCharsets.UTF_8));
 		}
 		finally {
@@ -72,10 +72,10 @@ class BatchEntryPointIT {
 	}
 
 	@Test
-	void connectsWithApplicationNameDbui() {
+	void connectsWithApplicationNameJdbx() {
 		Outcome outcome = run(connection("-c", "show application_name"));
 
-		assertThat(outcome.stdout()).contains("dbui");
+		assertThat(outcome.stdout()).contains("jdbx");
 		assertThat(outcome.exitCode()).isZero();
 	}
 
@@ -91,7 +91,7 @@ class BatchEntryPointIT {
 	@Test
 	void failsWithoutInputWhenStdinIsNoTerminal() throws Exception {
 		var command = new ArrayList<>(List.of(Path.of(System.getProperty("java.home"), "bin", "java").toString(),
-			"-cp", System.getProperty("java.class.path"), DbuiApplication.class.getName()));
+			"-cp", System.getProperty("java.class.path"), JdbxApplication.class.getName()));
 		command.addAll(List.of(connection()));
 		Process process = new ProcessBuilder(command).start();
 		try {
@@ -408,7 +408,7 @@ class BatchEntryPointIT {
 	/** Runs Batch mode in a JVM with a 64 MB heap; counts stdout lines without storing them. */
 	private static long countLines(String... more) throws Exception {
 		var command = new ArrayList<>(List.of(Path.of(System.getProperty("java.home"), "bin", "java").toString(),
-				"-Xmx64m", "-cp", System.getProperty("java.class.path"), DbuiApplication.class.getName()));
+				"-Xmx64m", "-cp", System.getProperty("java.class.path"), JdbxApplication.class.getName()));
 		command.addAll(List.of(connection(more)));
 		Process process = new ProcessBuilder(command).redirectError(new java.io.File("target/mem-stderr.txt")).start();
 		try {

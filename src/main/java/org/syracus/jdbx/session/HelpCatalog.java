@@ -37,7 +37,7 @@ final class HelpCatalog {
 
 	private static final String LEGACY_NOTES = """
 		Legacy terminals: Ctrl-H = Backspace, Ctrl-I = Tab, Ctrl-J = LF, Ctrl-M = Enter.
-		Without Kitty these are not distinct keys; dbui preserves bare LF as Ctrl-J.
+		Without Kitty these are not distinct keys; jdbx preserves bare LF as Ctrl-J.
 		If the terminal sends Enter instead, Ctrl-J / Ctrl-M can send input. Use a distinct key
 		or bracketed paste for multi-line input on legacy terminals.""";
 
@@ -131,10 +131,10 @@ final class HelpCatalog {
 		rows.add(new KeyRow("Completion", "Completion Tab / Enter", "Accept a candidate without sending input"));
 		rows.add(new KeyRow("Completion", "Completion Esc", "Close Completion"));
 		rows.add(new KeyRow("Copy and paste", "Shift + mouse drag",
-			"Select text; dbui captures the mouse. Some terminals use another key (iTerm2: Option)"));
-		rows.add(new KeyRow("Copy and paste", "Ctrl-Shift-C", "Copy the selection. A terminal key, not a dbui key (macOS: Cmd-C)"));
+			"Select text; jdbx captures the mouse. Some terminals use another key (iTerm2: Option)"));
+		rows.add(new KeyRow("Copy and paste", "Ctrl-Shift-C", "Copy the selection. A terminal key, not a jdbx key (macOS: Cmd-C)"));
 		rows.add(new KeyRow("Copy and paste", "Ctrl-Shift-V",
-			"Paste. A terminal key; dbui reads it as a bracketed paste and never sends it"));
+			"Paste. A terminal key; jdbx reads it as a bracketed paste and never sends it"));
 		rows.add(new KeyRow("Copy and paste", "/copy", "Copy the held query Result to the clipboard (a command, not a key)"));
 		rows.add(new KeyRow("Results and screen", "Ctrl-C", "Cancel a running Statement, cancel search, or clear idle input; never exit"));
 		rows.add(new KeyRow("Results and screen", "Ctrl-D", "Ignore; never exit (use /quit)"));
@@ -162,7 +162,7 @@ final class HelpCatalog {
 		}
 		names.values().removeIf(List::isEmpty);
 		int width = names.keySet().stream().mapToInt(String::length).max().orElse(0) + 1;
-		var text = new StringBuilder("dbui " + versionText + ". Use /help commands, /help keys, or /help <word>.\n\n");
+		var text = new StringBuilder("jdbx " + versionText + ". Use /help commands, /help keys, or /help <word>.\n\n");
 		names.forEach((group, list) -> text.append(String.format("%-" + width + "s %s%n", group, String.join(" ", list))));
 		text.append("\nEssential keys\n");
 		text.append(keyRow("Enter", "Send input")).append('\n');

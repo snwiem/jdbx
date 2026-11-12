@@ -10,7 +10,7 @@ import picocli.CommandLine;
 
 /** Hosts the picocli command line inside Spring Boot and reports its exit code. */
 @Component
-class DbuiRunner implements CommandLineRunner, ExitCodeGenerator {
+class JdbxRunner implements CommandLineRunner, ExitCodeGenerator {
 
 	private int exitCode;
 

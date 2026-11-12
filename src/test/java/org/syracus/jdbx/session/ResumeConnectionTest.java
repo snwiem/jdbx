@@ -15,7 +15,7 @@ import org.syracus.jdbx.config.Settings;
 class ResumeConnectionTest {
 
 	private static final ConnectionParameters CURRENT = new ConnectionParameters("jdbc:postgresql://h:5432/shop",
-		Map.of("user", "alice", "password", "secret", "ApplicationName", "dbui"), false);
+		Map.of("user", "alice", "password", "secret", "ApplicationName", "jdbx"), false);
 
 	private static ConnectionInfo stored(String host, int port, String database, String user, String profile) {
 		return new ConnectionInfo(host, port, database, user, "jdbc:postgresql://" + host + ":" + port + "/" + database, profile);
@@ -53,7 +53,7 @@ class ResumeConnectionTest {
 		var profile = new Profile("p", null, "h", 5432, "shop", "alice", "pw", null, "sa", Map.of());
 		var stored = stored("h", 5432, "shop", "alice", "p");
 		var current = new ConnectionParameters("jdbc:postgresql://h:5432/shop",
-			Map.of("user", "alice", "password", "secret", "ApplicationName", "dbui", "currentSchema", "sb"), false);
+			Map.of("user", "alice", "password", "secret", "ApplicationName", "jdbx", "currentSchema", "sb"), false);
 		var result = ResumeConnection.plan("SID", stored, false, ConnectionInfo.of(current, "p"), current, name -> profile, Settings.defaults());
 		assertThat(result).isInstanceOf(ResumeConnection.Reconnect.class);
 	}
@@ -62,7 +62,7 @@ class ResumeConnectionTest {
 	void theSameProfileWithTheSameSchemaPropertyIsKept() {
 		var profile = new Profile("p", null, "h", 5432, "shop", "alice", "pw", null, "sa", Map.of());
 		var current = new ConnectionParameters("jdbc:postgresql://h:5432/shop",
-			Map.of("user", "alice", "password", "pw", "ApplicationName", "dbui", "currentSchema", "sa"), false);
+			Map.of("user", "alice", "password", "pw", "ApplicationName", "jdbx", "currentSchema", "sa"), false);
 		assertThat(ResumeConnection.plan("SID", stored("h", 5432, "shop", "alice", "p"), false, ConnectionInfo.of(current, "p"), current,
 			name -> profile, Settings.defaults())).isInstanceOf(ResumeConnection.Keep.class);
 	}

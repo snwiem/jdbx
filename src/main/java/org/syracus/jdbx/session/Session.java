@@ -48,7 +48,7 @@ public final class Session implements AutoCloseable {
 	private final SessionDirectory plainDirectory;
 	private volatile Settings plainSettings;
 	private Consumer<SessionDirectory> directoryListener = directory -> { };
-	private final ExecutorService executor = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dbui-statement").factory());
+	private final ExecutorService executor = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("jdbx-statement").factory());
 	private final ExecutorService cancellations = Executors.newVirtualThreadPerTaskExecutor();
 	private final TranscriptMemory transcript = new TranscriptMemory();
 	private final ExecutionControls controls;

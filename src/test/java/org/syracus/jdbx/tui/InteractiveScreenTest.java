@@ -49,7 +49,7 @@ class InteractiveScreenTest {
 	void shiftTabAndCtrlOCycleOrientationWithoutSendingOrClearingTheEditorDraft() throws Exception {
 		var inputs = new CopyOnWriteArrayList<String>();
 		var cycles = new AtomicInteger();
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add, () -> { },
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", inputs::add, () -> { },
 			Settings.defaults(), cycles::incrementAndGet);
 		screen.history(List.of("select 1"));
 		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(120, 20))) {
@@ -81,7 +81,7 @@ class InteractiveScreenTest {
 
 	@Test
 	void statusBarShowsTheCurrentFormatAndOrientation() {
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { }, () -> { },
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", input -> { }, () -> { },
 			Settings.defaults().withOutput("csv", "vertical"));
 		assertThat(line(draw(screen, new Size(140, 20)), 18)).contains("Format: csv", "Orientation: vertical");
 		assertThat(line(draw(screen, new Size(140, 20)), 19)).contains("Row limit: 1000");
@@ -89,7 +89,7 @@ class InteractiveScreenTest {
 
 	@Test
 	void anEmptyFrozenCsvResultDoesNotFallBackToTable() {
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { });
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", input -> { });
 		var result = new Result(List.of(), List.of(List.of()));
 		var block = MessageBlock.result(result, Settings.defaults().withOutput("csv", "vertical"));
 		assertThat(block.text()).isEmpty();
@@ -99,7 +99,7 @@ class InteractiveScreenTest {
 
 	@Test
 	void transcriptDrawsTheFormatFrozenOnEachResultInsteadOfAlwaysUsingTable() {
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { });
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", input -> { });
 		var settings = Settings.defaults().withOutput("json", "vertical");
 		screen.update(List.of(MessageBlock.result(new Result(List.of("id"), List.of(List.of(7))), settings)));
 		var buffer = draw(screen, new Size(80, 20));
@@ -111,7 +111,7 @@ class InteractiveScreenTest {
 	void screenDrawsConfiguredFormatterOptionsAndCurrentExecutionStatus() {
 		var settings = new Settings(5, null, "table", "horizontal", false,
 			"∅", "↵", 5, ZoneId.of("UTC"));
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { }, () -> { }, settings);
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", input -> { }, () -> { }, settings);
 		screen.update(List.of(MessageBlock.result(new Result(List.of("null", "lines", "long"),
 			List.of(Arrays.asList(null, "a\nb", "abcdefgh"))))));
 		assertThat(line(draw(screen, new Size(100, 20)), 19)).contains("Row limit: 5");
@@ -125,7 +125,7 @@ class InteractiveScreenTest {
 
 	@Test
 	void statusBarShowsModeAlsoWithoutColor() {
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { }, KeyBindings.defaults(), false);
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", input -> { }, KeyBindings.defaults(), false);
 		assertThat(line(draw(screen, new Size(100, 20)), 19)).contains("read-write · Row limit");
 		screen.status(new ExecutionStatus(5, false, Duration.ZERO, null, true, true));
 		assertThat(line(draw(screen, new Size(100, 20)), 19)).contains("read-only · Row limit");
@@ -137,7 +137,7 @@ class InteractiveScreenTest {
 	void ctrlCCancelsWhileLockedAndOtherKeysAndPasteAreIgnored() throws Exception {
 		var inputs = new CopyOnWriteArrayList<String>();
 		var cancellations = new AtomicInteger();
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add, cancellations::incrementAndGet,
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", inputs::add, cancellations::incrementAndGet,
 			Settings.defaults());
 		screen.busy(true);
 		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(80, 20))) {
@@ -162,7 +162,7 @@ class InteractiveScreenTest {
 
 	@Test
 	void resultControlStringsNeverReachRenderedCellsOrTerminalOutput() throws Exception {
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { });
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", input -> { });
 		var controls = List.of("\u001b[2J", "\u001b]0;title\u0007", "\u001b[31m", "\u001b[201~", "\u001b]52;c;aGVsbG8=\u0007");
 		screen.update(List.of(MessageBlock.result(new Result(List.of("control"),
 			controls.stream().map(value -> List.<Object>of(value)).toList()))));
@@ -194,7 +194,7 @@ class InteractiveScreenTest {
 	@Test
 	void editorIgnoresInputWhileAStatementRuns() {
 		var inputs = new CopyOnWriteArrayList<String>();
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add);
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", inputs::add);
 		screen.busy(true);
 		screen.handle(new PasteEvent("must not run"));
 		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
@@ -207,7 +207,7 @@ class InteractiveScreenTest {
 	@Test
 	void bracketedPasteStaysOneInputAndNavigationEditsAcrossLinesAndWords() throws Exception {
 		var inputs = new CopyOnWriteArrayList<String>();
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add);
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", inputs::add);
 		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(60, 20))) {
 			terminal.runner().dispatch(new PasteEvent("select one\r\nfrom two"));
 			terminal.pilot().pause();
@@ -228,13 +228,13 @@ class InteractiveScreenTest {
 
 	@Test
 	void transcriptScrollsWhileEditorAndStatusBarStayFixedAfterResize() {
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { });
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", input -> { });
 		var values = IntStream.rangeClosed(1, 30).mapToObj(n -> List.<Object>of(n)).toList();
 		screen.update(List.of(MessageBlock.input("first"), MessageBlock.result(new Result(List.of("id"), values))));
 		screen.handle(new PasteEvent("select\n1"));
 		for (var size : List.of(new Size(60, 20), new Size(40, 10), new Size(100, 40))) {
 			var bottom = draw(screen, size);
-			assertThat(line(bottom, size.height() - 2)).startsWith(" dbui@localhost:5432/dbui");
+			assertThat(line(bottom, size.height() - 2)).startsWith(" jdbx@localhost:5432/jdbx");
 			assertThat(line(bottom, size.height() - 5)).startsWith("select");
 			assertThat(line(bottom, size.height() - 4)).startsWith("1");
 			assertThat(line(bottom, size.height() - 3)).startsWith("─");
@@ -273,7 +273,7 @@ class InteractiveScreenTest {
 
 	@Test
 	void withoutColorTheWholeScreenWritesNoColorCodes() {
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", input -> { }, KeyBindings.defaults(), false);
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", input -> { }, KeyBindings.defaults(), false);
 		screen.update(List.of(MessageBlock.input("select 1"), MessageBlock.info("CREATE TABLE"), MessageBlock.error("bad")));
 		var buffer = draw(screen, new Size(40, 14));
 		for (int y = 0; y < 14; y++) {
@@ -282,7 +282,7 @@ class InteractiveScreenTest {
 				assertThat(buffer.get(x, y).style().bg()).as("bg at %d,%d", x, y).isEmpty();
 			}
 		}
-		assertThat(line(buffer, 12)).contains("dbui@localhost");
+		assertThat(line(buffer, 12)).contains("jdbx@localhost");
 	}
 
 	private static Buffer drawAtBottom(InteractiveScreen screen, Size size) {
@@ -309,7 +309,7 @@ class InteractiveScreenTest {
 	@Test
 	void ctrlCClearsInputAndCtrlDDoesNotExitOrDeleteText() throws Exception {
 		var inputs = new CopyOnWriteArrayList<String>();
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add);
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", inputs::add);
 		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(60, 20))) {
 			terminal.pilot().press("x");
 			terminal.pilot().press('c', KeyModifiers.CTRL);
@@ -427,7 +427,7 @@ class InteractiveScreenTest {
 	@Test
 	void ctrlJInsertsANewlineInsteadOfSending() throws Exception {
 		var inputs = new CopyOnWriteArrayList<String>();
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add);
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", inputs::add);
 		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(60, 20))) {
 			terminal.pilot().press("a");
 			terminal.pilot().press('j', KeyModifiers.CTRL);
@@ -444,7 +444,7 @@ class InteractiveScreenTest {
 	@Test
 	void enterSendsOneInputAndClearsEditor() throws Exception {
 		var inputs = new CopyOnWriteArrayList<String>();
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add);
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", inputs::add);
 		try (var terminal = TuiTestRunner.runTest((event, runner) -> screen.handle(event), screen::render, new Size(60, 20))) {
 			terminal.pilot().press("s", "e", "l", "e", "c", "t", " ", "1");
 			terminal.pilot().press(KeyCode.ENTER);
@@ -458,7 +458,7 @@ class InteractiveScreenTest {
 	}
 
 	private static InteractiveScreen screenWithHistory(Consumer<String> send, String... entries) {
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", send);
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", send);
 		screen.history(List.of(entries));
 		return screen;
 	}
@@ -536,7 +536,7 @@ class InteractiveScreenTest {
 	void ctrlCCancelsTheStatementOrSearchOrClearsIdleInputWithoutColliding() {
 		var inputs = new CopyOnWriteArrayList<String>();
 		var cancellations = new AtomicInteger();
-		var screen = new InteractiveScreen("dbui@localhost:5432/dbui", inputs::add, cancellations::incrementAndGet,
+		var screen = new InteractiveScreen("jdbx@localhost:5432/jdbx", inputs::add, cancellations::incrementAndGet,
 			Settings.defaults());
 		screen.history(List.of("select 1"));
 		type(screen, "draft");

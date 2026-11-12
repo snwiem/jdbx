@@ -22,7 +22,7 @@ class BatchCommandVersionTest {
 			"--password", "ignored", "-c", "select 1");
 
 		assertThat(exitCode).isZero();
-		assertThat(out.toString()).isEqualTo("dbui " + BuildInfo.current().versionText() + System.lineSeparator());
+		assertThat(out.toString()).isEqualTo("jdbx " + BuildInfo.current().versionText() + System.lineSeparator());
 		assertThat(err.toString()).isEmpty();
 	}
 }

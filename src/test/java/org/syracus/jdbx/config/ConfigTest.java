@@ -73,13 +73,13 @@ class ConfigTest {
 	@Test
 	void configDirectoryOptionBeatsEnvironmentBeatsXdgBeatsHome() {
 		Path home = Path.of("/home/u");
-		assertThat(ConfigLoader.directory("/opt/o", Map.of("DBUI_CONFIG_DIR", "/e", "XDG_CONFIG_HOME", "/x"), home))
+		assertThat(ConfigLoader.directory("/opt/o", Map.of("JDBX_CONFIG_DIR", "/e", "XDG_CONFIG_HOME", "/x"), home))
 			.isEqualTo(Path.of("/opt/o"));
-		assertThat(ConfigLoader.directory(null, Map.of("DBUI_CONFIG_DIR", "/e", "XDG_CONFIG_HOME", "/x"), home))
+		assertThat(ConfigLoader.directory(null, Map.of("JDBX_CONFIG_DIR", "/e", "XDG_CONFIG_HOME", "/x"), home))
 			.isEqualTo(Path.of("/e"));
 		assertThat(ConfigLoader.directory(null, Map.of("XDG_CONFIG_HOME", "/x"), home))
-			.isEqualTo(Path.of("/x/dbui"));
-		assertThat(ConfigLoader.directory(null, Map.of(), home)).isEqualTo(Path.of("/home/u/.config/dbui"));
+			.isEqualTo(Path.of("/x/jdbx"));
+		assertThat(ConfigLoader.directory(null, Map.of(), home)).isEqualTo(Path.of("/home/u/.config/jdbx"));
 	}
 
 	// --- Settings ---
@@ -385,7 +385,7 @@ class ConfigTest {
 		assertThat(parameters.url()).isEqualTo("jdbc:postgresql://h:6543/app");
 		assertThat(parameters.properties()).containsEntry("user", "alice")
 			.containsEntry("password", "pw")
-			.containsEntry("ApplicationName", "dbui")
+			.containsEntry("ApplicationName", "jdbx")
 			.containsEntry("currentSchema", "shop")
 			.containsEntry("sslmode", "require");
 		assertThat(parameters.readOnly()).isFalse();

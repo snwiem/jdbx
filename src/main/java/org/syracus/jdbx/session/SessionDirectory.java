@@ -73,17 +73,17 @@ public final class SessionDirectory {
 		return disabledReason;
 	}
 
-	/** DBUI_STATE_DIR, else $XDG_STATE_HOME/dbui, else ~/.local/state/dbui. Empty variables count as unset. */
+	/** JDBX_STATE_DIR, else $XDG_STATE_HOME/jdbx, else ~/.local/state/jdbx. Empty variables count as unset. */
 	public static Path stateBase(Map<String, String> environment, Path home) {
-		String override = environment.get("DBUI_STATE_DIR");
+		String override = environment.get("JDBX_STATE_DIR");
 		if (override != null && !override.isEmpty()) {
 			return Path.of(override);
 		}
 		String xdg = environment.get("XDG_STATE_HOME");
 		if (xdg != null && !xdg.isEmpty()) {
-			return Path.of(xdg).resolve("dbui");
+			return Path.of(xdg).resolve("jdbx");
 		}
-		return home.resolve(".local").resolve("state").resolve("dbui");
+		return home.resolve(".local").resolve("state").resolve("jdbx");
 	}
 
 	public static Path defaultStateBase() {

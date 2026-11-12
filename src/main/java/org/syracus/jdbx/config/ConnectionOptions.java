@@ -8,7 +8,7 @@ public class ConnectionOptions {
 	@Option(names = { "-p", "--profile" }, description = "Profile name from profiles.yaml")
 	public String profile;
 
-	@Option(names = "--config-dir", description = "Config directory (default: $DBUI_CONFIG_DIR, $XDG_CONFIG_HOME/dbui or ~/.config/dbui)")
+	@Option(names = "--config-dir", description = "Config directory (default: $JDBX_CONFIG_DIR, $XDG_CONFIG_HOME/jdbx or ~/.config/jdbx)")
 	public String configDir;
 
 	@Option(names = "--url", description = "JDBC URL (overrides the Profile host, port and database)")

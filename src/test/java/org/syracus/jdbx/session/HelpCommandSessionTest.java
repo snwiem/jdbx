@@ -31,7 +31,7 @@ class HelpCommandSessionTest {
 			var help = last(session, "/help");
 			assertThat(help.kind()).isEqualTo(MessageBlock.Kind.INFO);
 			// Issue 0040 wires the current build version into the overview; command and key topics do not change.
-			assertThat(help.text()).startsWith("dbui " + BuildInfo.current().versionText()
+			assertThat(help.text()).startsWith("jdbx " + BuildInfo.current().versionText()
 				+ ". Use /help commands, /help keys, or /help <word>.")
 				.contains("Essential keys", "Enter", "Ctrl-R");
 			for (var command : session.slashCommands().commands()) {

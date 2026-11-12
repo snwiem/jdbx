@@ -43,20 +43,20 @@ public class ConfigLoader {
 		this.environment = environment;
 	}
 
-	/** Option, then {@code DBUI_CONFIG_DIR}, then {@code $XDG_CONFIG_HOME/dbui}, then {@code ~/.config/dbui}. */
+	/** Option, then {@code JDBX_CONFIG_DIR}, then {@code $XDG_CONFIG_HOME/jdbx}, then {@code ~/.config/jdbx}. */
 	public static Path directory(String option, Map<String, String> environment, Path home) {
 		if (option != null && !option.isBlank()) {
 			return Path.of(option);
 		}
-		String fromEnvironment = environment.get("DBUI_CONFIG_DIR");
+		String fromEnvironment = environment.get("JDBX_CONFIG_DIR");
 		if (fromEnvironment != null && !fromEnvironment.isBlank()) {
 			return Path.of(fromEnvironment);
 		}
 		String xdg = environment.get("XDG_CONFIG_HOME");
 		if (xdg != null && !xdg.isBlank()) {
-			return Path.of(xdg).resolve("dbui");
+			return Path.of(xdg).resolve("jdbx");
 		}
-		return home.resolve(".config").resolve("dbui");
+		return home.resolve(".config").resolve("jdbx");
 	}
 
 	public Settings settings() {

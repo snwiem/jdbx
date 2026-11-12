@@ -140,7 +140,7 @@ public final class ResultFiles {
 			if (Files.isDirectory(absolute, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
 				throw new IOException("Target is a directory: " + absolute);
 			}
-			Path temporary = Files.createTempFile(absolute.getParent(), ".dbui-", ".tmp");
+			Path temporary = Files.createTempFile(absolute.getParent(), ".jdbx-", ".tmp");
 			try {
 				try (Writer out = new java.io.FilterWriter(Files.newBufferedWriter(temporary)) {
 					@Override public void write(int c) throws IOException { checkCancelled(cancelled); super.write(c); }

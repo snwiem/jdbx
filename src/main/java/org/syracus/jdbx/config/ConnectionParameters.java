@@ -16,7 +16,7 @@ import java.util.Properties;
  */
 public record ConnectionParameters(String url, Map<String, String> properties, boolean readOnly) {
 
-	public static final String APPLICATION_NAME = "dbui";
+	public static final String APPLICATION_NAME = "jdbx";
 
 	/**
 	 * @param profile the selected Profile, or {@code null}
