@@ -46,6 +46,7 @@ public final class CompletionContext {
 	private boolean quoted;
 	private List<String> qualifier = List.of();
 	private List<TableRef> tables = List.of();
+	private String slashCommand;
 
 	CompletionContext(String text, int cursor, SchemaModel schema) {
 		this.text = text;
@@ -97,6 +98,11 @@ public final class CompletionContext {
 		return tables;
 	}
 
+	/** For {@link Position#SLASH}: the command name when the cursor is in its first argument, otherwise null. */
+	public String slashCommand() {
+		return slashCommand;
+	}
+
 	/** Whether {@code name} starts with the typed prefix. Case does not matter. */
 	public boolean matches(String name) {
 		return name.regionMatches(true, 0, prefix, 0, prefix.length());
@@ -129,6 +135,9 @@ public final class CompletionContext {
 	private void analyze(int cursor) {
 		if (text.stripLeading().startsWith("/") && !text.stripLeading().startsWith("/*")) {
 			position = Position.SLASH;
+			if (analyzeSchemaArgument(cursor)) {
+				return;
+			}
 			while (start > 0 && !Character.isWhitespace(text.charAt(start - 1))) {
 				start--;
 			}
@@ -136,6 +145,10 @@ public final class CompletionContext {
 				end++;
 			}
 			prefix = text.substring(start, cursor);
+			String before = text.substring(0, start).strip();
+			if (before.startsWith("/") && before.chars().noneMatch(Character::isWhitespace)) {
+				slashCommand = before.substring(1);
+			}
 			return;
 		}
 		List<Token> all = SqlTokens.scan(text);
@@ -163,6 +176,58 @@ public final class CompletionContext {
 			prefix = text.substring(word.start() + 1, Math.max(word.start() + 1, contentEnd)).replace("\"\"", "\"");
 		}
 		analyzeStatement(all, word);
+	}
+
+	/**
+	 * The argument of {@code /describe} and {@code /tables} is one raw text, so a quoted name may hold spaces.
+	 * Finds the command, the last dot outside quotes and the word after it. False when the cursor is not in such an argument.
+	 */
+	private boolean analyzeSchemaArgument(int cursor) {
+		int slash = text.indexOf('/');
+		int commandEnd = slash + 1;
+		while (commandEnd < text.length() && !Character.isWhitespace(text.charAt(commandEnd))) {
+			commandEnd++;
+		}
+		String command = text.substring(slash + 1, commandEnd);
+		if (cursor <= commandEnd || !(command.equals("describe") || command.equals("tables"))) {
+			return false;
+		}
+		slashCommand = command;
+		int argument = commandEnd;
+		while (argument < cursor && Character.isWhitespace(text.charAt(argument))) {
+			argument++;
+		}
+		List<String> parts = new ArrayList<>();
+		var part = new StringBuilder();
+		boolean inQuotes = false;
+		boolean partQuoted = false;
+		int wordStart = argument;
+		for (int i = argument; i < cursor; i++) {
+			char c = text.charAt(i);
+			if (c == '"' && inQuotes && i + 1 < cursor && text.charAt(i + 1) == '"') {
+				part.append('"');
+				i++;
+			}
+			else if (c == '"') {
+				inQuotes = !inQuotes;
+				partQuoted = true;
+			}
+			else if (c == '.' && !inQuotes) {
+				parts.add(partQuoted ? part.toString() : part.toString().toLowerCase(Locale.ROOT));
+				part.setLength(0);
+				partQuoted = false;
+				wordStart = i + 1;
+			}
+			else {
+				part.append(c);
+			}
+		}
+		start = wordStart;
+		end = text.length();
+		quoted = start < cursor && text.charAt(start) == '"';
+		prefix = text.substring(quoted ? start + 1 : start, cursor).replace("\"\"", "\"");
+		qualifier = List.copyOf(parts);
+		return true;
 	}
 
 	private static final Set<String> TABLE_WORDS = Set.of("FROM", "JOIN", "INTO", "UPDATE", "TABLE");

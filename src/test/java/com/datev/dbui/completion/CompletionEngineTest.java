@@ -181,4 +181,45 @@ class CompletionEngineTest {
 	void slashCommandsGetNoSqlCandidates() {
 		assertThat(complete("/tab|").candidates()).isEmpty();
 	}
+
+	@Test
+	void describeCompletesTablesAndViewsOfTheDefaultSchemaAndSchemas() {
+		assertThat(inserts("/describe cu|")).containsExactly("customers");
+		assertThat(inserts("/describe v|")).containsExactly("v_open");
+		assertThat(inserts("/describe sa|")).containsExactly("sales");
+	}
+
+	@Test
+	void tablesCompletesSchemasOnly() {
+		assertThat(inserts("/tables sa|")).containsExactly("sales");
+		assertThat(inserts("/tables or|")).isEmpty();
+	}
+
+	@Test
+	void otherSlashPositionsGiveNoSchemaCandidates() {
+		assertThat(inserts("/describe orders cu|")).isEmpty();
+		assertThat(inserts("/nosuch cu|")).isEmpty();
+		assertThat(inserts("/desc|")).isEmpty();
+	}
+
+	@Test
+	void describeCompletesTablesOfAQualifyingSchemaAndReplacesOnlyTheNamePart() {
+		var completion = complete("/describe sales.in|");
+		assertThat(completion.candidates()).extracting(Candidate::insert).containsExactly("invoices");
+		assertThat(completion.start()).isEqualTo(16);
+		assertThat(completion.end()).isEqualTo(18);
+	}
+
+	@Test
+	void describeInsertsQuotedNamesAndCompletesInsideQuotes() {
+		assertThat(inserts("/describe mi|")).containsExactly("\"Mixed Case\"");
+		assertThat(inserts("/describe \"Mixed C|")).containsExactly("\"Mixed Case\"");
+		assertThat(inserts("/describe \"public\".cu|")).containsExactly("customers");
+	}
+
+	@Test
+	void describeWithAnEmptyArgumentSuggestsEverything() {
+		assertThat(inserts("/describe |")).contains("orders", "customers", "public", "sales");
+		assertThat(inserts("/tables |")).containsExactlyInAnyOrder("public", "sales");
+	}
 }

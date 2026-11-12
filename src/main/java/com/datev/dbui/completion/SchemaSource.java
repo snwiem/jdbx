@@ -17,12 +17,29 @@ public final class SchemaSource implements CandidateSource {
 	@Override
 	public List<Candidate> candidates(CompletionContext context) {
 		return switch (context.position()) {
-			case NONE, SLASH, KEYWORD -> List.of();
+			case NONE, KEYWORD -> List.of();
+			case SLASH -> slash(context);
 			case TABLE -> tablesAndSchemas(context);
 			case QUALIFIED_TABLE -> context.qualifier().size() == 1 ? tables(context, context.qualifier().get(0)) : List.of();
 			case QUALIFIED -> qualified(context);
 			case EXPRESSION -> expression(context);
 		};
+	}
+
+	/** Arguments of the schema Slash commands: {@code /describe} takes a table, {@code /tables} a schema. */
+	private List<Candidate> slash(CompletionContext context) {
+		String command = context.slashCommand();
+		if ("describe".equals(command)) {
+			return switch (context.qualifier().size()) {
+				case 0 -> tablesAndSchemas(context);
+				case 1 -> tables(context, context.qualifier().get(0));
+				default -> List.of();
+			};
+		}
+		if ("tables".equals(command)) {
+			return context.qualifier().isEmpty() ? schemas(context) : List.of();
+		}
+		return List.of();
 	}
 
 	private List<Candidate> tablesAndSchemas(CompletionContext context) {
