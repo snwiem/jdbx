@@ -93,7 +93,7 @@ dbui is a Java terminal tool that talks to PostgreSQL over JDBC.
 
 ### Schema and Completion
 
-62. As a developer, I want `/schema`, `/tables` and `/describe <table>`, so that I can inspect the database without writing catalog SQL.
+62. As a developer, I want `/describe [schema|table]`, so that I can list schemas, tables and views, and look at one table, without writing catalog SQL. (Issue 0037 replaced `/schema` and `/tables`.)
 63. As a developer, I want schema data read through JDBC metadata, so that dbui needs no database-specific queries in 1.0.
 64. As a developer, I want Completion only when I press a key (default `Tab`), so that typing is never slowed or interrupted.
 65. As a developer, I want Completion for SQL keywords and for schema, table and column names, so that I type fewer names.
