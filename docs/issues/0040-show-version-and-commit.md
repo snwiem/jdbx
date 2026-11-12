@@ -4,7 +4,7 @@
 
 **Blocked by:** none
 
-**Status:** in review (manual check open)
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md` (`/help`, issue 0039; the Batch command line)
 
@@ -53,7 +53,7 @@
 - [x] Test: the generated `git.properties` is found and has the project version
 - [x] `./mvnw -q verify` passes with the plugin; a build without git information still works
 - [x] `README.md` documents the version output
-- [ ] Manual check: `dbui --version` and `/help` from the built jar, also with an uncommitted change
+- [x] Manual check (done by the user): `dbui --version` and `/help` from the built jar, also with an uncommitted change
 
 ## Findings
 
