@@ -134,6 +134,12 @@ Configured Ctrl-H, Ctrl-I and Ctrl-M cannot be distinguished from those fixed ke
 If the terminal sends Enter instead, Ctrl-J or Ctrl-M can send input rather than run the configured action.
 Use a distinct key, Kitty keyboard support, or bracketed paste for multi-line input on legacy terminals. Bracketed paste never sends input by itself.
 
+## Cell width
+
+In the `table` Format, a cell that is longer than `max-width` characters is cut and ends with `…`. The default is 60. Set `max-width` in `config.yaml`; `0` means no cut. Other Formats do not cut.
+
+`/width <n|off>` changes the maximum cell width in the running Session. `/width 0` and `/width off` both mean no cut. The new value applies to Results that you run afterwards; earlier Results in the Transcript keep their text. `/width` is a Session setting: it does not change `config.yaml`, and Resume uses the `config.yaml` value.
+
 ## History
 
 `/history` lists the History of the Session: one row per entry with its number (1 is the oldest) and its first line. An entry with more lines ends with ` …`. A long first line is cut by `max-width`. The list is an info Message block, so `/format` and `/orientation` do not change it.

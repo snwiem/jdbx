@@ -402,6 +402,9 @@ public final class Session implements AutoCloseable {
 			SlashCommand.argument("<seconds|off>", "1", List.of("off"),
 				value -> value.equals("off") ? value : ExecutionControls.positiveInteger(value)), false,
 			argument -> List.of(controls.timeout(argument))));
+		commands.add(new SlashCommand("width", "Change the maximum cell width of the table Format (0 or off: no cut).",
+			SlashCommand.argument("<n|off>", "1", List.of("off"), ExecutionControls::widthArgument), false,
+			argument -> List.of(controls.width(argument))));
 		commands.add(new SlashCommand("readonly", "Show or change the Session Read-only setting.",
 			SlashCommand.argument("on|off", "0..1", List.of("on", "off"), value -> {
 				if (ReadOnlyCommand.parse("/readonly " + value) == ReadOnlyCommand.Kind.USAGE) {
