@@ -418,7 +418,7 @@ public final class Session implements AutoCloseable {
 				return List.of();
 			}));
 		commands.add(new SlashCommand("history", "List the input history, load entry <number> into the editor, or clear it.",
-			SlashCommand.argument("[<number>|clear]", "0..1", List.of("clear")), false, argument -> {
+			SlashCommand.argument("<number>|clear", "0..1", List.of("clear")), false, argument -> {
 				var outcome = HistoryCommand.run(argument, history(), state != null && state.historyEnabled(), settings().maxWidth());
 				if (outcome.clear()) {
 					state.clearHistory();
