@@ -55,6 +55,22 @@ final class ExecutionControls {
 		throw new picocli.CommandLine.TypeConversionException("Use an integer from 1 to 2147483647");
 	}
 
+	/** Picocli converter for /width: a whole number from 0, or {@code off}. */
+	static String widthArgument(String argument) {
+		if (argument.equals("off")) {
+			return argument;
+		}
+		try {
+			if (Integer.parseInt(argument) >= 0) {
+				return Integer.toString(Integer.parseInt(argument));
+			}
+		}
+		catch (NumberFormatException ignored) {
+			// Use the same range message for a non-integer and an overflow.
+		}
+		throw new picocli.CommandLine.TypeConversionException("Use an integer from 0 to 2147483647, or off");
+	}
+
 	/** The registry has already validated the argument through picocli. */
 	MessageBlock limit(String argument) {
 		var current = settings.get();
@@ -71,5 +87,12 @@ final class ExecutionControls {
 		var current = settings.get();
 		update.accept(current.withExecution(current.rowLimit(), Duration.ofSeconds(Integer.parseInt(argument)), current.readOnly()));
 		return MessageBlock.info("Timeout: " + timeoutSeconds() + " s");
+	}
+
+	/** {@code argument} is a number from 0 or {@code off}; both 0 and {@code off} mean no cut. */
+	MessageBlock width(String argument) {
+		int width = argument.equals("off") ? 0 : Integer.parseInt(argument);
+		update.accept(settings.get().withMaxWidth(width));
+		return MessageBlock.info("Maximum cell width: " + (width == 0 ? "off" : width));
 	}
 }

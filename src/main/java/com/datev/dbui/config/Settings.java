@@ -48,6 +48,12 @@ public record Settings(int rowLimit, Duration timeout, String format, String ori
 				timezone, historyEnabled, sessionsKeep, keyBindings);
 	}
 
+	/** The same Settings with another maximum cell width for the {@code table} Format; 0 means no cut. */
+	public Settings withMaxWidth(int maxWidth) {
+		return new Settings(rowLimit, timeout, format, orientation, readOnly, nullMarker, multilineMarker, maxWidth,
+				timezone, historyEnabled, sessionsKeep, keyBindings);
+	}
+
 	/** The same Settings with another Format and Orientation for subsequent Results. */
 	public Settings withOutput(String format, String orientation) {
 		return new Settings(rowLimit, timeout, format, orientation, readOnly, nullMarker, multilineMarker, maxWidth,
