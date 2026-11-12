@@ -79,9 +79,21 @@ public final class SchemaCommands {
 		return List.of(MessageBlock.result(new Result(List.of("name", "type", "remarks"), rows)));
 	}
 
+	/** The schemas, then the tables and views of the current schema, one row each with its kind. */
+	private List<MessageBlock> overview() throws SQLException {
+		List<List<Object>> rows = new ArrayList<>();
+		for (String schema : provider.schemas(false)) {
+			rows.add(row(schema, "schema"));
+		}
+		for (var table : provider.tables(provider.currentSchema())) {
+			rows.add(row(table.name(), table.type().toLowerCase(java.util.Locale.ROOT)));
+		}
+		return List.of(MessageBlock.result(new Result(List.of("name", "type"), rows)));
+	}
+
 	private List<MessageBlock> describe(String argument) throws SQLException {
 		if (argument.isEmpty()) {
-			return List.of(MessageBlock.error("Usage: /describe <table>"));
+			return overview();
 		}
 		var name = QualifiedName.parse(argument);
 		String schema = name.schema() != null ? name.schema() : provider.currentSchema();

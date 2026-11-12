@@ -94,9 +94,26 @@ class SchemaCommandsIT {
 			assertThat(unknown.kind()).isEqualTo(MessageBlock.Kind.ERROR);
 			assertThat(unknown.text()).isEqualTo("Unknown table: no_such");
 			assertThat(last(session.submit("/tables nowhere").get(5, TimeUnit.SECONDS)).text()).isEqualTo("Unknown schema: nowhere");
-			assertThat(last(session.submit("/describe").get(5, TimeUnit.SECONDS)).text()).isEqualTo("Usage: /describe <table>");
 			assertThat(last(session.submit("/describe \"open").get(5, TimeUnit.SECONDS)).kind()).isEqualTo(MessageBlock.Kind.ERROR);
 			assertThat(last(session.submit("select 1").get(5, TimeUnit.SECONDS)).kind()).isEqualTo(MessageBlock.Kind.RESULT);
+		}
+	}
+
+	@Test
+	void describeWithoutArgumentListsSchemasThenTablesAndViewsOfTheCurrentSchema() throws Exception {
+		try (Session session = session()) {
+			session.submit("create schema ov_schema; create table ov_table (id int); create view ov_view as select 1 as x")
+				.get(5, TimeUnit.SECONDS);
+			for (String input : new String[] { "/describe", "/describe   " }) {
+				var result = last(session.submit(input).get(5, TimeUnit.SECONDS)).result();
+				assertThat(result.columns()).containsExactly("name", "type");
+				var rows = result.rows();
+				assertThat(rows).contains(java.util.Arrays.asList("public", "schema"), java.util.Arrays.asList("ov_schema", "schema"),
+					java.util.Arrays.asList("ov_table", "table"), java.util.Arrays.asList("ov_view", "view"));
+				assertThat(rows).doesNotContain(java.util.Arrays.asList("pg_catalog", "schema"));
+				assertThat(rows.indexOf(java.util.Arrays.asList("ov_schema", "schema")))
+					.isLessThan(rows.indexOf(java.util.Arrays.asList("ov_table", "table")));
+			}
 		}
 	}
 }
