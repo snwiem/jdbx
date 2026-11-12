@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### mise (personal settings) ###
+mise.local.toml
+.mise.local.toml
