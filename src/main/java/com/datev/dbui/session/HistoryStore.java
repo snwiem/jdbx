@@ -53,7 +53,7 @@ public final class HistoryStore {
 		return enabled;
 	}
 
-	/** Adds an entry unless it is blank, starts with a space, is a {@code /resume} or {@code /quit} line, or repeats the last entry. */
+	/** Adds an entry unless it is blank, starts with a space, is a {@code /resume}, {@code /quit} or {@code /history} line, or repeats the last entry. */
 	public synchronized void add(String input) {
 		if (!enabled || input.isBlank() || input.startsWith(" ") || isLocalOnly(input)) {
 			return;
@@ -78,6 +78,20 @@ public final class HistoryStore {
 		return List.copyOf(entries);
 	}
 
+	/** Removes all entries, also from the file. A write failure is kept like in {@link #add}. */
+	public synchronized void clear() {
+		entries.clear();
+		if (!enabled || file == null || failure != null) {
+			return;
+		}
+		try {
+			Files.writeString(file, "", StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+		}
+		catch (IOException e) {
+			failure = e;
+		}
+	}
+
 	/** The first write or read failure, or {@code null}. */
 	public synchronized IOException failure() {
 		return failure;
@@ -85,7 +99,7 @@ public final class HistoryStore {
 
 	private static boolean isLocalOnly(String input) {
 		String name = input.strip().split("\\s+", 2)[0];
-		return name.equals("/quit") || name.equals("/resume") || containsProfileCredentials(input);
+		return name.equals("/quit") || name.equals("/resume") || name.equals("/history") || containsProfileCredentials(input);
 	}
 
 	/** Profile credentials belong in masked interactions, never in raw input or a diagnostic quoting that input. */

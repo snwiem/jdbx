@@ -31,9 +31,14 @@ import com.datev.dbui.schema.SchemaProviderModel;
 /** Owns one JDBC connection. Statement execution never runs on the input thread. */
 public final class Session implements AutoCloseable {
 
-	public record Update(List<MessageBlock> messageBlocks, boolean ended) {
+	/** {@code editorText} is null, or the text that the editor must show with the cursor at its start (/history). */
+	public record Update(List<MessageBlock> messageBlocks, boolean ended, String editorText) {
 		public Update {
 			messageBlocks = List.copyOf(messageBlocks);
+		}
+
+		public Update(List<MessageBlock> messageBlocks, boolean ended) {
+			this(messageBlocks, ended, null);
 		}
 	}
 
@@ -64,6 +69,7 @@ public final class Session implements AutoCloseable {
 	private long startedAt;
 	private ExecutionStatus.ResultSummary lastResult;
 	private boolean heldResultTruncated;
+	private String pendingEditorText;
 	private boolean heldQueryResult;
 	private CopyCommand copy = new CopyCommand(sequence -> { throw new IOException("Terminal clipboard is unavailable."); });
 	private String lastSqlInput;
@@ -288,8 +294,9 @@ public final class Session implements AutoCloseable {
 		if (stripped.startsWith("/") && !stripped.startsWith("/*")) {
 			var invocation = slashCommands.parse(input);
 			Supplier<Update> work = () -> {
+				pendingEditorText = null;
 				invocation.execute().forEach(this::add);
-				return new Update(messageBlocks(), ended);
+				return new Update(messageBlocks(), ended, pendingEditorText);
 			};
 			return invocation.background() ? run(work) : CompletableFuture.completedFuture(work.get());
 		}
@@ -409,6 +416,15 @@ public final class Session implements AutoCloseable {
 					changeReadOnly(argument.equals("on"));
 				}
 				return List.of();
+			}));
+		commands.add(new SlashCommand("history", "List the input history, load entry <number> into the editor, or clear it.",
+			SlashCommand.argument("[<number>|clear]", "0..1", List.of("clear")), false, argument -> {
+				var outcome = HistoryCommand.run(argument, history(), state != null && state.historyEnabled(), settings().maxWidth());
+				if (outcome.clear()) {
+					state.clearHistory();
+				}
+				pendingEditorText = outcome.editorText();
+				return outcome.blocks();
 			}));
 		commands.add(schemaCommand("describe", "List schemas, tables and views, or describe a table or view.", "<schema|table>", "0..1", List.of()));
 		commands.add(schemaCommand("refresh", "Clear the schema cache.", null, "0", List.of()));
