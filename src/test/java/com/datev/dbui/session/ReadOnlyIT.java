@@ -121,7 +121,7 @@ class ReadOnlyIT {
 	@Test
 	void readonlyIsRegisteredWithHelpAndCompletionCandidates() throws Exception {
 		try (Session session = session(false)) {
-			assertThat(last(session, "/help").text()).contains("/readonly [on|off]");
+			assertThat(last(session, "/help commands").text()).contains("/readonly [on|off]");
 			assertThat(session.slashCommands().completionCandidates("readonly")).containsExactly("on", "off");
 			assertThat(session.slashCommands().parse("/readonly on").background()).isTrue();
 		}

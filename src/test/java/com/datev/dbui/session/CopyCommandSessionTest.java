@@ -22,7 +22,7 @@ class CopyCommandSessionTest {
 			session.clipboard(sent::add);
 
 			var error = session.submit("/copy extra").get(5, TimeUnit.SECONDS).messageBlocks().getLast();
-			var help = session.submit("/help").get(5, TimeUnit.SECONDS).messageBlocks().getLast();
+			var help = session.submit("/help commands").get(5, TimeUnit.SECONDS).messageBlocks().getLast();
 
 			assertThat(error.kind()).isEqualTo(MessageBlock.Kind.ERROR);
 			assertThat(error.text()).isEqualTo("Usage: /copy\nUnexpected argument: extra");

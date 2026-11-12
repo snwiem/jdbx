@@ -51,7 +51,7 @@ class WidthCommandSessionTest {
 	@Test
 	void helpListsWidthAndCompletionOffersOff() throws Exception {
 		try (Session session = session()) {
-			assertThat(last(session, "/help").text()).contains("/width <n|off> —");
+			assertThat(last(session, "/help commands").text()).contains("/width <n|off> —");
 			assertThat(session.slashCommands().completionCandidates("width")).containsExactly("off");
 		}
 	}

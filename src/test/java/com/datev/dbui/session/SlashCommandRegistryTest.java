@@ -66,7 +66,7 @@ class SlashCommandRegistryTest {
 			"orientation-fallback", "alt-o", "complete", "ctrl-space", "complete-alternate", "alt-c"));
 		var settings = Settings.defaults().withKeyBindings(bindings);
 		try (var session = new Session(SessionDirectory.create(dir), settings)) {
-			var update = session.submit("/help").get();
+			var update = session.submit("/help keys").get();
 			assertThat(update.messageBlocks().getLast().text())
 				.contains("Alt-N", "Ctrl-T / Alt-O", "Ctrl-Space / Alt-C", "Completion Tab / Enter")
 				.doesNotContain("Ctrl-J                    Insert a newline", "Shift-Tab / Ctrl-O", "Tab / Alt-/");
