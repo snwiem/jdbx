@@ -1,15 +1,15 @@
-# dbui
+# jdbx
 
 A terminal tool to run SQL statements against a database over JDBC and read the results. It stays open for long sessions, or runs once in batch mode.
 
 ## Modes
 
 **Interactive mode**:
-The mode where dbui stays open, shows a fixed editor and a Status bar and scrolls a Transcript, and runs Statements and Slash commands you enter.
+The mode where jdbx stays open, shows a fixed editor and a Status bar and scrolls a Transcript, and runs Statements and Slash commands you enter.
 _Avoid_: shell, REPL, TUI
 
 **Batch mode**:
-The mode where dbui runs Statements from the command line, a file or stdin, writes the Results to stdout, and exits.
+The mode where jdbx runs Statements from the command line, a file or stdin, writes the Results to stdout, and exits.
 _Avoid_: script mode, one-shot mode
 
 ## Connecting
@@ -25,7 +25,7 @@ _Avoid_: safe mode, write protection
 ## Sessions
 
 **Session**:
-One run of dbui with its own connection, settings, input history and log. Several Sessions can run in parallel.
+One run of jdbx with its own connection, settings, input history and log. Several Sessions can run in parallel.
 _Avoid_: instance, window
 
 **Resume**:
@@ -39,7 +39,7 @@ One SQL statement, ended by `;` or by the end of the input.
 _Avoid_: query, command
 
 **Slash command**:
-An input that starts with `/` and controls dbui itself (for example `/format`, `/connect`). It is not sent to the database.
+An input that starts with `/` and controls jdbx itself (for example `/format`, `/connect`). It is not sent to the database.
 _Avoid_: meta command, backslash command
 
 **History**:
@@ -57,7 +57,7 @@ The rows and columns that the database returns for one Statement.
 _Avoid_: result set, output
 
 **Row limit**:
-The maximum number of rows dbui reads for one Result in Interactive mode. dbui applies it, not the SQL.
+The maximum number of rows jdbx reads for one Result in Interactive mode. jdbx applies it, not the SQL.
 _Avoid_: max rows, LIMIT clause
 
 **Format**:
@@ -83,7 +83,7 @@ A full-width entry in the Transcript with its own background color and padding, 
 _Avoid_: notification, alert, log line
 
 **Transcript**:
-The scrollable area above the editor that holds the Message blocks of a Session. dbui scrolls it, while the editor and the Status bar stay fixed.
+The scrollable area above the editor that holds the Message blocks of a Session. jdbx scrolls it, while the editor and the Status bar stay fixed.
 _Avoid_: scrollback, output pane, log
 
 **Status bar**:

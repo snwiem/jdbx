@@ -1,23 +1,23 @@
-# dbui
+# jdbx
 
 A java based terminal ui tool to query databases over jdbc.
 
 ## Install and run
 
-dbui needs Java 25 or newer.
+jdbx needs Java 25 or newer.
 
 1. Build the jar: `./mvnw -DskipTests package`
 2. Link the wrapper script onto your `PATH`:
-   `ln -s "$PWD/bin/dbui" ~/.local/bin/dbui`
-   The script finds the jar in `target/` through the link. You can also copy `bin/dbui` and the jar into one directory (`dbui.jar` next to the script, or in `../lib/`).
+   `ln -s "$PWD/bin/jdbx" ~/.local/bin/jdbx`
+   The script finds the jar in `target/` through the link. You can also copy `bin/jdbx` and the jar into one directory (`jdbx.jar` next to the script, or in `../lib/`).
 
 The script passes all arguments and stdin to the jar and returns its exit code.
 
 | Variable | Meaning |
 |---|---|
-| `DBUI_JAR` | Path to the jar. Overrides the lookup. |
-| `DBUI_JAVA` | Path to the `java` executable. Default: `$JAVA_HOME/bin/java`, then `java` on `PATH`. |
-| `DBUI_OPTS` | Extra JVM options, split at spaces, for example `-Xmx512m`. |
+| `JDBX_JAR` | Path to the jar. Overrides the lookup. |
+| `JDBX_JAVA` | Path to the `java` executable. Default: `$JAVA_HOME/bin/java`, then `java` on `PATH`. |
+| `JDBX_OPTS` | Extra JVM options, split at spaces, for example `-Xmx512m`. |
 
 If no Java 25+ is found, the script prints a message and exits with code 127. If the jar is missing, it exits with code 1.
 
@@ -27,24 +27,24 @@ Try it with the Postgres from `compose.yaml`:
 docker compose up -d --wait postgres
 
 # Batch mode: run a statement and print the Result
-dbui --host localhost --db dbui --user dbui --password dbui -c 'select 1'
+jdbx --host localhost --db jdbx --user jdbx --password jdbx -c 'select 1'
 
 # Interactive mode: no statement given
-dbui --host localhost --db dbui --user dbui --password dbui
+jdbx --host localhost --db jdbx --user jdbx --password jdbx
 ```
 
-Test the wrapper script with `sh bin/test-dbui.sh`. It is not part of `./mvnw verify`.
+Test the wrapper script with `sh bin/test-jdbx.sh`. It is not part of `./mvnw verify`.
 
 ## Version
 
-`dbui --version` prints the project version and short git commit, then exits with code 0 without connecting:
+`jdbx --version` prints the project version and short git commit, then exits with code 0 without connecting:
 
 ```text
-$ dbui --version
-dbui 0.0.1-SNAPSHOT (f9a81f5)
+$ jdbx --version
+jdbx 0.0.1-SNAPSHOT (f9a81f5)
 ```
 
-The first line of `/help` shows the same version. A build with uncommitted changes adds `-dirty`, for example `dbui 0.0.1-SNAPSHOT (f9a81f5-dirty)`. This metadata describes the sources at build time; rebuild after changes. Builds from source archives without git information show `0.0.1-SNAPSHOT (unknown)`. If the metadata file or project version is missing, dbui shows `unknown version` instead. No build time is included.
+The first line of `/help` shows the same version. A build with uncommitted changes adds `-dirty`, for example `jdbx 0.0.1-SNAPSHOT (f9a81f5-dirty)`. This metadata describes the sources at build time; rebuild after changes. Builds from source archives without git information show `0.0.1-SNAPSHOT (unknown)`. If the metadata file or project version is missing, jdbx shows `unknown version` instead. No build time is included.
 
 ## Batch output and memory
 
@@ -53,7 +53,7 @@ Batch mode streams rows and has no default row limit. Horizontal output uses con
 **Warning:** `--orientation vertical` buffers the whole Result in memory in Batch mode, because each output line needs one value of every row. Use `--limit N` to bound it. Vertical Batch output is not the usual use case.
 
 ```sh
-dbui --host localhost --db dbui --user dbui --password dbui --orientation vertical --limit 100 -c 'select * from big_table'
+jdbx --host localhost --db jdbx --user jdbx --password jdbx --orientation vertical --limit 100 -c 'select * from big_table'
 ```
 
 ## JSON output for several Results
@@ -87,7 +87,7 @@ A Dump checks **all Statements before running any**. It accepts `SELECT`, query-
 
 Dump refuses to run when the connection reports `standard_conforming_strings = off`, because its SQL scanner assumes standard strings. Set `standard_conforming_strings = on` before using `/dump`. Every accepted Dump Statement runs in its own READ ONLY transaction, even in a read-write Session, and rolls back afterward. The Session mode stays unchanged. Finish an open user transaction with `COMMIT` or `ROLLBACK` before `/dump`. This is a guard against mistakes, not a security boundary: functions that affect other connections or non-transactional state can still have side effects (ADR 0007).
 
-Both commands write a temporary file in the target directory, sync it to disk, and replace the target atomically only on success. A failure or cancellation before publication removes the temporary file and keeps an existing target unchanged. A crash can leave `.dbui-*.tmp` files and `.dbui-columns-*` spool directories in the target directory. The directory must exist and support atomic replacement; a directory cannot be the target file. The completed file and spool files have mode `600` on POSIX systems; replacement does not preserve old permissions and replaces a target symlink rather than following it. Timeout and Ctrl-C apply to Dump execution, including later cursor fetches; success reports the total row count and file name.
+Both commands write a temporary file in the target directory, sync it to disk, and replace the target atomically only on success. A failure or cancellation before publication removes the temporary file and keeps an existing target unchanged. A crash can leave `.jdbx-*.tmp` files and `.jdbx-columns-*` spool directories in the target directory. The directory must exist and support atomic replacement; a directory cannot be the target file. The completed file and spool files have mode `600` on POSIX systems; replacement does not preserve old permissions and replaces a target symlink rather than following it. Timeout and Ctrl-C apply to Dump execution, including later cursor fetches; success reports the total row count and file name.
 
 With `json` or `json-pretty`, `/save` writes one Result array. `/dump` writes **one JSON document with an outer array of Result arrays**, including for one Result. Other Formats separate Results with one blank line. Several CSV, TSV or Markdown Results in one file are separate tables, not one table.
 
@@ -97,8 +97,8 @@ The Transcript retains the newest 200 Message blocks. Earlier retained Results k
 
 ## Configurable editor keys
 
-Editor keys come from `key-bindings` in the hand-edited `config.yaml`. dbui never writes this file.
-The config directory is `--config-dir <directory>`, then `DBUI_CONFIG_DIR`, then `$XDG_CONFIG_HOME/dbui`, then `~/.config/dbui`.
+Editor keys come from `key-bindings` in the hand-edited `config.yaml`. jdbx never writes this file.
+The config directory is `--config-dir <directory>`, then `JDBX_CONFIG_DIR`, then `$XDG_CONFIG_HOME/jdbx`, then `~/.config/jdbx`.
 Omitted actions keep these defaults:
 
 ```yaml
@@ -141,7 +141,7 @@ This differs from the behavior before configurable keys, when Shift-Enter also s
 Some terminals intercept modified keys or send the same bytes for different keys.
 Without Kitty keyboard support, the legacy aliases are `ctrl-h` = Backspace (byte 8), `ctrl-i` = Tab (9), `ctrl-j` = LF (10, normally parsed as Enter), and `ctrl-m` = Enter (13).
 Configured Ctrl-H, Ctrl-I and Ctrl-M cannot be distinguished from those fixed keys on legacy terminals.
-**Ctrl-J exception:** dbui preserves a bare LF as Ctrl-J outside bracketed paste, so the default newline key still works if the terminal sends LF.
+**Ctrl-J exception:** jdbx preserves a bare LF as Ctrl-J outside bracketed paste, so the default newline key still works if the terminal sends LF.
 If the terminal sends Enter instead, Ctrl-J or Ctrl-M can send input rather than run the configured action.
 Use a distinct key, Kitty keyboard support, or bracketed paste for multi-line input on legacy terminals. Bracketed paste never sends input by itself.
 
@@ -151,13 +151,13 @@ Use a distinct key, Kitty keyboard support, or bracketed paste for multi-line in
 
 ## Copy and paste
 
-`Ctrl-Shift-C` and `Ctrl-Shift-V` are keys of the terminal, not of dbui, and dbui cannot change them. Most terminals use them for copy and paste (on macOS usually `Cmd-C` and `Cmd-V`).
+`Ctrl-Shift-C` and `Ctrl-Shift-V` are keys of the terminal, not of jdbx, and jdbx cannot change them. Most terminals use them for copy and paste (on macOS usually `Cmd-C` and `Cmd-V`).
 
-- **Paste:** dbui turns on bracketed paste, so a paste arrives as one block. A paste never sends the input, also when it contains line breaks. Press Enter to send.
-- **Select and copy:** dbui captures the mouse for scrolling the Transcript, so a plain mouse drag does not select text. Hold **Shift** while you drag to let the terminal select (Windows Terminal documents this for applications that use the mouse; iTerm2 uses **Option**). Then press `Ctrl-Shift-C`. Inside a multiplexer such as tmux or Herdr, selection can differ; check its own documentation.
+- **Paste:** jdbx turns on bracketed paste, so a paste arrives as one block. A paste never sends the input, also when it contains line breaks. Press Enter to send.
+- **Select and copy:** jdbx captures the mouse for scrolling the Transcript, so a plain mouse drag does not select text. Hold **Shift** while you drag to let the terminal select (Windows Terminal documents this for applications that use the mouse; iTerm2 uses **Option**). Then press `Ctrl-Shift-C`. Inside a multiplexer such as tmux or Herdr, selection can differ; check its own documentation.
 - **Copy a Result:** `/copy` sends the held query Result to the clipboard with OSC 52, see below. `/save <file>` writes it to a file.
 
-These terminal behaviors are not checked by dbui's tests. `/help keys` lists them under **Copy and paste**.
+These terminal behaviors are not checked by jdbx's tests. `/help keys` lists them under **Copy and paste**.
 
 ## Cell width
 
@@ -179,7 +179,7 @@ The fixed limit is **64 KB (65,536 bytes) of formatted UTF-8 text, before base64
 
 With no Result or an empty Result, `/copy` shows an info Message block and changes no clipboard. A successful Statement that returns no Result also disables `/copy` until another query Result arrives; it does not change `/save` retention. Info, errors and Dump do not replace the held Result.
 
-Copy uses **OSC 52 through the TamboUI backend only**. The terminal and any multiplexer, including Herdr, must allow OSC 52 clipboard writes. No external clipboard tool or fallback is used. The success Message block says the rows were **sent to the terminal clipboard**: dbui cannot confirm that the terminal accepted them. If paste does not work, check terminal permissions or use `/save`.
+Copy uses **OSC 52 through the TamboUI backend only**. The terminal and any multiplexer, including Herdr, must allow OSC 52 clipboard writes. No external clipboard tool or fallback is used. The success Message block says the rows were **sent to the terminal clipboard**: jdbx cannot confirm that the terminal accepted them. If paste does not work, check terminal permissions or use `/save`.
 
 ```text
 select 7 as id;
@@ -189,7 +189,7 @@ select 7 as id;
 
 ## Profiles in Interactive mode
 
-Start `dbui` in a terminal without complete connection options to open **Edit Connection Profile**.
+Start `jdbx` in a terminal without complete connection options to open **Edit Connection Profile**.
 The dialog keeps the values you gave. Complete options, including an available password, connect directly.
 Batch mode still fails when required values are missing; it never opens a dialog or prompt.
 
