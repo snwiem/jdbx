@@ -16,9 +16,9 @@
 
 ## Decision (proposed, confirm before work)
 
-- `/width <n|off>`: `n` is a whole number of 1 or more. `off` means no cut (`maxWidth` 0). Other input gives an error band with the usage text, as `/limit` does.
+- `/width <n|off>`: `n` is a whole number of 0 or more. `0` and `off` are the same: no cut (`maxWidth` 0). Other input gives an error band with the usage text, as `/limit` does.
 - The command changes the Settings for new Results only. It does not reformat earlier Results in the Transcript, as with `/format`.
-- Success shows an info block, for example `Maximum cell width: 40` or `Maximum cell width: off`.
+- Success shows an info block, for example `Maximum cell width: 40` or `Maximum cell width: off` (also for `/width 0`).
 - It is a Session setting and does not change `config.yaml`. Resume uses the value from `config.yaml`, not the earlier Session's value. This keeps `SessionMetadata` unchanged.
 - No new "cut" marker. The `…` stays the only sign of a cut. Decided by the user.
 - No `/show` command for single values. Decided by the user.
@@ -27,7 +27,7 @@
 
 ## Acceptance criteria
 
-- [ ] Unit test: a number sets `maxWidth`; `off` sets 0; a value below 1, text or a missing argument gives an error and keeps the setting
+- [ ] Unit test: a number sets `maxWidth`; `0` and `off` both set 0; a negative value, text or a missing argument gives an error and keeps the setting
 - [ ] Unit test: after `/width off` a long text value shows in full in `table`; after `/width 10` it is cut with `…`
 - [ ] Integration test at the Session seam: `/width` changes the next Result only
 - [ ] `/help` lists `/width`; Completion offers `off`
