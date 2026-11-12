@@ -488,6 +488,34 @@ class InteractiveScreenTest {
 	}
 
 	@Test
+	void loadedEditorTextFillsTheEditorWithTheCursorAtTheStart() {
+		var inputs = new CopyOnWriteArrayList<String>();
+		var screen = screenWithHistory(inputs::add, "select 1");
+		type(screen, "old draft");
+		screen.editorText("select 2\nfrom t");
+		var buffer = draw(screen, new Size(60, 20));
+		assertThat(line(buffer, 15)).startsWith("select 2");
+		assertThat(line(buffer, 16)).startsWith("from t");
+		type(screen, "X");
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(inputs).containsExactly("Xselect 2\nfrom t");
+	}
+
+	@Test
+	void afterTheHistoryIsClearedUpAndCtrlRFindNothing() {
+		var inputs = new CopyOnWriteArrayList<String>();
+		var screen = screenWithHistory(inputs::add, "select 1");
+		screen.history(List.of());
+		screen.handle(KeyEvent.ofKey(KeyCode.UP));
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		screen.handle(KeyEvent.ofChar('r', KeyModifiers.CTRL));
+		type(screen, "select");
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
+		assertThat(inputs).isEmpty();
+	}
+
+	@Test
 	void ctrlROpensASearchLineAndEnterAcceptsTheMatchWithoutSendingIt() {
 		var inputs = new CopyOnWriteArrayList<String>();
 		var screen = screenWithHistory(inputs::add, "select 1", "insert into t values (1)", "update t set a = 2");

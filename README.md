@@ -134,6 +134,12 @@ Configured Ctrl-H, Ctrl-I and Ctrl-M cannot be distinguished from those fixed ke
 If the terminal sends Enter instead, Ctrl-J or Ctrl-M can send input rather than run the configured action.
 Use a distinct key, Kitty keyboard support, or bracketed paste for multi-line input on legacy terminals. Bracketed paste never sends input by itself.
 
+## History
+
+`/history` lists the History of the Session: one row per entry with its number (1 is the oldest) and its first line. An entry with more lines ends with ` …`. A long first line is cut by `max-width`. The list is an info Message block, so `/format` and `/orientation` do not change it.
+
+`/history <number>` puts that entry into the editor, with the cursor at the start. It does not run the entry. `/history clear` removes all entries of this Session, in memory and in the Session's `history` file; other Sessions stay unchanged. `/history`, `/history <number>` and `/history clear` are not stored in the History.
+
 ## Copy a Result in Interactive mode
 
 `/copy` sends the newest held query Result to the terminal clipboard, with no argument. It uses the current Format, Orientation and value settings, exactly as `/save` would write the Result. It does not copy screen padding, input, info or error Message blocks. Schema Results are not query Results for `/copy`; use `/save` for those.

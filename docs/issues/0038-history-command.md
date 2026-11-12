@@ -4,7 +4,7 @@
 
 **Blocked by:** none
 
-**Status:** open
+**Status:** in review (manual check open)
 
 **Parent:** `docs/prd/mvp-1.0.md` (Sessions and history, stories 68 to 74)
 
@@ -14,7 +14,7 @@
 - `HistoryStore` does not store a blank entry, an entry that starts with a space, `/resume`, `/quit`, an input with Profile credentials, or a repeat of the last entry.
 - The editor is cleared when the user presses Enter, so `/history <#>` never replaces a draft: the editor is empty at that moment.
 - `Session.Update` has only Message blocks and an `ended` flag. Loading text into the editor needs a new field in the Update (editor text), which the terminal layer applies with the cursor at the start (as `setEditor(Completion.Edit)` does).
-- `InteractiveMode` hands `session.history()` to the screen after the Session changed. `/history clear` must reach the screen the same way, so that Up and Ctrl-R no longer find cleared entries. Check this in the code before the tests.
+- `InteractiveMode` hands `session.history()` to the screen after the Session changed. `/history clear` must reach the screen the same way, so that Up and Ctrl-R no longer find cleared entries. Checked: `InteractiveMode.refresh()` hands `session.history()` to the screen after every Update, so no extra code was needed.
 
 ## Decision (agreed with the user)
 
@@ -42,14 +42,20 @@
 
 ## Acceptance criteria
 
-- [ ] Unit test: the list numbers entries from 1 (oldest) and shows the first line, with ` …` for a multi-line entry
-- [ ] Unit test: a long first line is cut by `max-width`
-- [ ] Unit test: the error and info texts for a bad argument, a number out of range, an empty history and a disabled history
-- [ ] Session test: `/history <#>` returns the full entry as editor text and no Message block
-- [ ] Session test: `/history`, `/history <#>` and `/history clear` are not stored in the history
-- [ ] Session test: `/history clear` empties the history and the file, numbering restarts at 1, a resumed-from Session is unchanged
-- [ ] Unit test: the loaded text is in the editor and the cursor is at the start
-- [ ] Unit test: after `/history clear`, Up and Ctrl-R find nothing
-- [ ] `/help` lists `/history`; Completion offers `clear`
-- [ ] `GLOSSARY.md` and `README.md` name the command
+- [x] Unit test: the list numbers entries from 1 (oldest) and shows the first line, with ` …` for a multi-line entry
+- [x] Unit test: a long first line is cut by `max-width`
+- [x] Unit test: the error and info texts for a bad argument, a number out of range, an empty history and a disabled history
+- [x] Session test: `/history <#>` returns the full entry as editor text and no Message block
+- [x] Session test: `/history`, `/history <#>` and `/history clear` are not stored in the history
+- [x] Session test: `/history clear` empties the history and the file, numbering restarts at 1, a resumed-from Session is unchanged
+- [x] Unit test: the loaded text is in the editor and the cursor is at the start
+- [x] Unit test: after `/history clear`, Up and Ctrl-R find nothing
+- [x] `/help` lists `/history`; Completion offers `clear`
+- [x] `GLOSSARY.md` and `README.md` name the command
 - [ ] Manual check in a real terminal
+
+## Findings
+
+- Tests: `HistoryCommandTest` (logic, no Session), `HistoryCommandSessionTest` (Session without a database: a Session with a context and no connection still stores the history), and two cases in `InteractiveScreenTest`.
+- Placement: the load of the editor text is `InteractiveScreen.editorText`, called from `InteractiveMode` when `Update.editorText()` is set.
+- The input echo of `/history <number>` still appears in the Transcript, like for every Slash command. Only the result is empty.

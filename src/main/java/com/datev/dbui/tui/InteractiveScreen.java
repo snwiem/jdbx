@@ -151,6 +151,15 @@ public final class InteractiveScreen {
 	}
 
 	/** The connection text of the Status bar; it changes when {@code /resume} reconnects. */
+	/** Replaces the editor text with {@code text} and puts the cursor at its start (/history <number>). */
+	public void editorText(String text) {
+		editor.setText(text);
+		editor.moveCursorToStart();
+		history.reset();
+		search = null;
+		closeCompletion();
+	}
+
 	public void connection(String connection) {
 		this.connection = connection;
 	}

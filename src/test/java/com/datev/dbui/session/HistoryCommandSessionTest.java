@@ -72,4 +72,14 @@ class HistoryCommandSessionTest {
 			assertThat(submit(session, "/history").messageBlocks().getLast().text()).isEqualTo("1  select 3");
 		}
 	}
+
+	@Test
+	void helpListsHistoryAndCompletionOffersClear() throws Exception {
+		try (Session session = session()) {
+			assertThat(submit(session, "/help").messageBlocks().getLast().text()).contains("/history");
+			assertThat(session.slashCommands().completionCandidates("history")).containsExactly("clear");
+			assertThat(session.complete("/history cl", 11).get(5, TimeUnit.SECONDS).candidates())
+				.extracting(com.datev.dbui.completion.Candidate::insert).containsExactly("clear");
+		}
+	}
 }
