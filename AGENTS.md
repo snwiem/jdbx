@@ -44,3 +44,8 @@
 - `docs/adr/`: architecture decision records, numbered `0001-slug.md`.
 - `docs/issues/`: local issue files sliced from a PRD, named `NNNN-slug.md` (four digits, dependency order). They exist before or instead of publishing to GitHub.
 - Put new requirements, decisions and issues in the matching directory. Do not add files directly under `docs/`.
+
+## Naming
+
+- The application is called `jdbx` (ADR 0008). It was called `dbui` before.
+- ADRs 0001 to 0007, finished issues and the PRD keep the old name `dbui`. They record history. Do not rename it there.

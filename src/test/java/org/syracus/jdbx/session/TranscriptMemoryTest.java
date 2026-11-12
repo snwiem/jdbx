@@ -1,0 +1,53 @@
+package org.syracus.jdbx.session;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.List;
+import java.util.stream.IntStream;
+
+import org.syracus.jdbx.Result;
+import org.syracus.jdbx.config.Settings;
+import org.syracus.jdbx.tui.MessageBlockRenderer;
+import org.junit.jupiter.api.Test;
+
+class TranscriptMemoryTest {
+
+	@Test
+	void oldestBlocksAreDiscardedButTheHeldResultSurvivesUntilAnotherResultArrives() {
+		var transcript = new TranscriptMemory();
+		var result = new Result(List.of("id"), List.of(List.of(7)));
+		transcript.add(MessageBlock.result(result, Settings.defaults()));
+		for (int i = 0; i < 500; i++) transcript.add(MessageBlock.info("message " + i));
+		assertThat(transcript.blocks()).hasSize(200);
+		assertThat(transcript.blocks().getFirst().text()).isEqualTo("message 300");
+		assertThat(transcript.heldResult()).isSameAs(result);
+	}
+
+	@Test
+	void unformattedAdapterResultKeepsReadableTextBeforeItsRowsAreDropped() {
+		var transcript = new TranscriptMemory();
+		transcript.add(MessageBlock.result(new Result(List.of("id"), List.of(List.of(7)))));
+		var newest = new Result(List.of("id"), List.of(List.of(8)));
+		transcript.add(MessageBlock.result(newest));
+		var earlier = transcript.blocks().getFirst();
+		assertThat(earlier.result()).isNull();
+		assertThat(earlier.text()).isEqualTo("id\n--\n7\n");
+		assertThat(new MessageBlockRenderer(false).rows(List.of(earlier), 80))
+			.extracting(MessageBlockRenderer.Row::text).contains("7");
+		assertThat(transcript.heldResult()).isSameAs(newest);
+	}
+
+	@Test
+	void onlyTheNewestResultKeepsRowsWhileOlderResultsKeepTheirFrozenText() {
+		var transcript = new TranscriptMemory();
+		for (int i = 0; i < 50; i++) {
+			var rows = IntStream.range(0, 1000).mapToObj(n -> List.<Object>of(n)).toList();
+			transcript.add(MessageBlock.result(new Result(List.of("id"), rows), Settings.defaults()));
+		}
+		assertThat(transcript.blocks()).filteredOn(block -> block.result() != null).hasSize(1);
+		assertThat(transcript.heldResult().rows()).hasSize(1000);
+		assertThat(transcript.blocks().getFirst().text()).startsWith("id\n").contains("999");
+		assertThat(new MessageBlockRenderer(false).rows(List.of(transcript.blocks().getFirst()), 80))
+			.extracting(MessageBlockRenderer.Row::text).contains("999");
+	}
+}
