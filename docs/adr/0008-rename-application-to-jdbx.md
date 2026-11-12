@@ -52,9 +52,16 @@ We brainstormed 12 names, then ranked the favourites. The user ranking was `jdbx
 - On GitHub only a few small repositories use the name. They have 0 stars, and none is a command line tool. One is a "JDBC refactored" library.
 - Not verified: Maven Central (query returned nothing), Homebrew (HTTP 503), apt, npm, PyPI. Check them before the first public release.
 
+## Decisions on the rename
+
+- **Old text stays.** ADRs 0001 to 0007, finished issues and the PRD keep the name `dbui`. They record history. Only the titles of open issues change. Readers find this note in `AGENTS.md`.
+- **User data is not migrated.** The new config path is `~/.config/jdbx/`. Profiles and settings are created again during the manual tests after the rename.
+- **Maven coordinates:** `groupId` `org.syracus`, `artifactId` `jdbx`.
+- **Spring resources change too.** Keys and values with `dbui` in `application*.properties` are renamed. Environment variables `DBUI_*` become `JDBX_*`.
+- **Four phases, one branch each:** (1) documentation, (2) build, scripts and config files, (3) package structure with `git mv`, (4) class and variable names in code and tests. Merge to `main` only when the phases are done, so `main` never shows docs that do not match the code.
+
 ## Consequences
 
 - All uses of `dbui` change: Maven artifact, main class, Java package, wrapper script and jar name, user config and session directories, environment variables, docs, ADR text and `GLOSSARY.md`.
-- Existing user data under the old name needs a decision (migrate or ignore). The rename plan must cover this.
-- Old ADRs and issue files keep their history. The plan decides whether text in them changes or a note points to this ADR.
+- Users of the old name lose their profiles and history. We accept this, because there are no external users yet.
 - Git history keeps the old name. Commits that contain `dbui` stay unchanged.
