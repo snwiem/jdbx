@@ -1,6 +1,6 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
-import com.datev.dbui.Result;
+import org.syracus.jdbx.Result;
 
 /** A terminal-independent entry in a Session's Transcript. */
 public record MessageBlock(Kind kind, String text, Result result) {
@@ -17,9 +17,9 @@ public record MessageBlock(Kind kind, String text, Result result) {
 	}
 
 	/** Freeze the rendered text when the Result enters the Transcript; later setting changes do not rewrite it. */
-	public static MessageBlock result(Result result, com.datev.dbui.config.Settings settings) {
-		String text = com.datev.dbui.Format.parse(settings.format())
-			.formatter(com.datev.dbui.FormatOptions.from(settings), com.datev.dbui.Orientation.parse(settings.orientation()))
+	public static MessageBlock result(Result result, org.syracus.jdbx.config.Settings settings) {
+		String text = org.syracus.jdbx.Format.parse(settings.format())
+			.formatter(org.syracus.jdbx.FormatOptions.from(settings), org.syracus.jdbx.Orientation.parse(settings.orientation()))
 			.format(result);
 		return new MessageBlock(Kind.RESULT, text, result);
 	}

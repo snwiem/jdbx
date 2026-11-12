@@ -1,11 +1,11 @@
-package com.datev.dbui.tui;
+package org.syracus.jdbx.tui;
 
 import java.util.List;
 import java.util.Locale;
 
-import com.datev.dbui.config.KeyBindings;
-import com.datev.dbui.config.Settings;
-import com.datev.dbui.session.ExecutionStatus;
+import org.syracus.jdbx.config.KeyBindings;
+import org.syracus.jdbx.config.Settings;
+import org.syracus.jdbx.session.ExecutionStatus;
 
 /** Plain Status bar text; the terminal adapter only draws it. */
 final class StatusBarText {

@@ -1,4 +1,4 @@
-package com.datev.dbui.completion;
+package org.syracus.jdbx.completion;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -6,7 +6,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import com.datev.dbui.completion.Candidate.Kind;
+import org.syracus.jdbx.completion.Candidate.Kind;
 
 class CompletionTest {
 

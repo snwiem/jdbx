@@ -1,4 +1,4 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
-import com.datev.dbui.config.Settings;
+import org.syracus.jdbx.config.Settings;
 
 class ExecutionControlsWidthTest {
 

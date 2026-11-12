@@ -1,4 +1,4 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -12,9 +12,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
-import com.datev.dbui.completion.Candidate;
-import com.datev.dbui.config.ConnectionParameters;
-import com.datev.dbui.config.Settings;
+import org.syracus.jdbx.completion.Candidate;
+import org.syracus.jdbx.config.ConnectionParameters;
+import org.syracus.jdbx.config.Settings;
 
 /** Cross-feature behavior through the Session's public input, Completion and settings interfaces. */
 @Testcontainers
@@ -31,7 +31,7 @@ class FeatureIntegrationIT {
 	private Session session() throws Exception {
 		var parameters = parameters();
 		var context = new SessionContext(directory.resolve("state"), Settings.defaults(), parameters, null,
-			new com.datev.dbui.config.ConfigLoader(directory, Map.of())::profile);
+			new org.syracus.jdbx.config.ConfigLoader(directory, Map.of())::profile);
 		var session = new Session(parameters.open(), SessionDirectory.create(context.stateBase()), context);
 		session.configureProfiles(directory, Map.of());
 		return session;
@@ -73,7 +73,7 @@ class FeatureIntegrationIT {
 		var unreachable = new ConnectionParameters("jdbc:postgresql://127.0.0.1:1/unreachable?connectTimeout=1",
 			Map.of("user", POSTGRES.getUsername(), "password", POSTGRES.getPassword()), false);
 		var context = new SessionContext(directory.resolve("state"), Settings.defaults(), unreachable, null, name -> null);
-		new com.datev.dbui.config.ProfileStore(directory).save(new com.datev.dbui.config.Profile("prompted",
+		new org.syracus.jdbx.config.ProfileStore(directory).save(new org.syracus.jdbx.config.Profile("prompted",
 			parameters().url(), null, null, null, POSTGRES.getUsername(), null, true, "public", Map.of()));
 		try (Session current = new Session(parameters().open(), SessionDirectory.create(context.stateBase()), context);
 				var admin = parameters().open(); var sql = admin.createStatement()) {
@@ -98,7 +98,7 @@ class FeatureIntegrationIT {
 			assertThat(current.messageBlocks().toString()).doesNotContain(POSTGRES.getPassword(), "incorrect");
 			assertThat(java.nio.file.Files.readString(current.directory().metadataFile())).doesNotContain(POSTGRES.getPassword());
 			assertThat(java.nio.file.Files.readString(current.directory().historyFile())).doesNotContain(POSTGRES.getPassword());
-			assertThat(new com.datev.dbui.config.ProfileStore(directory).profile("prompted").password()).isNull();
+			assertThat(new org.syracus.jdbx.config.ProfileStore(directory).profile("prompted").password()).isNull();
 		}
 	}
 
@@ -187,7 +187,7 @@ class FeatureIntegrationIT {
 	@Test
 	void anUnsetProfileKeepsReadWriteEvenWhenTheGlobalDefaultIsReadOnly() throws Exception {
 		java.nio.file.Files.writeString(directory.resolve("config.yaml"), "read-only: true\n");
-		new com.datev.dbui.config.ProfileStore(directory).save(new com.datev.dbui.config.Profile("unset",
+		new org.syracus.jdbx.config.ProfileStore(directory).save(new org.syracus.jdbx.config.Profile("unset",
 			parameters().url(), null, null, null, POSTGRES.getUsername(), POSTGRES.getPassword(), null, null, Map.of()));
 		try (Session current = session()) {
 			last(current, "/readonly off");
@@ -199,7 +199,7 @@ class FeatureIntegrationIT {
 
 	@Test
 	void credentialWordsInProfileNamesRemainSelectableEditableAndRemovable() throws Exception {
-		new com.datev.dbui.config.ProfileStore(directory).save(new com.datev.dbui.config.Profile("api-token",
+		new org.syracus.jdbx.config.ProfileStore(directory).save(new org.syracus.jdbx.config.Profile("api-token",
 			parameters().url(), null, null, null, POSTGRES.getUsername(), POSTGRES.getPassword(), null, null, Map.of()));
 		try (Session current = session()) {
 			assertThat(last(current, "/connect api-token").text()).contains("Connected to");
@@ -209,7 +209,7 @@ class FeatureIntegrationIT {
 			last(current, "/profile remove api-token");
 			assertThat(current.interaction()).isInstanceOf(SessionInteraction.Confirmation.class);
 			last(current, "y");
-			assertThat(new com.datev.dbui.config.ProfileStore(directory).names()).isEmpty();
+			assertThat(new org.syracus.jdbx.config.ProfileStore(directory).names()).isEmpty();
 		}
 	}
 
@@ -221,7 +221,7 @@ class FeatureIntegrationIT {
 			assertThat(current.slashCommands().parse("/connect").background()).isTrue();
 			assertThat(current.slashCommands().parse("/profile list").background()).isTrue();
 			assertThat(current.slashCommands().completionCandidates("profile")).containsExactly("list", "add", "edit", "remove");
-			new com.datev.dbui.config.ProfileStore(directory).save(new com.datev.dbui.config.Profile("newly-saved",
+			new org.syracus.jdbx.config.ProfileStore(directory).save(new org.syracus.jdbx.config.Profile("newly-saved",
 				parameters().url(), null, null, null, POSTGRES.getUsername(), POSTGRES.getPassword(), null, null, Map.of()));
 			assertThat(current.complete("/connect new", 12).get(10, TimeUnit.SECONDS).candidates())
 				.extracting(Candidate::insert).containsExactly("newly-saved");
@@ -248,7 +248,7 @@ class FeatureIntegrationIT {
 		try (var admin = parameters().open(); var sql = admin.createStatement()) {
 			sql.execute("create schema switched; create table switched.connection_target(id int)");
 		}
-		new com.datev.dbui.config.ProfileStore(directory).save(new com.datev.dbui.config.Profile("switched",
+		new org.syracus.jdbx.config.ProfileStore(directory).save(new org.syracus.jdbx.config.Profile("switched",
 			parameters().url(), null, null, null, POSTGRES.getUsername(), POSTGRES.getPassword(), null, "switched", Map.of()));
 		try (Session current = session()) {
 			current.complete("select * from ", 14).get(10, TimeUnit.SECONDS);
@@ -270,7 +270,7 @@ class FeatureIntegrationIT {
 	@Test
 	void connectReadOnlyCanBeChangedAndResumeRestoresTheEarlierSettings() throws Exception {
 		var parameters = parameters();
-		new com.datev.dbui.config.ProfileStore(directory).save(new com.datev.dbui.config.Profile("protected",
+		new org.syracus.jdbx.config.ProfileStore(directory).save(new org.syracus.jdbx.config.Profile("protected",
 			parameters.url(), null, null, null, POSTGRES.getUsername(), POSTGRES.getPassword(), true, "public", Map.of()));
 		String earlier;
 		try (Session first = session()) {

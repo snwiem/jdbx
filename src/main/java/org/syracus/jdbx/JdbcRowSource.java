@@ -1,4 +1,4 @@
-package com.datev.dbui;
+package org.syracus.jdbx;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;

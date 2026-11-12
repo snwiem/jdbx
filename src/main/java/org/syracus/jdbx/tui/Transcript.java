@@ -1,8 +1,8 @@
-package com.datev.dbui.tui;
+package org.syracus.jdbx.tui;
 
 import java.util.List;
 
-import com.datev.dbui.session.MessageBlock;
+import org.syracus.jdbx.session.MessageBlock;
 
 /** Retains Message blocks, their wrapped rows, and the distance from the newest row. */
 final class Transcript {

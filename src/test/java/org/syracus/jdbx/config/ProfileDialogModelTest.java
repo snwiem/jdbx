@@ -1,4 +1,4 @@
-package com.datev.dbui.config;
+package org.syracus.jdbx.config;
 
 import static org.assertj.core.api.Assertions.*;
 import java.util.Map;

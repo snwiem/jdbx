@@ -1,7 +1,7 @@
-package com.datev.dbui.tui;
+package org.syracus.jdbx.tui;
 
-import com.datev.dbui.config.KeyBinding;
-import com.datev.dbui.config.KeyBindings;
+import org.syracus.jdbx.config.KeyBinding;
+import org.syracus.jdbx.config.KeyBindings;
 
 import dev.tamboui.tui.bindings.KeyTrigger;
 import dev.tamboui.tui.event.KeyCode;

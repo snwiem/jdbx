@@ -1,6 +1,6 @@
-package com.datev.dbui.profile;
+package org.syracus.jdbx.profile;
 
-import com.datev.dbui.config.ConfigException;
+import org.syracus.jdbx.config.ConfigException;
 
 /** Profile operation logic called by the shared registry's /profile action. */
 public final class ProfileCommand {

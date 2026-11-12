@@ -1,10 +1,10 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import java.util.Arrays;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import com.datev.dbui.config.ConnectionParameters;
+import org.syracus.jdbx.config.ConnectionParameters;
 
 /**
  * The non-secret part of a connection, as stored in {@code session.yaml}. {@code url} has no credentials.

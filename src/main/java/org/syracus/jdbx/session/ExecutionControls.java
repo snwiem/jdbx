@@ -1,10 +1,10 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import com.datev.dbui.config.Settings;
+import org.syracus.jdbx.config.Settings;
 
 /** Session-local execution settings and their Slash commands. No JDBC or terminal knowledge. */
 final class ExecutionControls {
@@ -19,8 +19,8 @@ final class ExecutionControls {
 	}
 
 	static void validate(Settings settings) {
-		com.datev.dbui.Format.parse(settings.format());
-		com.datev.dbui.Orientation.parse(settings.orientation());
+		org.syracus.jdbx.Format.parse(settings.format());
+		org.syracus.jdbx.Orientation.parse(settings.orientation());
 		if (settings.rowLimit() < 1) {
 			throw new IllegalArgumentException("Row limit must be 1 or more");
 		}

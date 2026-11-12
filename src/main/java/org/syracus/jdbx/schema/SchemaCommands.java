@@ -1,4 +1,4 @@
-package com.datev.dbui.schema;
+package org.syracus.jdbx.schema;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -6,8 +6,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import com.datev.dbui.Result;
-import com.datev.dbui.session.MessageBlock;
+import org.syracus.jdbx.Result;
+import org.syracus.jdbx.session.MessageBlock;
 
 /** Runs the schema Slash commands and turns their output into Message blocks. */
 public final class SchemaCommands {

@@ -1,12 +1,12 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import com.datev.dbui.BuildInfo;
-import com.datev.dbui.config.KeyBindings;
+import org.syracus.jdbx.BuildInfo;
+import org.syracus.jdbx.config.KeyBindings;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Model.CommandSpec;

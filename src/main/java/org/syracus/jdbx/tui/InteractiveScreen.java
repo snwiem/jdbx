@@ -1,4 +1,4 @@
-package com.datev.dbui.tui;
+package org.syracus.jdbx.tui;
 
 import java.time.Duration;
 import java.util.List;
@@ -8,15 +8,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import com.datev.dbui.FormatOptions;
-import com.datev.dbui.completion.Completion;
-import com.datev.dbui.completion.CompletionEngine;
-import com.datev.dbui.completion.SchemaModel;
-import com.datev.dbui.session.ExecutionStatus;
-import com.datev.dbui.session.MessageBlock;
-import com.datev.dbui.session.SessionInteraction;
-import com.datev.dbui.config.KeyBindings;
-import com.datev.dbui.config.Settings;
+import org.syracus.jdbx.FormatOptions;
+import org.syracus.jdbx.completion.Completion;
+import org.syracus.jdbx.completion.CompletionEngine;
+import org.syracus.jdbx.completion.SchemaModel;
+import org.syracus.jdbx.session.ExecutionStatus;
+import org.syracus.jdbx.session.MessageBlock;
+import org.syracus.jdbx.session.SessionInteraction;
+import org.syracus.jdbx.config.KeyBindings;
+import org.syracus.jdbx.config.Settings;
 
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.buffer.Cell;

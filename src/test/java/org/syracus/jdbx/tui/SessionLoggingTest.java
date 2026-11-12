@@ -1,4 +1,4 @@
-package com.datev.dbui.tui;
+package org.syracus.jdbx.tui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

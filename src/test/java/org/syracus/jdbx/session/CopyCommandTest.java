@@ -1,4 +1,4 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -7,8 +7,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import com.datev.dbui.Result;
-import com.datev.dbui.config.Settings;
+import org.syracus.jdbx.Result;
+import org.syracus.jdbx.config.Settings;
 
 class CopyCommandTest {
 

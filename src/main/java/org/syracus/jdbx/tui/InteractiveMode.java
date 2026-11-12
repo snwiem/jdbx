@@ -1,4 +1,4 @@
-package com.datev.dbui.tui;
+package org.syracus.jdbx.tui;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -9,9 +9,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.datev.dbui.config.*;
-import com.datev.dbui.profile.ProfileCommands;
-import com.datev.dbui.session.*;
+import org.syracus.jdbx.config.*;
+import org.syracus.jdbx.profile.ProfileCommands;
+import org.syracus.jdbx.session.*;
 
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.terminal.KeyboardProtocol;

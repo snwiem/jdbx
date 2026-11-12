@@ -1,4 +1,4 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -18,9 +18,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
-import com.datev.dbui.config.ConnectionParameters;
-import com.datev.dbui.config.Profile;
-import com.datev.dbui.config.Settings;
+import org.syracus.jdbx.config.ConnectionParameters;
+import org.syracus.jdbx.config.Profile;
+import org.syracus.jdbx.config.Settings;
 
 /** Session seam: read-only is enforced by the server, and /readonly changes it for the Session. */
 @Testcontainers

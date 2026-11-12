@@ -1,4 +1,4 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -8,9 +8,9 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.datev.dbui.BuildInfo;
-import com.datev.dbui.completion.Candidate;
-import com.datev.dbui.config.Settings;
+import org.syracus.jdbx.BuildInfo;
+import org.syracus.jdbx.completion.Candidate;
+import org.syracus.jdbx.config.Settings;
 
 /** Session seam for /help. No database is needed. */
 class HelpCommandSessionTest {

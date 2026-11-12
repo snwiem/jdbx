@@ -1,6 +1,6 @@
-package com.datev.dbui.tui;
+package org.syracus.jdbx.tui;
 
-import com.datev.dbui.completion.Completion;
+import org.syracus.jdbx.completion.Completion;
 
 /**
  * What a finished Completion request does to the editor: nothing but a note, one edit, or an edit plus a popup.

@@ -1,4 +1,4 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -18,9 +18,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
-import com.datev.dbui.config.ConnectionParameters;
-import com.datev.dbui.config.Profile;
-import com.datev.dbui.config.Settings;
+import org.syracus.jdbx.config.ConnectionParameters;
+import org.syracus.jdbx.config.Profile;
+import org.syracus.jdbx.config.Settings;
 
 /** Session seam: history, session.yaml and {@code /resume} against a real database, without a terminal. */
 @Testcontainers
@@ -342,7 +342,7 @@ class SessionResumeIT {
 		var a = new Profile("pa", POSTGRES.getJdbcUrl(), null, null, null, POSTGRES.getUsername(), POSTGRES.getPassword(), null, "resume_a", Map.of());
 		var b = new Profile("pb", POSTGRES.getJdbcUrl(), null, null, null, POSTGRES.getUsername(), POSTGRES.getPassword(), null, "resume_b", Map.of());
 		Function<String, Profile> profiles = name -> "pa".equals(name) ? a : b;
-		var options = new com.datev.dbui.config.ConnectionOptions();
+		var options = new org.syracus.jdbx.config.ConnectionOptions();
 		String earlier;
 		try (Session first = session(Settings.defaults(), "pa", ConnectionParameters.resolve(options, a, Settings.defaults()), profiles)) {
 			earlier = first.directory().id();

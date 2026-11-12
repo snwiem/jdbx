@@ -1,11 +1,11 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.datev.dbui.config.KeyBindings;
+import org.syracus.jdbx.config.KeyBindings;
 
 /** The text of {@code /help}: an overview, all commands, all keys, or a filter. Plain code: no Session, no terminal. */
 final class HelpCatalog {

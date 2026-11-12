@@ -1,14 +1,14 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
-import com.datev.dbui.Format;
-import com.datev.dbui.FormatOptions;
-import com.datev.dbui.Orientation;
-import com.datev.dbui.Result;
-import com.datev.dbui.config.Settings;
+import org.syracus.jdbx.Format;
+import org.syracus.jdbx.FormatOptions;
+import org.syracus.jdbx.Orientation;
+import org.syracus.jdbx.Result;
+import org.syracus.jdbx.config.Settings;
 
 /** Formats the held query Result like Save, independently of screen rendering. */
 public final class CopyCommand {

@@ -1,8 +1,8 @@
-package com.datev.dbui.completion;
+package org.syracus.jdbx.completion;
 
 import java.util.List;
 
-import com.datev.dbui.session.SlashCommandRegistry;
+import org.syracus.jdbx.session.SlashCommandRegistry;
 
 /** Slash command names and literal argument candidates from the same registry used for dispatch and help. */
 public final class SlashCommandSource implements CandidateSource {

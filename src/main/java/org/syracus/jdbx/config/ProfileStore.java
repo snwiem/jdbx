@@ -1,4 +1,4 @@
-package com.datev.dbui.config;
+package org.syracus.jdbx.config;
 
 import java.io.IOException;
 import java.nio.file.Files;

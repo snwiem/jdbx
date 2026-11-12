@@ -1,4 +1,4 @@
-package com.datev.dbui;
+package org.syracus.jdbx;
 
 import java.time.ZoneId;
 
@@ -16,7 +16,7 @@ public record FormatOptions(String nullMarker, String multiLineMarker, int maxWi
 		return new FormatOptions(DEFAULT_NULL_MARKER, DEFAULT_MULTI_LINE_MARKER, DEFAULT_MAX_WIDTH, ZoneId.systemDefault());
 	}
 
-	public static FormatOptions from(com.datev.dbui.config.Settings settings) {
+	public static FormatOptions from(org.syracus.jdbx.config.Settings settings) {
 		FormatOptions options = defaults().withNullMarker(settings.nullMarker())
 			.withMultiLineMarker(settings.multilineMarker()).withMaxWidth(settings.maxWidth());
 		return settings.timezone() == null ? options : options.withTimeZone(settings.timezone());

@@ -1,4 +1,4 @@
-package com.datev.dbui;
+package org.syracus.jdbx;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -10,7 +10,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 
-import com.datev.dbui.config.Settings;
+import org.syracus.jdbx.config.Settings;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;

@@ -1,13 +1,13 @@
-package com.datev.dbui.completion;
+package org.syracus.jdbx.completion;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-import com.datev.dbui.SqlTokens;
-import com.datev.dbui.SqlTokens.Token;
-import com.datev.dbui.SqlTokens.Type;
+import org.syracus.jdbx.SqlTokens;
+import org.syracus.jdbx.SqlTokens.Token;
+import org.syracus.jdbx.SqlTokens.Type;
 
 /**
  * What a {@link CandidateSource} needs to know about the request: the word being completed, where the cursor

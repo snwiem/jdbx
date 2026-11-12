@@ -1,8 +1,8 @@
-package com.datev.dbui.completion;
+package org.syracus.jdbx.completion;
 
 import java.util.List;
 
-import com.datev.dbui.completion.CompletionContext.Position;
+import org.syracus.jdbx.completion.CompletionContext.Position;
 
 /** SQL keywords and function names. They fit wherever SQL text can go, except after {@code name.}. */
 public final class KeywordSource implements CandidateSource {

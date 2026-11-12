@@ -1,6 +1,6 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
-import com.datev.dbui.config.ProfileDialogModel;
+import org.syracus.jdbx.config.ProfileDialogModel;
 
 /** A pending interaction, rendered by the terminal and answered through the Session API (never submit secrets). */
 public sealed interface SessionInteraction {

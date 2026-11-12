@@ -1,4 +1,4 @@
-package com.datev.dbui;
+package org.syracus.jdbx;
 
 import java.io.Console;
 import java.io.IOException;
@@ -15,12 +15,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
-import com.datev.dbui.config.ConfigLoader;
-import com.datev.dbui.config.ConnectionOptions;
-import com.datev.dbui.config.ConnectionParameters;
-import com.datev.dbui.config.Profile;
-import com.datev.dbui.config.Settings;
-import com.datev.dbui.tui.InteractiveMode;
+import org.syracus.jdbx.config.ConfigLoader;
+import org.syracus.jdbx.config.ConnectionOptions;
+import org.syracus.jdbx.config.ConnectionParameters;
+import org.syracus.jdbx.config.Profile;
+import org.syracus.jdbx.config.Settings;
+import org.syracus.jdbx.tui.InteractiveMode;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ITypeConverter;

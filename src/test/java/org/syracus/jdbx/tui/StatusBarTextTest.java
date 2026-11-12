@@ -1,4 +1,4 @@
-package com.datev.dbui.tui;
+package org.syracus.jdbx.tui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -6,7 +6,7 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
-import com.datev.dbui.session.ExecutionStatus;
+import org.syracus.jdbx.session.ExecutionStatus;
 
 class StatusBarTextTest {
 
@@ -28,7 +28,7 @@ class StatusBarTextTest {
 	void combinedStatusKeepsSettingsSummaryAndLoadingNoteWithoutHidingMode() {
 		var status = new ExecutionStatus(2, true, Duration.ofSeconds(3),
 			new ExecutionStatus.ResultSummary(2, Duration.ofMillis(15), true), true, true);
-		var settings = com.datev.dbui.config.Settings.defaults().withOutput("csv", "vertical");
+		var settings = org.syracus.jdbx.config.Settings.defaults().withOutput("csv", "vertical");
 		assertThat(StatusBarText.lines(status, settings, "alice@host:5432/db", "loading schema…", 2))
 			.containsExactly("alice@host:5432/db · Format: csv · Orientation: vertical",
 				"read-only · loading schema… · Row limit: 2 · running… 3 s · 2 rows · 0.015 s · truncated");

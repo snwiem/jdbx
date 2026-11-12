@@ -1,4 +1,4 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -17,9 +17,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
-import com.datev.dbui.config.ConnectionParameters;
-import com.datev.dbui.config.Profile;
-import com.datev.dbui.config.Settings;
+import org.syracus.jdbx.config.ConnectionParameters;
+import org.syracus.jdbx.config.Profile;
+import org.syracus.jdbx.config.Settings;
 
 /** Session seam: a lost connection is restored once on the next input, and a Statement never runs twice. */
 @Testcontainers

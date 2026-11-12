@@ -1,4 +1,4 @@
-package com.datev.dbui.config;
+package org.syracus.jdbx.config;
 
 import java.util.Arrays;
 import java.util.Locale;

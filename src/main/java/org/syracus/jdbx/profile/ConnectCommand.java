@@ -1,4 +1,4 @@
-package com.datev.dbui.profile;
+package org.syracus.jdbx.profile;
 
 /** Profile selection logic called by the shared registry's /connect action. */
 public final class ConnectCommand {

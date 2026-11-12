@@ -1,4 +1,4 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 /**
  * Argument validation and mode text for the registry's {@code /readonly [on|off]} Slash command.

@@ -1,4 +1,4 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import java.util.Locale;
 import java.util.regex.Pattern;

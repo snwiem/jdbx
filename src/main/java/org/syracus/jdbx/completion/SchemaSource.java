@@ -1,12 +1,12 @@
-package com.datev.dbui.completion;
+package org.syracus.jdbx.completion;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-import com.datev.dbui.completion.Candidate.Kind;
-import com.datev.dbui.completion.CompletionContext.TableRef;
+import org.syracus.jdbx.completion.Candidate.Kind;
+import org.syracus.jdbx.completion.CompletionContext.TableRef;
 
 /** Schema, table, view and column names from the {@link SchemaModel}, chosen by the position in the Statement. */
 public final class SchemaSource implements CandidateSource {

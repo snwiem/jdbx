@@ -1,4 +1,4 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -7,8 +7,8 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.datev.dbui.config.KeyBindings;
-import com.datev.dbui.session.HelpCatalog.Command;
+import org.syracus.jdbx.config.KeyBindings;
+import org.syracus.jdbx.session.HelpCatalog.Command;
 
 class HelpCatalogTest {
 

@@ -1,11 +1,11 @@
-package com.datev.dbui.profile;
+package org.syracus.jdbx.profile;
 
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
-import com.datev.dbui.config.*;
-import com.datev.dbui.session.ConnectionInfo;
+import org.syracus.jdbx.config.*;
+import org.syracus.jdbx.session.ConnectionInfo;
 
 /** Profile command logic, independent of the terminal and Session execution. */
 public final class ProfileCommands {

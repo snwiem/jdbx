@@ -1,9 +1,9 @@
-package com.datev.dbui.tui;
+package org.syracus.jdbx.tui;
 
 import java.util.List;
 
-import com.datev.dbui.completion.Candidate;
-import com.datev.dbui.completion.Completion;
+import org.syracus.jdbx.completion.Candidate;
+import org.syracus.jdbx.completion.Completion;
 
 /** The state of the open Completion list: which candidates are visible and which one is selected. No terminal. */
 final class CompletionPopup {

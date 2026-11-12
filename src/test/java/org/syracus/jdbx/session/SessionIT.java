@@ -1,4 +1,4 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -48,7 +48,7 @@ class SessionIT {
 
 	@Test
 	void invalidConfiguredTimeoutIsRejectedBeforeExecutingStatements() throws Exception {
-		var settings = new com.datev.dbui.config.Settings(1000, java.time.Duration.ofSeconds(-1), "table", "horizontal", false);
+		var settings = new org.syracus.jdbx.config.Settings(1000, java.time.Duration.ofSeconds(-1), "table", "horizontal", false);
 		try (Connection connection = connection()) {
 			assertThatThrownBy(() -> new Session(connection, SessionDirectory.create(stateDir), settings))
 				.isInstanceOf(IllegalArgumentException.class).hasMessage("Timeout must be 0 or more seconds");
@@ -58,7 +58,7 @@ class SessionIT {
 	@org.junit.jupiter.params.ParameterizedTest
 	@org.junit.jupiter.params.provider.ValueSource(ints = { 0, -1, -2 })
 	void invalidConfiguredRowLimitCannotDisableTheJdbcRowLimit(int rowLimit) throws Exception {
-		var settings = new com.datev.dbui.config.Settings(rowLimit, null, "table", "horizontal", false);
+		var settings = new org.syracus.jdbx.config.Settings(rowLimit, null, "table", "horizontal", false);
 		try (Connection connection = connection()) {
 			assertThatThrownBy(() -> new Session(connection, SessionDirectory.create(stateDir), settings))
 				.isInstanceOf(IllegalArgumentException.class).hasMessage("Row limit must be 1 or more");
@@ -158,7 +158,7 @@ class SessionIT {
 		"/limit 1.5", "/limit 2147483648", "/limit 1 extra", "/timeout", "/timeout 0", "/timeout -1",
 		"/timeout nope", "/timeout 1.5", "/timeout 2147483648", "/timeout off extra" })
 	void invalidExecutionControlShowsAnErrorAndLeavesThePreviousSettingsUnchanged(String input) throws Exception {
-		var settings = new com.datev.dbui.config.Settings(5, java.time.Duration.ofSeconds(1), "table", "horizontal", false);
+		var settings = new org.syracus.jdbx.config.Settings(5, java.time.Duration.ofSeconds(1), "table", "horizontal", false);
 		try (Session session = new Session(connection(), SessionDirectory.create(stateDir), settings)) {
 			var block = session.submit(input).get(5, TimeUnit.SECONDS).messageBlocks().getLast();
 			assertThat(block.kind()).isEqualTo(MessageBlock.Kind.ERROR);
@@ -239,7 +239,7 @@ class SessionIT {
 
 	@Test
 	void configuredTimeoutStopsAStatementWithAnErrorAndLeavesSessionUsable() throws Exception {
-		var settings = new com.datev.dbui.config.Settings(1000, java.time.Duration.ofSeconds(1), "table", "horizontal", false);
+		var settings = new org.syracus.jdbx.config.Settings(1000, java.time.Duration.ofSeconds(1), "table", "horizontal", false);
 		try (Session session = new Session(connection(), SessionDirectory.create(stateDir), settings)) {
 			var block = session.submit("select pg_sleep(10)").get(4, TimeUnit.SECONDS).messageBlocks().getLast();
 			assertThat(block.kind()).isEqualTo(MessageBlock.Kind.ERROR);
@@ -266,7 +266,7 @@ class SessionIT {
 
 	@Test
 	void limitSlashCommandOverridesTheConfiguredRowLimitForThisSession() throws Exception {
-		var settings = new com.datev.dbui.config.Settings(3, null, "table", "horizontal", false);
+		var settings = new org.syracus.jdbx.config.Settings(3, null, "table", "horizontal", false);
 		try (Session session = new Session(connection(), SessionDirectory.create(stateDir), settings)) {
 			var configured = session.submit("select generate_series(1,4)").get(5, TimeUnit.SECONDS).messageBlocks();
 			assertThat(configured.get(1).result().rows()).hasSize(3);
@@ -307,8 +307,8 @@ class SessionIT {
 			assertThat(update.messageBlocks().getLast().result().rows().getFirst()).containsExactly(
 				java.time.LocalDateTime.of(2024, 1, 15, 12, 34, 56),
 				java.time.OffsetDateTime.parse("2024-01-15T12:34:56Z"), java.time.LocalDate.of(2024, 1, 15),
-				java.time.LocalTime.of(12, 34, 56), new com.datev.dbui.JsonValue("{\"id\":7}"),
-				new com.datev.dbui.JsonValue("{\"id\": 8}"));
+				java.time.LocalTime.of(12, 34, 56), new org.syracus.jdbx.JsonValue("{\"id\":7}"),
+				new org.syracus.jdbx.JsonValue("{\"id\": 8}"));
 		}
 	}
 

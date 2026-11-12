@@ -1,4 +1,4 @@
-package com.datev.dbui.completion;
+package org.syracus.jdbx.completion;
 
 /**
  * One suggestion. {@code insert} is the exact text that replaces the typed word (quoted when the name needs it);

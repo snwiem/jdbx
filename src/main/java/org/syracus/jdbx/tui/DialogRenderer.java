@@ -1,9 +1,9 @@
-package com.datev.dbui.tui;
+package org.syracus.jdbx.tui;
 
 import java.util.function.Function;
 
-import com.datev.dbui.config.ProfileDialogModel;
-import com.datev.dbui.config.ProfileDialogModel.Field;
+import org.syracus.jdbx.config.ProfileDialogModel;
+import org.syracus.jdbx.config.ProfileDialogModel.Field;
 
 import dev.tamboui.buffer.Cell;
 import dev.tamboui.layout.Rect;

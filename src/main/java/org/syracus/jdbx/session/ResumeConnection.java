@@ -1,14 +1,14 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import java.util.LinkedHashMap;
 import java.util.Objects;
 import java.util.function.Function;
 
-import com.datev.dbui.config.ConfigException;
-import com.datev.dbui.config.ConnectionOptions;
-import com.datev.dbui.config.ConnectionParameters;
-import com.datev.dbui.config.Profile;
-import com.datev.dbui.config.Settings;
+import org.syracus.jdbx.config.ConfigException;
+import org.syracus.jdbx.config.ConnectionOptions;
+import org.syracus.jdbx.config.ConnectionParameters;
+import org.syracus.jdbx.config.Profile;
+import org.syracus.jdbx.config.Settings;
 
 /**
  * Decides how Resume gets a connection, including a request for a masked password prompt. The password is never stored in the

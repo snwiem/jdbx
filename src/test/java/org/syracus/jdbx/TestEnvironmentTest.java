@@ -1,11 +1,11 @@
-package com.datev.dbui;
+package org.syracus.jdbx;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
 
-import com.datev.dbui.config.ConfigLoader;
-import com.datev.dbui.session.SessionDirectory;
+import org.syracus.jdbx.config.ConfigLoader;
+import org.syracus.jdbx.session.SessionDirectory;
 import org.junit.jupiter.api.Test;
 
 /** Build seam: default application paths must not escape into the caller's home. */

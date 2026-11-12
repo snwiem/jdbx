@@ -1,11 +1,11 @@
-package com.datev.dbui.tui;
+package org.syracus.jdbx.tui;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.datev.dbui.FormatOptions;
-import com.datev.dbui.TableFormatter;
-import com.datev.dbui.session.MessageBlock;
+import org.syracus.jdbx.FormatOptions;
+import org.syracus.jdbx.TableFormatter;
+import org.syracus.jdbx.session.MessageBlock;
 
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.buffer.Cell;

@@ -1,11 +1,11 @@
-package com.datev.dbui.completion;
+package org.syracus.jdbx.completion;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import com.datev.dbui.session.SlashCommand;
-import com.datev.dbui.session.SlashCommandRegistry;
+import org.syracus.jdbx.session.SlashCommand;
+import org.syracus.jdbx.session.SlashCommandRegistry;
 
 class SlashCommandSourceTest {
 	private final SlashCommandRegistry registry = new SlashCommandRegistry(List.of(

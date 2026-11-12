@@ -1,4 +1,4 @@
-package com.datev.dbui.tui;
+package org.syracus.jdbx.tui;
 
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;

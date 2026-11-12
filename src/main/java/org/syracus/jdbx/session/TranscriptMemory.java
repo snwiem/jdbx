@@ -1,9 +1,9 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.datev.dbui.Result;
+import org.syracus.jdbx.Result;
 
 /** Retains frozen Transcript text, but row data only for the newest Result. */
 public final class TranscriptMemory {
@@ -19,7 +19,7 @@ public final class TranscriptMemory {
 				var earlier = blocks.get(i);
 				if (earlier.result() != null) {
 					String text = earlier.text() == null
-						? MessageBlock.result(earlier.result(), com.datev.dbui.config.Settings.defaults()).text() : earlier.text();
+						? MessageBlock.result(earlier.result(), org.syracus.jdbx.config.Settings.defaults()).text() : earlier.text();
 					blocks.set(i, new MessageBlock(earlier.kind(), text, null));
 				}
 			}

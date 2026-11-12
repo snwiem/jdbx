@@ -1,9 +1,9 @@
-package com.datev.dbui.schema;
+package org.syracus.jdbx.schema;
 
 import java.sql.SQLException;
 import java.util.List;
 
-import com.datev.dbui.completion.SchemaModel;
+import org.syracus.jdbx.completion.SchemaModel;
 
 /**
  * Feeds Completion from the {@link SchemaProvider} cache. A cache miss queries the database once; the next

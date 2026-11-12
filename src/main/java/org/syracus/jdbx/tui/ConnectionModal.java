@@ -1,12 +1,12 @@
-package com.datev.dbui.tui;
+package org.syracus.jdbx.tui;
 
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import com.datev.dbui.config.ProfileDialogModel;
-import com.datev.dbui.config.ProfileDialogModel.Field;
-import com.datev.dbui.session.SessionInteraction;
+import org.syracus.jdbx.config.ProfileDialogModel;
+import org.syracus.jdbx.config.ProfileDialogModel.Field;
+import org.syracus.jdbx.session.SessionInteraction;
 
 import dev.tamboui.buffer.Cell;
 import dev.tamboui.layout.Rect;

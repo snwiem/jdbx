@@ -1,10 +1,10 @@
-package com.datev.dbui.tui;
+package org.syracus.jdbx.tui;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.datev.dbui.config.ProfileDialogModel;
-import com.datev.dbui.config.ProfileDialogModel.Field;
+import org.syracus.jdbx.config.ProfileDialogModel;
+import org.syracus.jdbx.config.ProfileDialogModel.Field;
 
 /** Rows, groups and focus order of the Profile dialog: first the fields, then the buttons. No terminal. */
 final class DialogForm {

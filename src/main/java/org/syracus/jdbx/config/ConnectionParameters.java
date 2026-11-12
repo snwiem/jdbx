@@ -1,4 +1,4 @@
-package com.datev.dbui.config;
+package org.syracus.jdbx.config;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

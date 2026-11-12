@@ -1,4 +1,4 @@
-package com.datev.dbui.schema;
+package org.syracus.jdbx.schema;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;

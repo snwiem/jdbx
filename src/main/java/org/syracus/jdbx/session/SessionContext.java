@@ -1,11 +1,11 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import java.nio.file.Path;
 import java.util.function.Function;
 
-import com.datev.dbui.config.ConnectionParameters;
-import com.datev.dbui.config.Profile;
-import com.datev.dbui.config.Settings;
+import org.syracus.jdbx.config.ConnectionParameters;
+import org.syracus.jdbx.config.Profile;
+import org.syracus.jdbx.config.Settings;
 
 /**
  * What a Session needs to store its history and Session metadata and to Resume an earlier Session.

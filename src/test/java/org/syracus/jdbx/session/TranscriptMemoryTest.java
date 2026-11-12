@@ -1,13 +1,13 @@
-package com.datev.dbui.session;
+package org.syracus.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.stream.IntStream;
 
-import com.datev.dbui.Result;
-import com.datev.dbui.config.Settings;
-import com.datev.dbui.tui.MessageBlockRenderer;
+import org.syracus.jdbx.Result;
+import org.syracus.jdbx.config.Settings;
+import org.syracus.jdbx.tui.MessageBlockRenderer;
 import org.junit.jupiter.api.Test;
 
 class TranscriptMemoryTest {

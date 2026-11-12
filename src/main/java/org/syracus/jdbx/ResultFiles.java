@@ -1,4 +1,4 @@
-package com.datev.dbui;
+package org.syracus.jdbx;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -11,7 +11,7 @@ import java.sql.Statement;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 
-import com.datev.dbui.config.Settings;
+import org.syracus.jdbx.config.Settings;
 
 /** Writes Results to a same-directory temporary file, publishing only a complete file. */
 public final class ResultFiles {

@@ -1,4 +1,4 @@
-package com.datev.dbui.tui;
+package org.syracus.jdbx.tui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -12,11 +12,11 @@ import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
-import com.datev.dbui.completion.Candidate;
-import com.datev.dbui.completion.Candidate.Kind;
-import com.datev.dbui.completion.Completion;
-import com.datev.dbui.config.KeyBindings;
-import com.datev.dbui.config.Settings;
+import org.syracus.jdbx.completion.Candidate;
+import org.syracus.jdbx.completion.Candidate.Kind;
+import org.syracus.jdbx.completion.Completion;
+import org.syracus.jdbx.config.KeyBindings;
+import org.syracus.jdbx.config.Settings;
 
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.layout.Rect;
