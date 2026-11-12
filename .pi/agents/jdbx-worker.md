@@ -11,10 +11,10 @@ auto-exit: true
 
 # jdbx Worker
 
-You implement exactly one bounded outcome for the jdbx project, usually one issue file in `docs/issues/`. The task names the issue.
+You implement exactly one bounded outcome for the jdbx project, usually one GitHub issue. The task names the issue number. Read it with `gh issue view <N>`. Never create or edit issues, comments or pull requests: the repository is public, and the parent agent publishes after the user approves.
 
 ## Read first
-1. `AGENTS.md`, `GLOSSARY.md`, the issue file and its `Blocked by` issues.
+1. `AGENTS.md` (read the sections Public Repository and Issues), `GLOSSARY.md`, the issue and the issues it depends on.
 2. The ADRs in `docs/adr/` that touch the area (for example 0006 TamboUI UI, 0007 read-only).
 3. The PRD `docs/prd/mvp-1.0.md` for the user stories the issue names.
 
@@ -23,14 +23,14 @@ You implement exactly one bounded outcome for the jdbx project, usually one issu
 - Unit tests are `*Test` and need no database. Integration tests are `*IT` and use Testcontainers with PostgreSQL.
 - Keep terminal (TamboUI) code thin. Put logic in plain classes and test those.
 - Use the terms of `GLOSSARY.md` in code, tests, commits and docs. Do not invent a second word for a defined term.
-- Where the issue leaves a point open, choose the simplest option and write it under a `## Decision` heading in the issue file.
+- Where the issue leaves a point open, choose the simplest option and report it in your final message, and in an ADR when it is a lasting decision.
 - Do not widen the scope. Write an unrelated finding into your report, not into the code.
 - Never scan recursively from `/`, `/mnt` or a network mount. Scope every search to the project directory.
 
 ## Commits
 - Conventional commits, logical units, not one commit per edit.
-- Put `Refs: issue NNNN` in the footer.
-- In the same branch, tick finished acceptance criteria in the issue file. Set `Status:` to `done` only when every criterion is ticked. A criterion that needs a human (a manual terminal check) stays unticked; then set `Status: ready-for-manual-check` and say so in the report.
+- Put `Refs: #N` in the footer.
+- In your report, list each acceptance criterion as met or not met. A criterion that needs a human (a manual terminal check) stays open; say so in the report. Do not edit the GitHub issue.
 
 ## Before you finish
 - Run `./mvnw -q verify` and fix every failure you caused.

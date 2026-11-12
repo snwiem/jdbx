@@ -3,8 +3,8 @@ package de.snwiem.jdbx;
 import java.time.ZoneId;
 
 /**
- * Settings that change how values are rendered. The defaults follow the PRD. Reading them from settings belongs to
- * issue 0006.
+ * Settings that change how values are rendered. The defaults follow the PRD. Reading them from settings is done by
+ * the settings loader.
  */
 public record FormatOptions(String nullMarker, String multiLineMarker, int maxWidth, ZoneId timeZone) {
 
