@@ -17,15 +17,39 @@
 - Keep terminal (TamboUI) glue thin. Put logic in plain classes and test those.
 - Use the terms of `GLOSSARY.md` in code, tests, commits and docs.
 
-## Branches and Worktrees
+## Branches and Pull Requests
 
-- Work on one branch per GitHub issue, or per set of closely related issues. Never commit feature work directly to `main`.
-- Branch name: `<type>/<N>[-<N>...]-<slug>`, where `<type>` is the conventional commit type and `<N>` is the GitHub issue number. Examples: `feat/12-save-and-dump`, `fix/15-17-resume-profile`. Work without an issue uses `<type>/<slug>`.
-- Group issues on one branch only when they touch the same code and cannot be demoed alone. Otherwise use one branch per issue.
-- Start each branch from the committed `HEAD` of `main`, after the issue's blockers are merged.
-- Use a git worktree per branch when work is delegated or runs in parallel. Create it through the `subagent` tool (`worktree: { branch }`). A single sequential branch may use a plain checkout.
+- **Every change needs a branch.** Never commit to `main`, not even a documentation or build change.
+- Branch name: `<prefix>/<N>[-<N>...]-<slug>`. The prefix is `feat` for a feature, `fix` for a bug fix and `chore` for everything else (docs, ci, build, refactor, tests). `<N>` is the GitHub issue number. Examples: `feat/12-save-and-dump`, `fix/15-17-resume-profile`, `chore/build-workflow`. Work without an issue uses `<prefix>/<slug>`. The commit type stays the conventional commit type (`docs`, `ci`, `refactor`, ...); only the branch prefix is limited to these three.
+- Work on one branch per GitHub issue, or per set of closely related issues. Group issues on one branch only when they touch the same code and cannot be demoed alone.
 - Put the issue number in each commit footer, for example `Refs: #12`. Use `Closes #12` in the commit or pull request that finishes the issue.
-- Merge to `main` only after review and with the user's approval. Do not push, merge or remove worktrees without that approval.
+
+### Keep the branch in sync
+
+Others may work on branches in parallel. Never assume that your local copy is current.
+
+1. At the start of work, and again before every push, run `git fetch origin --prune`.
+2. Start a new branch from an up-to-date `origin/main`: `git switch -c <branch> origin/main`.
+3. If the branch already exists on `origin`, do not create it again. Check it out from `origin` and run `git pull --rebase`. Read what is new (`git log HEAD..origin/<branch>`) before you continue.
+4. If `origin/<branch>` has new commits before you push, integrate them first: `git pull --rebase` rebases only your unpushed commits. Run the verification again afterwards.
+5. To pick up `main`, merge `origin/main` into the branch. Do not rebase commits that are already pushed.
+6. Never force-push. `--force-with-lease` only with the user's explicit approval for that push.
+
+### Verify before every push
+
+- `./mvnw verify` must succeed before **every** push, to a branch as well as to `main`. Run it on the exact commit that you push, and after any rebase or merge. Do not push on a red or an unknown result.
+- The workflow `.github/workflows/build.yml` runs `./mvnw verify` on every push and on pull requests from forks. It does not replace the local run. A red check blocks the merge.
+
+### Merge through pull requests
+
+- **Merges to `main` always happen through a GitHub pull request.** Never run `git merge` into `main` locally, and never push to `main`.
+- Open the pull request with `gh pr create` from the pushed branch. Show the user the full title and text first and wait for approval (see Issues). Use the skill `to-pr` for the body.
+- Merge with `gh pr merge` only when the check `verify` is green and the user approves. Always **squash** (`--squash`): `main` gets one commit per pull request. The pull request title becomes the commit subject, so write it as a conventional commit (for example `feat: add /history command`). Put `Closes #N` in the pull request body. Delete the branch after the merge, then `git switch main && git pull --ff-only`.
+- Do not push, merge or remove worktrees without the user's approval.
+
+### Worktrees
+
+- Use a git worktree per branch when work is delegated or runs in parallel. Create it through the `subagent` tool (`worktree: { branch }`). A single sequential branch may use a plain checkout.
 
 ## Subagents
 
@@ -35,7 +59,7 @@
 - Tell the worker to test first, commit, report the commit SHA, and not to push, merge, switch branches or remove the worktree. Workers never create or edit GitHub issues, comments or pull requests (see Issues).
 - Set an acceptance check (`accept`) for the worker when a command can prove the result, for example `./mvnw -q verify`.
 - The parent agent reviews the result, integrates it and reports to the user. Do not poll a worker. Results arrive as messages.
-- Throwaway spike code lives on a branch named `spike/<slug>` that is never merged, or outside the repository. It is never reused as production code. Record spike findings in the ADR of the decision, or in the GitHub issue when no decision follows.
+- Throwaway spike code lives on a branch named `chore/spike-<slug>` that is never merged, or outside the repository. It is never reused as production code. Record spike findings in the ADR of the decision, or in the GitHub issue when no decision follows.
 
 ## Documentation Structure
 
