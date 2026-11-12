@@ -216,4 +216,10 @@ class CompletionEngineTest {
 		assertThat(inserts("/describe \"Mixed C|")).containsExactly("\"Mixed Case\"");
 		assertThat(inserts("/describe \"public\".cu|")).containsExactly("customers");
 	}
+
+	@Test
+	void describeWithAnEmptyArgumentSuggestsEverything() {
+		assertThat(inserts("/describe |")).contains("orders", "customers", "public", "sales");
+		assertThat(inserts("/tables |")).containsExactlyInAnyOrder("public", "sales");
+	}
 }
