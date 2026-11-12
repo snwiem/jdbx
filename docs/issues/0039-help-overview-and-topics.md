@@ -4,7 +4,7 @@
 
 **Blocked by:** none
 
-**Status:** in review (manual check open)
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md` (`/help`, issue 0012)
 
@@ -74,7 +74,7 @@ Ctrl-C      Cancel a running Statement, or clear the input
 - [x] Session test: `/help`, `/help keys` and `/help history` through `submit`
 - [x] Completion test: `/help <Tab>` offers `commands`, `keys` and the command names, not key names
 - [x] `README.md` documents `/help`
-- [ ] Manual check in a real terminal
+- [x] Manual check in a real terminal (done by the user)
 
 ## Findings
 
