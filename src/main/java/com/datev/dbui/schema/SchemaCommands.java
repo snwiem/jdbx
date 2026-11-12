@@ -112,7 +112,12 @@ public final class SchemaCommands {
 		var name = QualifiedName.parse(argument);
 		String schema = name.schema() != null ? name.schema() : provider.currentSchema();
 		Optional<SchemaProvider.TableDescription> found = provider.describe(schema, name.name());
-		if (found.isEmpty() && name.schema() == null && provider.schemas(true).contains(name.name())) {
+		boolean alsoSchema = name.schema() == null && provider.schemas(true).contains(name.name());
+		if (found.isPresent() && alsoSchema) {
+			return List.of(MessageBlock.error(name.name() + " is both a schema and a table. Use " + schema + "." + name.name()
+				+ " for the table or " + name.name() + ". for the schema."));
+		}
+		if (found.isEmpty() && alsoSchema) {
 			return schemaTables(name.name());
 		}
 		if (found.isEmpty()) {

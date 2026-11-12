@@ -132,4 +132,18 @@ class SchemaCommandsIT {
 			assertThat(system.kind()).isEqualTo(MessageBlock.Kind.RESULT);
 		}
 	}
+
+	@Test
+	void aNameThatIsASchemaAndATableIsAnErrorUntilTheUserQualifiesIt() throws Exception {
+		try (Session session = session()) {
+			session.submit("create schema dup; create table dup.inside (id int); create table dup (id int, label text)")
+				.get(5, TimeUnit.SECONDS);
+			var clash = last(session.submit("/describe dup").get(5, TimeUnit.SECONDS));
+			assertThat(clash.kind()).isEqualTo(MessageBlock.Kind.ERROR);
+			assertThat(clash.text()).isEqualTo("dup is both a schema and a table. Use public.dup for the table or dup. for the schema.");
+			assertThat(last(session.submit("/describe public.dup").get(5, TimeUnit.SECONDS)).kind()).isEqualTo(MessageBlock.Kind.RESULT);
+			assertThat(last(session.submit("/describe dup.").get(5, TimeUnit.SECONDS)).result().rows())
+				.extracting(r -> r.getFirst()).containsExactly("inside");
+		}
+	}
 }
