@@ -32,7 +32,12 @@
 - The Session log and `session.yaml` do not get the version in this issue.
 - Use the terms of `GLOSSARY.md`.
 
-## Proposed test seams (confirm before work)
+## Decision (implementation)
+
+- A missing or blank project version gives `unknown version`, even if a commit is present. A missing commit never gets a dirty suffix.
+- Use the Spring Boot-managed plugin version 9.2.0. In this worktree the default JGit provider read the common repository and reported `git.dirty=false` while `git status --porcelain` showed changes. Native git alone also resolved the common repository (verbose output: `dotGitDirectory '/home/snwiem/src/github/sebastian-wiemer_datev/dbui'`). Use native git with `dotGitDirectory=${project.basedir}/.`: the native provider runs in its parent, which keeps it in the current worktree. A build check then matched the commit and dirty flag against native git in this worktree.
+
+## Proposed test seams (agreed before work)
 
 1. Plain Unit tests on `BuildInfo`: properties to text (clean, dirty, no commit, no file, blank values). It misses the real build.
 2. `HelpCatalogTest`: the first line of the overview contains the version text. Other topics do not change. It misses the Session wiring.
@@ -41,10 +46,10 @@
 
 ## Acceptance criteria
 
-- [ ] Unit test: clean, dirty, no-commit and no-file texts
+- [x] Unit test: clean, dirty, no-commit and no-file texts
 - [ ] Unit test: `/help` overview starts with `dbui <version text>.`
 - [ ] Test: `dbui --version` prints `dbui <version text>` and needs no connection
-- [ ] Test: the generated `git.properties` is found and has the project version
+- [x] Test: the generated `git.properties` is found and has the project version
 - [ ] `./mvnw -q verify` passes with the plugin; a build without git information still works
 - [ ] `README.md` documents the version output
 - [ ] Manual check: `dbui --version` and `/help` from the built jar, also with an uncommitted change
