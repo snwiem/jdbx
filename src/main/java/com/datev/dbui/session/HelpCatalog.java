@@ -48,8 +48,27 @@ final class HelpCatalog {
 		return switch (word.toLowerCase(java.util.Locale.ROOT)) {
 			case "commands" -> commandsText(commands);
 			case "keys" -> keysText(keyRows()) + "\n\n" + LEGACY_NOTES;
-			default -> overview();
+			default -> filter(word);
 		};
+	}
+
+	/** Commands and key rows whose name or description contains {@code word}: plain text, any case, optional leading slash. */
+	private String filter(String word) {
+		String needle = (word.startsWith("/") ? word.substring(1) : word).toLowerCase(java.util.Locale.ROOT);
+		var foundCommands = needle.isEmpty() ? List.<Command>of() : commands.stream()
+			.filter(c -> c.name().toLowerCase(java.util.Locale.ROOT).contains(needle)
+				|| c.description().toLowerCase(java.util.Locale.ROOT).contains(needle)).toList();
+		var foundKeys = needle.isEmpty() ? List.<KeyRow>of() : keyRows().stream()
+			.filter(r -> r.key().toLowerCase(java.util.Locale.ROOT).contains(needle)
+				|| r.description().toLowerCase(java.util.Locale.ROOT).contains(needle)).toList();
+		var sections = new ArrayList<String>();
+		if (!foundCommands.isEmpty()) {
+			sections.add(commandsText(foundCommands));
+		}
+		if (!foundKeys.isEmpty()) {
+			sections.add(keysText(foundKeys));
+		}
+		return sections.isEmpty() ? "No help for \"" + word + "\". Try /help commands or /help keys." : String.join("\n\n", sections);
 	}
 
 	/** All commands, then all keys: the whole help in one text. */

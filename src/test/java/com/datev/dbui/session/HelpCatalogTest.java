@@ -116,6 +116,61 @@ class HelpCatalogTest {
 		assertThat(keys).contains("Shift-Enter / Alt-/").doesNotContain("Shift-Enter               Insert a newline");
 	}
 
+	@Test
+	void aWordFiltersCommandsAndKeyRowsByNameAndDescriptionKeepingGroupHeadings() {
+		assertThat(catalog(KeyBindings.defaults()).topic("history")).isEqualTo(String.join("\n",
+			"Slash commands",
+			"",
+			"History and Sessions",
+			"  /history [<number>|clear] — List the input history, load an entry or clear it.",
+			"",
+			"Key bindings",
+			"",
+			"History",
+			"  Up / Down                 History at the first / last editor line; otherwise move the cursor",
+			"  Ctrl-R                    Search history; press again for an older match",
+			"  Esc                       Cancel history search and restore the draft",
+			"",
+			"Dialogs",
+			"  Password Enter            Connect with the masked password; never store it in history"));
+	}
+
+	@Test
+	void aCommandNameWithOrWithoutTheSlashFindsOnlyThatCommandAndNoKeySection() {
+		String expected = String.join("\n", "Slash commands", "", "Schema",
+			"  /describe [<schema|table>] — List schemas, tables and views, or describe a table.");
+		assertThat(catalog(KeyBindings.defaults()).topic("describe")).isEqualTo(expected);
+		assertThat(catalog(KeyBindings.defaults()).topic(" /describe ")).isEqualTo(expected);
+	}
+
+	@Test
+	void keysAreFoundByNameIgnoringCaseAndByDescription() {
+		String byName = catalog(KeyBindings.defaults()).topic("CTRL-R");
+		assertThat(byName).doesNotContain("Slash commands").contains("Ctrl-R                    Search history",
+			"Enter                     Send input; accept a Ctrl-R match without sending");
+		String byDescription = catalog(KeyBindings.defaults()).topic("newline");
+		assertThat(byDescription).contains("Ctrl-J                    Insert a newline", "Shift-Enter               Insert a newline when")
+			.doesNotContain("Search history");
+	}
+
+	@Test
+	void noMatchGivesAHintAndTheWordIsPlainText() {
+		var catalog = catalog(KeyBindings.defaults());
+		assertThat(catalog.topic("xyz")).isEqualTo("No help for \"xyz\". Try /help commands or /help keys.");
+		assertThat(catalog.topic("/xyz")).isEqualTo("No help for \"/xyz\". Try /help commands or /help keys.");
+		assertThat(catalog.topic(".*")).isEqualTo("No help for \".*\". Try /help commands or /help keys.");
+		assertThat(catalog.topic("x(")).isEqualTo("No help for \"x(\". Try /help commands or /help keys.");
+		assertThat(catalog.topic("(")).contains("(primary / fallback)").doesNotContain("No help");
+		assertThat(catalog.topic("/")).isEqualTo("No help for \"/\". Try /help commands or /help keys.");
+	}
+
+	@Test
+	void commandsAndKeysTopicsIgnoreCase() {
+		var catalog = catalog(KeyBindings.defaults());
+		assertThat(catalog.topic("COMMANDS")).isEqualTo(catalog.topic("commands"));
+		assertThat(catalog.topic(" Keys ")).isEqualTo(catalog.topic("keys"));
+	}
+
 	/** The rows between a heading line and the next heading line. */
 	private static List<String> section(String text, String heading, String next) {
 		int from = text.indexOf("\n" + heading + "\n") + heading.length() + 2;
