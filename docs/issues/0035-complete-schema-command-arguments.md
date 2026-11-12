@@ -4,7 +4,7 @@
 
 **Blocked by:** none
 
-**Status:** in review (manual check open)
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md` (Completion of table names and Slash command arguments)
 
@@ -33,4 +33,4 @@
 - [x] Unit test: `/describe` after a second word, or an unknown command, suggests nothing
 - [x] Integration test: Tab after `/describe ` in a Session lists the tables of the test schema
 - [x] `/help` text stays correct
-- [ ] Manual check in a real terminal that Tab completes after `/describe`
+- [x] Manual check in a real terminal that Tab completes after `/describe` (done by the user)
