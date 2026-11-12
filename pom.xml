@@ -12,8 +12,9 @@
 	<artifactId>jdbx</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>jdbx</name>
-	<description/>
-	<url/>
+	<description>A terminal UI to run SQL over JDBC. Interactive mode for long sessions, Batch mode for scripts.</description>
+	<url>https://github.com/snwiem/jdbx</url>
+	<inceptionYear>2026</inceptionYear>
 	<licenses>
 		<license>
 			<name>Apache License, Version 2.0</name>
@@ -22,14 +23,22 @@
 		</license>
 	</licenses>
 	<developers>
-		<developer/>
+		<developer>
+			<id>snwiem</id>
+			<name>Sebastian Wiemer</name>
+			<url>https://github.com/snwiem</url>
+		</developer>
 	</developers>
 	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
+		<connection>scm:git:https://github.com/snwiem/jdbx.git</connection>
+		<developerConnection>scm:git:ssh://git@github.com/snwiem/jdbx.git</developerConnection>
+		<tag>HEAD</tag>
+		<url>https://github.com/snwiem/jdbx</url>
 	</scm>
+	<issueManagement>
+		<system>GitHub Issues</system>
+		<url>https://github.com/snwiem/jdbx/issues</url>
+	</issueManagement>
 	<properties>
 		<java.version>25</java.version>
 		<picocli.version>4.7.7</picocli.version>
