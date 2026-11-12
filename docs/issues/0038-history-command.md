@@ -4,7 +4,7 @@
 
 **Blocked by:** none
 
-**Status:** in review (manual check open)
+**Status:** done
 
 **Parent:** `docs/prd/mvp-1.0.md` (Sessions and history, stories 68 to 74)
 
@@ -52,7 +52,7 @@
 - [x] Unit test: after `/history clear`, Up and Ctrl-R find nothing
 - [x] `/help` lists `/history`; Completion offers `clear`
 - [x] `GLOSSARY.md` and `README.md` name the command
-- [ ] Manual check in a real terminal
+- [x] Manual check in a real terminal (done by the user)
 
 ## Findings
 
