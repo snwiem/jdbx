@@ -116,4 +116,20 @@ class SchemaCommandsIT {
 			}
 		}
 	}
+
+	@Test
+	void describeASchemaListsItsTablesAndViewsWithRemarksAlsoWithATrailingDot() throws Exception {
+		try (Session session = session()) {
+			session.submit("create schema ls_schema; create table ls_schema.ls_t (id int); create view ls_schema.ls_v as select 1 as x; "
+				+ "comment on table ls_schema.ls_t is 'the remark'").get(5, TimeUnit.SECONDS);
+			for (String input : new String[] { "/describe ls_schema", "/describe ls_schema.", "/describe LS_SCHEMA" }) {
+				var result = last(session.submit(input).get(5, TimeUnit.SECONDS)).result();
+				assertThat(result.columns()).containsExactly("name", "type", "remarks");
+				assertThat(result.rows()).containsExactly(java.util.Arrays.asList("ls_t", "TABLE", "the remark"),
+					java.util.Arrays.asList("ls_v", "VIEW", ""));
+			}
+			var system = last(session.submit("/describe pg_catalog").get(5, TimeUnit.SECONDS));
+			assertThat(system.kind()).isEqualTo(MessageBlock.Kind.RESULT);
+		}
+	}
 }

@@ -91,13 +91,30 @@ public final class SchemaCommands {
 		return List.of(MessageBlock.result(new Result(List.of("name", "type"), rows)));
 	}
 
+	private List<MessageBlock> schemaTables(String schema) throws SQLException {
+		if (!provider.schemas(true).contains(schema)) {
+			return List.of(MessageBlock.error("Unknown schema: " + schema));
+		}
+		List<List<Object>> rows = new ArrayList<>();
+		for (var table : provider.tables(schema)) {
+			rows.add(row(table.name(), table.type(), table.remarks()));
+		}
+		return List.of(MessageBlock.result(new Result(List.of("name", "type", "remarks"), rows)));
+	}
+
 	private List<MessageBlock> describe(String argument) throws SQLException {
 		if (argument.isEmpty()) {
 			return overview();
 		}
+		if (argument.endsWith(".")) {
+			return schemaTables(QualifiedName.parse(argument.substring(0, argument.length() - 1)).name());
+		}
 		var name = QualifiedName.parse(argument);
 		String schema = name.schema() != null ? name.schema() : provider.currentSchema();
 		Optional<SchemaProvider.TableDescription> found = provider.describe(schema, name.name());
+		if (found.isEmpty() && name.schema() == null && provider.schemas(true).contains(name.name())) {
+			return schemaTables(name.name());
+		}
 		if (found.isEmpty()) {
 			return List.of(MessageBlock.error("Unknown table: " + argument));
 		}
