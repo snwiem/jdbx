@@ -86,6 +86,14 @@ final class SessionState {
 		return history.entries();
 	}
 
+	boolean historyEnabled() {
+		return history.enabled();
+	}
+
+	void clearHistory() {
+		history.clear();
+	}
+
 	Settings settings() {
 		return settings;
 	}

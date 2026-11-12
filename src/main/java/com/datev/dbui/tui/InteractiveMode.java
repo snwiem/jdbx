@@ -136,6 +136,7 @@ public final class InteractiveMode {
 			if (error != null) { failure.set(error); runner.quit(); }
 			else {
 				refresh();
+				if (update.editorText() != null) screen.editorText(update.editorText());
 				if (update.ended()) runner.quit();
 				else runner.draw(this::render); // TamboUI 0.7.0 does not redraw after a runLater callback.
 			}

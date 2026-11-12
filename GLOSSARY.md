@@ -42,6 +42,10 @@ _Avoid_: query, command
 An input that starts with `/` and controls dbui itself (for example `/format`, `/connect`). It is not sent to the database.
 _Avoid_: meta command, backslash command
 
+**History**:
+The inputs (Statements and Slash commands) that a Session stored, oldest first, numbered from 1. Up, Down, Ctrl-R and `/history` use it. `/resume`, `/quit` and `/history` are not stored.
+_Avoid_: log, transcript
+
 **Completion**:
 A list of suggested keywords, schema names, table names, column names, Slash commands and their arguments. It opens only when the user asks for it.
 _Avoid_: autocomplete, suggestions
