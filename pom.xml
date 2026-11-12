@@ -8,7 +8,7 @@
 		<version>4.1.2</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>org.syracus</groupId>
+	<groupId>de.snwiem</groupId>
 	<artifactId>jdbx</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>jdbx</name>
