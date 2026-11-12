@@ -56,7 +56,7 @@ We brainstormed 12 names, then ranked the favourites. The user ranking was `jdbx
 
 - **Old text stays.** ADRs 0001 to 0007, finished issues and the PRD keep the name `dbui`. They record history. Only the titles of open issues change. Readers find this note in `AGENTS.md`.
 - **User data is not migrated.** The new config path is `~/.config/jdbx/`. Profiles and settings are created again during the manual tests after the rename.
-- **Maven coordinates:** `groupId` `org.syracus`, `artifactId` `jdbx`.
+- **Maven coordinates:** `groupId` `org.syracus`, `artifactId` `jdbx`. The Java package becomes `org.syracus.jdbx` (was `com.datev.dbui`), so the package matches the coordinates.
 - **Spring resources change too.** Keys and values with `dbui` in `application*.properties` are renamed. Environment variables `DBUI_*` become `JDBX_*`.
 - **Four phases, one branch each:** (1) documentation, (2) build, scripts and config files, (3) package structure with `git mv`, (4) class and variable names in code and tests. Merge to `main` only when the phases are done, so `main` never shows docs that do not match the code.
 
