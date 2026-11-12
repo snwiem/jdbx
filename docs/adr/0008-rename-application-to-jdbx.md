@@ -65,3 +65,7 @@ We brainstormed 12 names, then ranked the favourites. The user ranking was `jdbx
 - All uses of `dbui` change: Maven artifact, main class, Java package, wrapper script and jar name, user config and session directories, environment variables, docs, ADR text and `GLOSSARY.md`.
 - Users of the old name lose their profiles and history. We accept this, because there are no external users yet.
 - Git history keeps the old name. Commits that contain `dbui` stay unchanged.
+
+## Update: groupId and package (2026-11-12)
+
+The first decision used `org.syracus`. That domain is not owned, so Maven Central could not verify the namespace. The `groupId` is now `de.snwiem` (domain `snwiem.de`, owned), and the Java package is `de.snwiem.jdbx`. Everything else in this ADR stays.
