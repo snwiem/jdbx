@@ -121,9 +121,9 @@ class ReconnectIT {
 	void afterAReconnectTimeoutRowLimitReadOnlySchemaCacheAndSearchPathApplyToTheNewConnection() throws Exception {
 		var settings = Settings.defaults().withExecution(2, java.time.Duration.ofSeconds(1), false);
 		try (Session session = session(settings)) {
-			last(session, "/tables rc_schema");
+			last(session, "/describe rc_schema");
 			last(session, "create table rc_schema.rc_second (id int)");
-			assertThat(last(session, "/tables rc_schema").result().rows()).extracting(row -> row.getFirst())
+			assertThat(last(session, "/describe rc_schema").result().rows()).extracting(row -> row.getFirst())
 				.doesNotContain("rc_second");
 			last(session, "/readonly on");
 			terminate(pid(session));
@@ -136,7 +136,7 @@ class ReconnectIT {
 			var limited = submit(session, "select generate_series(1,5)").messageBlocks();
 			assertThat(limited.get(limited.size() - 2).result().rows()).hasSize(2);
 			assertThat(last(session, "select pg_sleep(10)").text()).contains("57014");
-			assertThat(last(session, "/tables rc_schema").result().rows()).extracting(row -> row.getFirst())
+			assertThat(last(session, "/describe rc_schema").result().rows()).extracting(row -> row.getFirst())
 				.contains("rc_second");
 		}
 	}

@@ -26,7 +26,7 @@ public final class SchemaSource implements CandidateSource {
 		};
 	}
 
-	/** Arguments of the schema Slash commands: {@code /describe} takes a table, {@code /tables} a schema. */
+	/** The argument of {@code /describe}: a table, view or schema. */
 	private List<Candidate> slash(CompletionContext context) {
 		String command = context.slashCommand();
 		if ("describe".equals(command)) {
@@ -35,9 +35,6 @@ public final class SchemaSource implements CandidateSource {
 				case 1 -> tables(context, context.qualifier().get(0));
 				default -> List.of();
 			};
-		}
-		if ("tables".equals(command)) {
-			return context.qualifier().isEmpty() ? schemas(context) : List.of();
 		}
 		return List.of();
 	}

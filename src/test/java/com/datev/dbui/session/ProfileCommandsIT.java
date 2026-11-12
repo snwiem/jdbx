@@ -198,14 +198,14 @@ class ProfileCommandsIT {
 			submit(session, "/limit 2");
 			submit(session, "/timeout 1");
 			assertThat(submit(session, "/profile list").messageBlocks().getLast().text()).contains("private", POSTGRES.getUsername()).doesNotContain(POSTGRES.getPassword());
-			submit(session, "/tables public");
+			submit(session, "/describe public");
 			submit(session, "create table profile_cache_rebound(id int)");
-			assertThat(submit(session, "/tables public").messageBlocks().getLast().result().rows()).extracting(row -> row.getFirst()).doesNotContain("profile_cache_rebound");
+			assertThat(submit(session, "/describe public").messageBlocks().getLast().result().rows()).extracting(row -> row.getFirst()).doesNotContain("profile_cache_rebound");
 			assertThat(submit(session, "/connect").messageBlocks().getLast().text()).contains("/connect <name|number>", "1");
 			assertThat(submit(session, "/connect 1").messageBlocks().getLast().kind()).isEqualTo(MessageBlock.Kind.INFO);
 			assertThat(old.isClosed()).isTrue();
 			assertThat(session.connectionLabel()).startsWith(POSTGRES.getUsername() + "@");
-			assertThat(submit(session, "/tables public").messageBlocks().getLast().result().rows()).extracting(row -> row.getFirst()).contains("profile_cache_rebound");
+			assertThat(submit(session, "/describe public").messageBlocks().getLast().result().rows()).extracting(row -> row.getFirst()).contains("profile_cache_rebound");
 			assertThat(submit(session, "show transaction_read_only").messageBlocks().getLast().result().rows()).containsExactly(List.of("on"));
 			var limited = submit(session, "select generate_series(1,5)").messageBlocks();
 			assertThat(limited.get(limited.size() - 2).result().rows()).hasSize(2);

@@ -15,3 +15,5 @@
 
 Note: `/tables` and `/describe` use the connection's current schema, not the full `search_path`. Other schemas need `schema.table`.
 - [x] Large schemas do not block the editor for long. Loading shows a running indicator
+
+Note (issue 0037): `/schema` and `/tables` were removed. `/describe` covers them.

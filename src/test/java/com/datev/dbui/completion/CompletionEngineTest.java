@@ -190,9 +190,10 @@ class CompletionEngineTest {
 	}
 
 	@Test
-	void tablesCompletesSchemasOnly() {
-		assertThat(inserts("/tables sa|")).containsExactly("sales");
-		assertThat(inserts("/tables or|")).isEmpty();
+	void removedSchemaCommandsGetNoCandidates() {
+		assertThat(inserts("/tables sa|")).isEmpty();
+		assertThat(inserts("/tables |")).isEmpty();
+		assertThat(inserts("/schema |")).isEmpty();
 	}
 
 	@Test
@@ -220,6 +221,5 @@ class CompletionEngineTest {
 	@Test
 	void describeWithAnEmptyArgumentSuggestsEverything() {
 		assertThat(inserts("/describe |")).contains("orders", "customers", "public", "sales");
-		assertThat(inserts("/tables |")).containsExactlyInAnyOrder("public", "sales");
 	}
 }

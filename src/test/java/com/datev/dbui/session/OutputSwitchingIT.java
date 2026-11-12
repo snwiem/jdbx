@@ -64,8 +64,8 @@ class OutputSwitchingIT {
 		try (Session session = session()) {
 			submit(session, "create table output_schema (id integer primary key)");
 			submit(session, "/format json");
-			assertThat(submit(session, "/schema").text()).contains("{\"schema\":\"public\"}");
-			assertThat(submit(session, "/tables public").text()).contains("{\"name\":\"output_schema\",\"type\":\"TABLE\"");
+			assertThat(submit(session, "/describe").text()).contains("{\"name\":\"public\",\"type\":\"schema\"}");
+			assertThat(submit(session, "/describe public").text()).contains("{\"name\":\"output_schema\",\"type\":\"TABLE\"");
 			submit(session, "/format csv");
 			submit(session, "/orientation vertical");
 			int before = session.messageBlocks().size();
