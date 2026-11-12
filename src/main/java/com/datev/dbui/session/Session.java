@@ -410,7 +410,7 @@ public final class Session implements AutoCloseable {
 				}
 				return List.of();
 			}));
-		commands.add(schemaCommand("describe", "List schemas and tables, or describe a table.", "<schema|table>", "0..1", List.of()));
+		commands.add(schemaCommand("describe", "List schemas, tables and views, or describe a table or view.", "<schema|table>", "0..1", List.of()));
 		commands.add(schemaCommand("refresh", "Clear the schema cache.", null, "0", List.of()));
 		commands.add(new SlashCommand("resume", "List earlier Sessions, or fork one by number or id.",
 			SlashCommand.argument("number|id", "0..1", List.of()), true, argument -> {
