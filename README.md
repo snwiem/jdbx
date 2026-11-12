@@ -2,16 +2,51 @@
 
 A java based terminal ui tool to query databases over jdbc.
 
-## Install and run
+## Install
 
-jdbx needs Java 25 or newer.
+jdbx runs on Linux, macOS and Windows. It needs **Java 25 or newer** (a JDK or a JRE).
 
-1. Build the jar: `./mvnw -DskipTests package`
+### 1. Get Java 25
+
+Check first: `java -version` must print version 25 or higher. If not, install a Java 25 distribution. These commands install Eclipse Temurin. The page https://adoptium.net/installation lists more systems and package managers.
+
+| Tool | Command |
+|---|---|
+| SDKMAN (Linux, macOS) | `sdk install java 25-tem` |
+| mise (Linux, macOS, Windows) | `mise use -g java@temurin-25` |
+| winget (Windows) | `winget install EclipseAdoptium.Temurin.25.JDK` |
+| apt (Debian, Ubuntu) | `sudo apt install temurin-25-jdk` (needs the Adoptium apt repository, see the page above) |
+
+### 2. Install jdbx
+
+1. Download `jdbx-<version>.tar.gz` (Linux, macOS) or `jdbx-<version>.zip` (Windows) from the [latest release](https://github.com/snwiem/jdbx/releases/latest). The release also has a `SHA256SUMS` file.
+2. Extract it. The archive has this layout:
+
+   ```text
+   jdbx-<version>/
+   ├── bin/jdbx        # Linux and macOS
+   ├── bin/jdbx.cmd    # Windows
+   ├── lib/jdbx.jar
+   ├── LICENSE
+   ├── NOTICE
+   └── README.md
+   ```
+
+3. Put the `bin` directory on your `PATH`, or link the script:
+   - Linux, macOS: `ln -s "$PWD/jdbx-<version>/bin/jdbx" ~/.local/bin/jdbx`
+   - Windows: add the full path of `jdbx-<version>\bin` to the `PATH` environment variable.
+4. Check: `jdbx --version`.
+
+### Build from source
+
+1. Build the jar and the archives: `./mvnw -DskipTests package`. The archives are in `target/`.
 2. Link the wrapper script onto your `PATH`:
    `ln -s "$PWD/bin/jdbx" ~/.local/bin/jdbx`
    The script finds the jar in `target/` through the link. You can also copy `bin/jdbx` and the jar into one directory (`jdbx.jar` next to the script, or in `../lib/`).
 
-The script passes all arguments and stdin to the jar and returns its exit code.
+## Run
+
+The wrapper script (`bin/jdbx`, or `bin/jdbx.cmd` on Windows) passes all arguments and stdin to the jar and returns its exit code.
 
 | Variable | Meaning |
 |---|---|
