@@ -1,9 +1,9 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
 import java.util.List;
 
-import org.syracus.jdbx.completion.Candidate;
-import org.syracus.jdbx.completion.Completion;
+import de.snwiem.jdbx.completion.Candidate;
+import de.snwiem.jdbx.completion.Completion;
 
 /** The state of the open Completion list: which candidates are visible and which one is selected. No terminal. */
 final class CompletionPopup {

@@ -1,11 +1,11 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.syracus.jdbx.config.KeyBindings;
+import de.snwiem.jdbx.config.KeyBindings;
 
 /** The text of {@code /help}: an overview, all commands, all keys, or a filter. Plain code: no Session, no terminal. */
 final class HelpCatalog {

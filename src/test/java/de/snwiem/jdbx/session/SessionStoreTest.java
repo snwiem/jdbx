@@ -1,4 +1,4 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -12,7 +12,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import org.syracus.jdbx.config.ConnectionParameters;
+import de.snwiem.jdbx.config.ConnectionParameters;
 
 class SessionStoreTest {
 

@@ -1,4 +1,4 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 /**
  * Argument validation and mode text for the registry's {@code /readonly [on|off]} Slash command.

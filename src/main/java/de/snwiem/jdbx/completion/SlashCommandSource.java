@@ -1,8 +1,8 @@
-package org.syracus.jdbx.completion;
+package de.snwiem.jdbx.completion;
 
 import java.util.List;
 
-import org.syracus.jdbx.session.SlashCommandRegistry;
+import de.snwiem.jdbx.session.SlashCommandRegistry;
 
 /** Slash command names and literal argument candidates from the same registry used for dispatch and help. */
 public final class SlashCommandSource implements CandidateSource {

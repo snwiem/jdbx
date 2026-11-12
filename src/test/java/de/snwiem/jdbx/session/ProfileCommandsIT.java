@@ -1,4 +1,4 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import static org.assertj.core.api.Assertions.*;
 import java.nio.file.Path;
@@ -11,7 +11,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.syracus.jdbx.config.*;
+import de.snwiem.jdbx.config.*;
 
 @Testcontainers
 class ProfileCommandsIT {

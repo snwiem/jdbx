@@ -1,4 +1,4 @@
-package org.syracus.jdbx.schema;
+package de.snwiem.jdbx.schema;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

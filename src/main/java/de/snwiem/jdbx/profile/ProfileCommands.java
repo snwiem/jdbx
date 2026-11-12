@@ -1,11 +1,11 @@
-package org.syracus.jdbx.profile;
+package de.snwiem.jdbx.profile;
 
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
-import org.syracus.jdbx.config.*;
-import org.syracus.jdbx.session.ConnectionInfo;
+import de.snwiem.jdbx.config.*;
+import de.snwiem.jdbx.session.ConnectionInfo;
 
 /** Profile command logic, independent of the terminal and Session execution. */
 public final class ProfileCommands {

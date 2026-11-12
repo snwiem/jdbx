@@ -1,6 +1,6 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
-import static org.syracus.jdbx.config.ProfileDialogModel.Field.*;
+import static de.snwiem.jdbx.config.ProfileDialogModel.Field.*;
 import static org.assertj.core.api.Assertions.*;
 
 import java.util.ArrayList;
@@ -10,11 +10,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
-import org.syracus.jdbx.config.KeyBindings;
-import org.syracus.jdbx.config.Profile;
-import org.syracus.jdbx.config.ProfileDialogModel;
-import org.syracus.jdbx.session.MessageBlock;
-import org.syracus.jdbx.session.SessionInteraction;
+import de.snwiem.jdbx.config.KeyBindings;
+import de.snwiem.jdbx.config.Profile;
+import de.snwiem.jdbx.config.ProfileDialogModel;
+import de.snwiem.jdbx.session.MessageBlock;
+import de.snwiem.jdbx.session.SessionInteraction;
 
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.layout.Position;

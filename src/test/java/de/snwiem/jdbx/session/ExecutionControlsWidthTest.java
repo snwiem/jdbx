@@ -1,4 +1,4 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
-import org.syracus.jdbx.config.Settings;
+import de.snwiem.jdbx.config.Settings;
 
 class ExecutionControlsWidthTest {
 

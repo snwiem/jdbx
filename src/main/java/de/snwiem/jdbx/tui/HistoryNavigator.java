@@ -1,4 +1,4 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
 import java.util.List;
 import java.util.Optional;

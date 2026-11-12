@@ -1,4 +1,4 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -14,7 +14,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import org.syracus.jdbx.config.KeyBindings;
+import de.snwiem.jdbx.config.KeyBindings;
 
 import dev.tamboui.backend.jline3.JLineBackend;
 import dev.tamboui.tui.event.EventParser;

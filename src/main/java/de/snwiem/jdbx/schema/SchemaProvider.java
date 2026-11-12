@@ -1,4 +1,4 @@
-package org.syracus.jdbx.schema;
+package de.snwiem.jdbx.schema;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;

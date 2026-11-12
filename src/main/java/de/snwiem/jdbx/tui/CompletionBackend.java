@@ -1,8 +1,8 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
 import java.util.concurrent.CompletableFuture;
 
-import org.syracus.jdbx.completion.Completion;
+import de.snwiem.jdbx.completion.Completion;
 
 /** Asks for Completion off the input thread. The future may complete late, for example while the schema loads. */
 @FunctionalInterface

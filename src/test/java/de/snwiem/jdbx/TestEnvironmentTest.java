@@ -1,11 +1,11 @@
-package org.syracus.jdbx;
+package de.snwiem.jdbx;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
 
-import org.syracus.jdbx.config.ConfigLoader;
-import org.syracus.jdbx.session.SessionDirectory;
+import de.snwiem.jdbx.config.ConfigLoader;
+import de.snwiem.jdbx.session.SessionDirectory;
 import org.junit.jupiter.api.Test;
 
 /** Build seam: default application paths must not escape into the caller's home. */

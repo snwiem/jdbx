@@ -1,9 +1,9 @@
-package org.syracus.jdbx.schema;
+package de.snwiem.jdbx.schema;
 
 import java.sql.SQLException;
 import java.util.List;
 
-import org.syracus.jdbx.completion.SchemaModel;
+import de.snwiem.jdbx.completion.SchemaModel;
 
 /**
  * Feeds Completion from the {@link SchemaProvider} cache. A cache miss queries the database once; the next

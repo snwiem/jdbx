@@ -1,4 +1,4 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -10,8 +10,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import org.syracus.jdbx.config.ConnectionParameters;
-import org.syracus.jdbx.config.Settings;
+import de.snwiem.jdbx.config.ConnectionParameters;
+import de.snwiem.jdbx.config.Settings;
 
 /** Session seam for /history. No database: inputs that need one fail, but they still enter the history. */
 class HistoryCommandSessionTest {
@@ -80,7 +80,7 @@ class HistoryCommandSessionTest {
 				.contains("/history [<number>|clear] —").doesNotContain("[[");
 			assertThat(session.slashCommands().completionCandidates("history")).containsExactly("clear");
 			assertThat(session.complete("/history cl", 11).get(5, TimeUnit.SECONDS).candidates())
-				.extracting(org.syracus.jdbx.completion.Candidate::insert).containsExactly("clear");
+				.extracting(de.snwiem.jdbx.completion.Candidate::insert).containsExactly("clear");
 		}
 	}
 }

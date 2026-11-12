@@ -1,6 +1,6 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
-import org.syracus.jdbx.completion.Completion;
+import de.snwiem.jdbx.completion.Completion;
 
 /**
  * What a finished Completion request does to the editor: nothing but a note, one edit, or an edit plus a popup.

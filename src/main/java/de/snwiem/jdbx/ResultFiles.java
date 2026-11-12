@@ -1,4 +1,4 @@
-package org.syracus.jdbx;
+package de.snwiem.jdbx;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -11,7 +11,7 @@ import java.sql.Statement;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 
-import org.syracus.jdbx.config.Settings;
+import de.snwiem.jdbx.config.Settings;
 
 /** Writes Results to a same-directory temporary file, publishing only a complete file. */
 public final class ResultFiles {

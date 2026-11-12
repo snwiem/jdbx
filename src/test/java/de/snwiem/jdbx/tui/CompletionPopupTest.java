@@ -1,4 +1,4 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -6,9 +6,9 @@ import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
-import org.syracus.jdbx.completion.Candidate;
-import org.syracus.jdbx.completion.Candidate.Kind;
-import org.syracus.jdbx.completion.Completion;
+import de.snwiem.jdbx.completion.Candidate;
+import de.snwiem.jdbx.completion.Candidate.Kind;
+import de.snwiem.jdbx.completion.Completion;
 
 class CompletionPopupTest {
 

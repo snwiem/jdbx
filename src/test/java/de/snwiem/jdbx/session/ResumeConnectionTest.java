@@ -1,4 +1,4 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -6,10 +6,10 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import org.syracus.jdbx.config.ConfigException;
-import org.syracus.jdbx.config.ConnectionParameters;
-import org.syracus.jdbx.config.Profile;
-import org.syracus.jdbx.config.Settings;
+import de.snwiem.jdbx.config.ConfigException;
+import de.snwiem.jdbx.config.ConnectionParameters;
+import de.snwiem.jdbx.config.Profile;
+import de.snwiem.jdbx.config.Settings;
 
 /** How Resume reuses credentials or requests a masked prompt. */
 class ResumeConnectionTest {

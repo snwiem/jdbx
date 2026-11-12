@@ -1,6 +1,6 @@
-package org.syracus.jdbx.profile;
+package de.snwiem.jdbx.profile;
 
-import org.syracus.jdbx.config.ConfigException;
+import de.snwiem.jdbx.config.ConfigException;
 
 /** Profile operation logic called by the shared registry's /profile action. */
 public final class ProfileCommand {

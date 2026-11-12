@@ -1,4 +1,4 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -6,8 +6,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import org.syracus.jdbx.Result;
-import org.syracus.jdbx.session.MessageBlock;
+import de.snwiem.jdbx.Result;
+import de.snwiem.jdbx.session.MessageBlock;
 
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.layout.Rect;
@@ -19,7 +19,7 @@ class MessageBlockRendererTest {
 
 	@Test
 	void transcriptUsesConfiguredValueMarkersWidthAndTimeZoneWithoutShiftingPlainTimestamp() {
-		var options = org.syracus.jdbx.FormatOptions.defaults().withNullMarker("∅").withMultiLineMarker("↵")
+		var options = de.snwiem.jdbx.FormatOptions.defaults().withNullMarker("∅").withMultiLineMarker("↵")
 			.withMaxWidth(25).withTimeZone(java.time.ZoneId.of("America/New_York"));
 		var configured = new MessageBlockRenderer(true, options);
 		var result = new Result(List.of("plain", "zoned", "nothing", "lines", "long"),

@@ -1,4 +1,4 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -19,14 +19,14 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import org.syracus.jdbx.JdbcResultReader;
-import org.syracus.jdbx.StatementSplitter;
-import org.syracus.jdbx.config.Settings;
-import org.syracus.jdbx.completion.Completion;
-import org.syracus.jdbx.completion.CompletionEngine;
-import org.syracus.jdbx.schema.SchemaCommands;
-import org.syracus.jdbx.schema.SchemaProvider;
-import org.syracus.jdbx.schema.SchemaProviderModel;
+import de.snwiem.jdbx.JdbcResultReader;
+import de.snwiem.jdbx.StatementSplitter;
+import de.snwiem.jdbx.config.Settings;
+import de.snwiem.jdbx.completion.Completion;
+import de.snwiem.jdbx.completion.CompletionEngine;
+import de.snwiem.jdbx.schema.SchemaCommands;
+import de.snwiem.jdbx.schema.SchemaProvider;
+import de.snwiem.jdbx.schema.SchemaProviderModel;
 
 /** Owns one JDBC connection. Statement execution never runs on the input thread. */
 public final class Session implements AutoCloseable {
@@ -56,7 +56,7 @@ public final class Session implements AutoCloseable {
 	private final SlashCommandRegistry slashCommands;
 	private SchemaProvider schemaProvider;
 	private final CompletionEngine completionEngine;
-	private org.syracus.jdbx.profile.ProfileCommands profiles;
+	private de.snwiem.jdbx.profile.ProfileCommands profiles;
 	private volatile SessionInteraction interaction;
 	private java.util.function.Function<String, Update> passwordContinuation;
 	private boolean ended;
@@ -113,8 +113,8 @@ public final class Session implements AutoCloseable {
 		this.plainSettings = settings;
 		this.controls = new ExecutionControls(this::settings, this::updateSettings);
 		this.slashCommands = new SlashCommandRegistry(commands());
-		this.completionEngine = new CompletionEngine(List.of(new org.syracus.jdbx.completion.SlashCommandSource(slashCommands),
-			new org.syracus.jdbx.completion.SchemaSource(), new org.syracus.jdbx.completion.KeywordSource()));
+		this.completionEngine = new CompletionEngine(List.of(new de.snwiem.jdbx.completion.SlashCommandSource(slashCommands),
+			new de.snwiem.jdbx.completion.SchemaSource(), new de.snwiem.jdbx.completion.KeywordSource()));
 		if (connection != null) {
 			this.schemaProvider = new SchemaProvider(connection);
 			this.schemaCommands = new SchemaCommands(schemaProvider);
@@ -128,7 +128,7 @@ public final class Session implements AutoCloseable {
 
 	/** Enables the Profile commands without changing the persistent Session context. */
 	public void configureProfiles(Path directory, java.util.Map<String, String> environment) {
-		profiles = new org.syracus.jdbx.profile.ProfileCommands(directory, environment);
+		profiles = new de.snwiem.jdbx.profile.ProfileCommands(directory, environment);
 		String warning = profiles.warning();
 		if (warning != null) add(MessageBlock.info(warning));
 	}
@@ -138,10 +138,10 @@ public final class Session implements AutoCloseable {
 
 	public SessionInteraction interaction() { return interaction; }
 
-	public void openConnectionDialog(org.syracus.jdbx.config.ProfileDialogModel model, Path stateBase) {
+	public void openConnectionDialog(de.snwiem.jdbx.config.ProfileDialogModel model, Path stateBase) {
 		pendingStateBase = stateBase;
-		interaction = new SessionInteraction.Dialog(model, true, model.value(org.syracus.jdbx.config.ProfileDialogModel.Field.NAME).isBlank()
-			? null : model.value(org.syracus.jdbx.config.ProfileDialogModel.Field.NAME));
+		interaction = new SessionInteraction.Dialog(model, true, model.value(de.snwiem.jdbx.config.ProfileDialogModel.Field.NAME).isBlank()
+			? null : model.value(de.snwiem.jdbx.config.ProfileDialogModel.Field.NAME));
 	}
 
 	/** Cancels a dialog or prompt without submitting input or storing credentials in history. */
@@ -163,22 +163,22 @@ public final class Session implements AutoCloseable {
 		});
 	}
 
-	private void connectProfile(org.syracus.jdbx.config.Profile profile, String profileName) throws SQLException {
+	private void connectProfile(de.snwiem.jdbx.config.Profile profile, String profileName) throws SQLException {
 		var supplied = profile;
 		if (profile.password() == null && (profile.url() == null || !profile.url().matches(".*[?&]password=.*"))) {
 			interaction = new SessionInteraction.Password(profile.user() == null ? "database" : profile.user());
 			passwordContinuation = password -> {
 				try {
-					var withPassword = new org.syracus.jdbx.config.Profile(supplied.name(), supplied.url(), supplied.host(), supplied.port(), supplied.database(), supplied.user(), password,
+					var withPassword = new de.snwiem.jdbx.config.Profile(supplied.name(), supplied.url(), supplied.host(), supplied.port(), supplied.database(), supplied.user(), password,
 						supplied.readOnly(), supplied.schema(), supplied.properties());
-					switchConnection(org.syracus.jdbx.config.ConnectionParameters.resolve(new org.syracus.jdbx.config.ConnectionOptions(), withPassword, connectionDefaults()), profileName);
+					switchConnection(de.snwiem.jdbx.config.ConnectionParameters.resolve(new de.snwiem.jdbx.config.ConnectionOptions(), withPassword, connectionDefaults()), profileName);
 				}
-				catch (org.syracus.jdbx.config.ConfigException | SQLException e) { add(MessageBlock.error(e instanceof SQLException sql ? SqlErrorText.of(sql) : e.getMessage())); }
+				catch (de.snwiem.jdbx.config.ConfigException | SQLException e) { add(MessageBlock.error(e instanceof SQLException sql ? SqlErrorText.of(sql) : e.getMessage())); }
 				return new Update(messageBlocks(), false);
 			};
 			return;
 		}
-		switchConnection(org.syracus.jdbx.config.ConnectionParameters.resolve(new org.syracus.jdbx.config.ConnectionOptions(), supplied, connectionDefaults()), profileName);
+		switchConnection(de.snwiem.jdbx.config.ConnectionParameters.resolve(new de.snwiem.jdbx.config.ConnectionOptions(), supplied, connectionDefaults()), profileName);
 	}
 
 	private Settings connectionDefaults() {
@@ -192,7 +192,7 @@ public final class Session implements AutoCloseable {
 			SessionInteraction.Dialog retry = dialog;
 			try {
 				dialog.model().validate(save);
-				if (!save && !dialog.connect()) throw new org.syracus.jdbx.config.ConfigException("Profile edits must be saved.");
+				if (!save && !dialog.connect()) throw new de.snwiem.jdbx.config.ConfigException("Profile edits must be saved.");
 				if (save) {
 					profiles.save(dialog.model(), dialog.editingName());
 					add(MessageBlock.info("Saved Profile '" + dialog.model().savedProfile().name() + "'."));
@@ -204,7 +204,7 @@ public final class Session implements AutoCloseable {
 					connectProfile(profile, save ? profile.name() : null);
 				}
 			}
-			catch (org.syracus.jdbx.config.ConfigException | SQLException e) {
+			catch (de.snwiem.jdbx.config.ConfigException | SQLException e) {
 				interaction = retry;
 				add(MessageBlock.error(e instanceof SQLException sql ? SqlErrorText.of(sql) : e.getMessage()));
 			}
@@ -277,7 +277,7 @@ public final class Session implements AutoCloseable {
 					if (input.strip().equalsIgnoreCase("y")) { profiles.removeConfirmed(confirmation.profileName()); add(MessageBlock.info("Removed Profile '" + confirmation.profileName() + "'.")); }
 					else add(MessageBlock.info("Profile removal cancelled."));
 				}
-				catch (org.syracus.jdbx.config.ConfigException e) { add(MessageBlock.error(e.getMessage())); }
+				catch (de.snwiem.jdbx.config.ConfigException e) { add(MessageBlock.error(e.getMessage())); }
 				interaction = null;
 				return new Update(messageBlocks(), false);
 			});
@@ -312,7 +312,7 @@ public final class Session implements AutoCloseable {
 	/** Key action, not an input: persist and confirm it without changing input history or echoing a Slash command. */
 	public synchronized Update cycleOrientation() {
 		if (!ended && !running) {
-			String orientation = org.syracus.jdbx.Orientation.parse(settings().orientation()) == org.syracus.jdbx.Orientation.HORIZONTAL
+			String orientation = de.snwiem.jdbx.Orientation.parse(settings().orientation()) == de.snwiem.jdbx.Orientation.HORIZONTAL
 				? "vertical" : "horizontal";
 			updateSettings(settings().withOutput(settings().format(), orientation));
 			add(MessageBlock.info("Orientation: " + orientation));
@@ -341,7 +341,7 @@ public final class Session implements AutoCloseable {
 	 */
 	public CompletableFuture<Completion> complete(String text, int cursor) {
 		return CompletableFuture.supplyAsync(() -> completionEngine.complete(text, cursor,
-			connection == null || connectionLost ? org.syracus.jdbx.completion.SchemaModel.EMPTY : new SchemaProviderModel(schemaProvider)), executor);
+			connection == null || connectionLost ? de.snwiem.jdbx.completion.SchemaModel.EMPTY : new SchemaProviderModel(schemaProvider)), executor);
 	}
 
 	/** Requests JDBC cancellation without blocking the input thread. The Session remains open. */
@@ -453,13 +453,13 @@ public final class Session implements AutoCloseable {
 			}));
 		commands.add(new SlashCommand("format", "Change the Format for new Results.",
 			SlashCommand.argument("<table|markdown|csv|tsv|json|json-pretty>", "1", List.of("table", "markdown", "csv", "tsv", "json", "json-pretty"),
-				value -> org.syracus.jdbx.Format.parse(value).id()), false, argument -> {
+				value -> de.snwiem.jdbx.Format.parse(value).id()), false, argument -> {
 				updateSettings(settings().withOutput(argument, settings().orientation()));
 				return List.of(MessageBlock.info("Format: " + argument));
 			}));
 		commands.add(new SlashCommand("orientation", "Change the Orientation for new Results (json and json-pretty ignore it).",
 			SlashCommand.argument("<horizontal|vertical>", "1", List.of("horizontal", "vertical"),
-				value -> org.syracus.jdbx.Orientation.parse(value).id()), false, argument -> {
+				value -> de.snwiem.jdbx.Orientation.parse(value).id()), false, argument -> {
 				updateSettings(settings().withOutput(settings().format(), argument));
 				return List.of(MessageBlock.info("Orientation: " + argument));
 			}));
@@ -516,12 +516,12 @@ public final class Session implements AutoCloseable {
 		try {
 			var request = FileCommandLine.parse(argument, true);
 			String sql = request.sql();
-			var statements = org.syracus.jdbx.ResultFiles.queries(sql.isEmpty() ? (lastSqlInput == null ? "" : lastSqlInput) : sql);
+			var statements = de.snwiem.jdbx.ResultFiles.queries(sql.isEmpty() ? (lastSqlInput == null ? "" : lastSqlInput) : sql);
 			if (!ensureConnected()) return;
 			try (var statement = connection.createStatement()) {
 				statement.setQueryTimeout(controls.timeoutSeconds());
 				activeStreaming(statement);
-				long rows = org.syracus.jdbx.ResultFiles.dump(connection, statement, statements, settings(), request.file(), () -> cancelRequested);
+				long rows = de.snwiem.jdbx.ResultFiles.dump(connection, statement, statements, settings(), request.file(), () -> cancelRequested);
 				add(MessageBlock.info("Dumped " + rows + " rows to " + request.file() + "."));
 			}
 		}
@@ -538,7 +538,7 @@ public final class Session implements AutoCloseable {
 		}
 		try {
 			var request = FileCommandLine.parse(argument, false);
-			org.syracus.jdbx.ResultFiles.save(result, settings(), request.file(), () -> cancelRequested);
+			de.snwiem.jdbx.ResultFiles.save(result, settings(), request.file(), () -> cancelRequested);
 			add(MessageBlock.info("Saved " + result.rows().size() + " rows to " + request.file()
 				+ (heldResultTruncated ? ". Warning: the held Result was truncated." : ".")));
 		}
@@ -632,21 +632,21 @@ public final class Session implements AutoCloseable {
 				return errorUpdate("Profile commands are not available without a Profile directory.");
 			}
 			var action = profiles.execute(input);
-			if (action instanceof org.syracus.jdbx.profile.ProfileCommands.Info info) add(MessageBlock.info(info.text()));
-			else if (action instanceof org.syracus.jdbx.profile.ProfileCommands.Edit edit) interaction = new SessionInteraction.Dialog(edit.model(), edit.connect(), edit.editingName());
-			else if (action instanceof org.syracus.jdbx.profile.ProfileCommands.Remove remove) {
+			if (action instanceof de.snwiem.jdbx.profile.ProfileCommands.Info info) add(MessageBlock.info(info.text()));
+			else if (action instanceof de.snwiem.jdbx.profile.ProfileCommands.Edit edit) interaction = new SessionInteraction.Dialog(edit.model(), edit.connect(), edit.editingName());
+			else if (action instanceof de.snwiem.jdbx.profile.ProfileCommands.Remove remove) {
 				interaction = new SessionInteraction.Confirmation(remove.name());
 				add(MessageBlock.info("Remove Profile '" + remove.name() + "'? Type y to confirm; anything else cancels."));
 			}
-			else if (action instanceof org.syracus.jdbx.profile.ProfileCommands.Connect connect) {
+			else if (action instanceof de.snwiem.jdbx.profile.ProfileCommands.Connect connect) {
 				connectProfile(connect.profile(), connect.profile().name());
 			}
 		}
-		catch (org.syracus.jdbx.config.ConfigException | SQLException e) { add(MessageBlock.error(e instanceof SQLException sql ? SqlErrorText.of(sql) : e.getMessage())); }
+		catch (de.snwiem.jdbx.config.ConfigException | SQLException e) { add(MessageBlock.error(e instanceof SQLException sql ? SqlErrorText.of(sql) : e.getMessage())); }
 		return new Update(messageBlocks(), false);
 	}
 
-	private void switchConnection(org.syracus.jdbx.config.ConnectionParameters parameters, String profileName) throws SQLException {
+	private void switchConnection(de.snwiem.jdbx.config.ConnectionParameters parameters, String profileName) throws SQLException {
 		var nextSettings = settings().withExecution(settings().rowLimit(), settings().timeout(), parameters.readOnly());
 		Connection next = openConnection(parameters, nextSettings);
 		if (state == null && pendingStateBase != null) {
@@ -796,7 +796,7 @@ public final class Session implements AutoCloseable {
 		var current = requestedReadOnly == null ? settings()
 			: settings().withExecution(settings().rowLimit(), settings().timeout(), requestedReadOnly);
 		var previous = state.parameters();
-		var parameters = new org.syracus.jdbx.config.ConnectionParameters(previous.url(), previous.properties(), current.readOnly());
+		var parameters = new de.snwiem.jdbx.config.ConnectionParameters(previous.url(), previous.properties(), current.readOnly());
 		try {
 			replaceConnection(openConnection(parameters, current), parameters, state.profileName());
 		}
@@ -809,9 +809,9 @@ public final class Session implements AutoCloseable {
 	}
 
 	/** One opening path for /connect, Resume and reconnect. Driver properties apply the initial search_path. */
-	private static Connection openConnection(org.syracus.jdbx.config.ConnectionParameters parameters, Settings settings) throws SQLException {
+	private static Connection openConnection(de.snwiem.jdbx.config.ConnectionParameters parameters, Settings settings) throws SQLException {
 		ExecutionControls.validate(settings);
-		var effective = new org.syracus.jdbx.config.ConnectionParameters(parameters.url(), parameters.properties(), settings.readOnly());
+		var effective = new de.snwiem.jdbx.config.ConnectionParameters(parameters.url(), parameters.properties(), settings.readOnly());
 		Connection next = effective.open();
 		try {
 			next.setAutoCommit(true);
@@ -827,7 +827,7 @@ public final class Session implements AutoCloseable {
 	}
 
 	/** One installation path invalidates both caches, persists settings/label and closes the old connection. */
-	private synchronized void replaceConnection(Connection next, org.syracus.jdbx.config.ConnectionParameters parameters, String profileName) {
+	private synchronized void replaceConnection(Connection next, de.snwiem.jdbx.config.ConnectionParameters parameters, String profileName) {
 		var old = connection;
 		if (state != null) state.connected(parameters, profileName);
 		else updateSettings(settings().withExecution(settings().rowLimit(), settings().timeout(), parameters.readOnly()));

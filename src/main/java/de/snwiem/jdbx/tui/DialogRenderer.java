@@ -1,9 +1,9 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
 import java.util.function.Function;
 
-import org.syracus.jdbx.config.ProfileDialogModel;
-import org.syracus.jdbx.config.ProfileDialogModel.Field;
+import de.snwiem.jdbx.config.ProfileDialogModel;
+import de.snwiem.jdbx.config.ProfileDialogModel.Field;
 
 import dev.tamboui.buffer.Cell;
 import dev.tamboui.layout.Rect;

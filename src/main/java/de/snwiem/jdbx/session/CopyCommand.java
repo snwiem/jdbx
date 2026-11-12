@@ -1,14 +1,14 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
-import org.syracus.jdbx.Format;
-import org.syracus.jdbx.FormatOptions;
-import org.syracus.jdbx.Orientation;
-import org.syracus.jdbx.Result;
-import org.syracus.jdbx.config.Settings;
+import de.snwiem.jdbx.Format;
+import de.snwiem.jdbx.FormatOptions;
+import de.snwiem.jdbx.Orientation;
+import de.snwiem.jdbx.Result;
+import de.snwiem.jdbx.config.Settings;
 
 /** Formats the held query Result like Save, independently of screen rendering. */
 public final class CopyCommand {

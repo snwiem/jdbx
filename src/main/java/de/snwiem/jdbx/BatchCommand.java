@@ -1,4 +1,4 @@
-package org.syracus.jdbx;
+package de.snwiem.jdbx;
 
 import java.io.Console;
 import java.io.IOException;
@@ -15,12 +15,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
-import org.syracus.jdbx.config.ConfigLoader;
-import org.syracus.jdbx.config.ConnectionOptions;
-import org.syracus.jdbx.config.ConnectionParameters;
-import org.syracus.jdbx.config.Profile;
-import org.syracus.jdbx.config.Settings;
-import org.syracus.jdbx.tui.InteractiveMode;
+import de.snwiem.jdbx.config.ConfigLoader;
+import de.snwiem.jdbx.config.ConnectionOptions;
+import de.snwiem.jdbx.config.ConnectionParameters;
+import de.snwiem.jdbx.config.Profile;
+import de.snwiem.jdbx.config.Settings;
+import de.snwiem.jdbx.tui.InteractiveMode;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ITypeConverter;

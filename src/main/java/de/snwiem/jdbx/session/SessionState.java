@@ -1,4 +1,4 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -10,7 +10,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.syracus.jdbx.config.Settings;
+import de.snwiem.jdbx.config.Settings;
 
 /**
  * The persistent part of a Session: history, {@code session.yaml}, the settings in effect and Resume. It owns the
@@ -39,7 +39,7 @@ final class SessionState {
 
 	@FunctionalInterface
 	interface ConnectionOpener {
-		Connection open(org.syracus.jdbx.config.ConnectionParameters parameters, Settings settings) throws SQLException;
+		Connection open(de.snwiem.jdbx.config.ConnectionParameters parameters, Settings settings) throws SQLException;
 	}
 
 	@FunctionalInterface
@@ -53,7 +53,7 @@ final class SessionState {
 	private volatile HistoryStore history;
 	private volatile Settings settings;
 	private volatile ConnectionInfo info;
-	private volatile org.syracus.jdbx.config.ConnectionParameters parameters;
+	private volatile de.snwiem.jdbx.config.ConnectionParameters parameters;
 	private volatile SessionMetadata metadata;
 	private List<SessionStore.Entry> listing;
 
@@ -108,7 +108,7 @@ final class SessionState {
 	}
 
 	/** The parameters of the connection in use, including the password. They change when {@code /resume} reconnects. */
-	org.syracus.jdbx.config.ConnectionParameters parameters() {
+	de.snwiem.jdbx.config.ConnectionParameters parameters() {
 		return parameters;
 	}
 
@@ -118,7 +118,7 @@ final class SessionState {
 
 	String profileName() { return info.profile(); }
 
-	void connected(org.syracus.jdbx.config.ConnectionParameters parameters, String profileName) {
+	void connected(de.snwiem.jdbx.config.ConnectionParameters parameters, String profileName) {
 		this.parameters = parameters;
 		this.info = ConnectionInfo.of(parameters, profileName);
 		metadata = metadata.withConnection(info);
@@ -191,7 +191,7 @@ final class SessionState {
 			if (password == null) throw new PasswordRequired(chosen.id(), prompt.message());
 			var properties = new java.util.LinkedHashMap<>(prompt.parameters().properties());
 			properties.put("password", password);
-			plan = new ResumeConnection.Reconnect(new org.syracus.jdbx.config.ConnectionParameters(prompt.parameters().url(), properties, stored.readOnly()));
+			plan = new ResumeConnection.Reconnect(new de.snwiem.jdbx.config.ConnectionParameters(prompt.parameters().url(), properties, stored.readOnly()));
 		}
 		boolean previousReadOnly = false;
 		boolean restoreReadOnly = false;
@@ -238,7 +238,7 @@ final class SessionState {
 			}
 			throw new ResumeException("Cannot resume Session " + chosen.id() + ": " + e.getMessage());
 		}
-		parameters = new org.syracus.jdbx.config.ConnectionParameters(newParameters.url(), newParameters.properties(), restored.readOnly());
+		parameters = new de.snwiem.jdbx.config.ConnectionParameters(newParameters.url(), newParameters.properties(), restored.readOnly());
 		info = newInfo;
 		settings = restored;
 		history = HistoryStore.open(directory.historyFile(), settings.historyEnabled());

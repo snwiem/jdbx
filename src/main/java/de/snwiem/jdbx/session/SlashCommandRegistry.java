@@ -1,12 +1,12 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import org.syracus.jdbx.BuildInfo;
-import org.syracus.jdbx.config.KeyBindings;
+import de.snwiem.jdbx.BuildInfo;
+import de.snwiem.jdbx.config.KeyBindings;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Model.CommandSpec;

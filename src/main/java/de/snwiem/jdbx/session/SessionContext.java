@@ -1,11 +1,11 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import java.nio.file.Path;
 import java.util.function.Function;
 
-import org.syracus.jdbx.config.ConnectionParameters;
-import org.syracus.jdbx.config.Profile;
-import org.syracus.jdbx.config.Settings;
+import de.snwiem.jdbx.config.ConnectionParameters;
+import de.snwiem.jdbx.config.Profile;
+import de.snwiem.jdbx.config.Settings;
 
 /**
  * What a Session needs to store its history and Session metadata and to Resume an earlier Session.

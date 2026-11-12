@@ -1,4 +1,4 @@
-package org.syracus.jdbx;
+package de.snwiem.jdbx;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;

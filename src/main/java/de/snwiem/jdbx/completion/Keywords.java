@@ -1,4 +1,4 @@
-package org.syracus.jdbx.completion;
+package de.snwiem.jdbx.completion;
 
 import java.util.List;
 import java.util.Set;

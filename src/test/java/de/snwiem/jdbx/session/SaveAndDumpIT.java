@@ -1,4 +1,4 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -280,9 +280,9 @@ class SaveAndDumpIT {
 
 	@Test
 	void connectionLossDuringDumpKeepsTheFileAndReconnectsOnlyForTheNextInput() throws Exception {
-		var parameters = new org.syracus.jdbx.config.ConnectionParameters(POSTGRES.getJdbcUrl(), java.util.Map.of(
+		var parameters = new de.snwiem.jdbx.config.ConnectionParameters(POSTGRES.getJdbcUrl(), java.util.Map.of(
 			"user", POSTGRES.getUsername(), "password", POSTGRES.getPassword()), false);
-		var context = new SessionContext(directory.resolve("reconnect-state"), org.syracus.jdbx.config.Settings.defaults(), parameters, null, name -> null);
+		var context = new SessionContext(directory.resolve("reconnect-state"), de.snwiem.jdbx.config.Settings.defaults(), parameters, null, name -> null);
 		Path target = directory.resolve("connection.csv");
 		Files.writeString(target, "original");
 		try (Session session = Session.connect(SessionDirectory.create(context.stateBase()), context)) {

@@ -1,4 +1,4 @@
-package org.syracus.jdbx.completion;
+package de.snwiem.jdbx.completion;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -13,8 +13,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
-import org.syracus.jdbx.schema.SchemaProvider;
-import org.syracus.jdbx.schema.SchemaProviderModel;
+import de.snwiem.jdbx.schema.SchemaProvider;
+import de.snwiem.jdbx.schema.SchemaProviderModel;
 
 /** Completion seam against a real schema: the SchemaProvider cache feeds the engine. */
 @Testcontainers

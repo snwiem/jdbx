@@ -1,11 +1,11 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
 import java.util.List;
 import java.util.Locale;
 
-import org.syracus.jdbx.config.KeyBindings;
-import org.syracus.jdbx.config.Settings;
-import org.syracus.jdbx.session.ExecutionStatus;
+import de.snwiem.jdbx.config.KeyBindings;
+import de.snwiem.jdbx.config.Settings;
+import de.snwiem.jdbx.session.ExecutionStatus;
 
 /** Plain Status bar text; the terminal adapter only draws it. */
 final class StatusBarText {

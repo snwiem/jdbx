@@ -1,8 +1,8 @@
-package org.syracus.jdbx.completion;
+package de.snwiem.jdbx.completion;
 
 import java.util.List;
 
-import org.syracus.jdbx.completion.CompletionContext.Position;
+import de.snwiem.jdbx.completion.CompletionContext.Position;
 
 /** SQL keywords and function names. They fit wherever SQL text can go, except after {@code name.}. */
 public final class KeywordSource implements CandidateSource {

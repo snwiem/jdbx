@@ -1,11 +1,11 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.syracus.jdbx.FormatOptions;
-import org.syracus.jdbx.TableFormatter;
-import org.syracus.jdbx.session.MessageBlock;
+import de.snwiem.jdbx.FormatOptions;
+import de.snwiem.jdbx.TableFormatter;
+import de.snwiem.jdbx.session.MessageBlock;
 
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.buffer.Cell;

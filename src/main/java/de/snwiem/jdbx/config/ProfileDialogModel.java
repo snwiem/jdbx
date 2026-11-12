@@ -1,11 +1,11 @@
-package org.syracus.jdbx.config;
+package de.snwiem.jdbx.config;
 
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.syracus.jdbx.session.ConnectionInfo;
+import de.snwiem.jdbx.session.ConnectionInfo;
 
 /** Terminal-independent dialog fields. Transient credentials are never mapped to a saved Profile. */
 public final class ProfileDialogModel {

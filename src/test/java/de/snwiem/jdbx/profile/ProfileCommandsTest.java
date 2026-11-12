@@ -1,4 +1,4 @@
-package org.syracus.jdbx.profile;
+package de.snwiem.jdbx.profile;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -10,9 +10,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import org.syracus.jdbx.config.ConfigException;
-import org.syracus.jdbx.config.Profile;
-import org.syracus.jdbx.config.ProfileStore;
+import de.snwiem.jdbx.config.ConfigException;
+import de.snwiem.jdbx.config.Profile;
+import de.snwiem.jdbx.config.ProfileStore;
 
 /** Selecting Profiles by name, quoted name with spaces, or list number, for /connect, /profile edit and remove. */
 class ProfileCommandsTest {

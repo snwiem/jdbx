@@ -1,4 +1,4 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -7,8 +7,8 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import org.syracus.jdbx.config.KeyBindings;
-import org.syracus.jdbx.session.HelpCatalog.Command;
+import de.snwiem.jdbx.config.KeyBindings;
+import de.snwiem.jdbx.session.HelpCatalog.Command;
 
 class HelpCatalogTest {
 

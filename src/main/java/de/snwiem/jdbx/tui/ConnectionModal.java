@@ -1,12 +1,12 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import org.syracus.jdbx.config.ProfileDialogModel;
-import org.syracus.jdbx.config.ProfileDialogModel.Field;
-import org.syracus.jdbx.session.SessionInteraction;
+import de.snwiem.jdbx.config.ProfileDialogModel;
+import de.snwiem.jdbx.config.ProfileDialogModel.Field;
+import de.snwiem.jdbx.session.SessionInteraction;
 
 import dev.tamboui.buffer.Cell;
 import dev.tamboui.layout.Rect;

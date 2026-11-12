@@ -1,6 +1,6 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
-import org.syracus.jdbx.config.ProfileDialogModel;
+import de.snwiem.jdbx.config.ProfileDialogModel;
 
 /** A pending interaction, rendered by the terminal and answered through the Session API (never submit secrets). */
 public sealed interface SessionInteraction {

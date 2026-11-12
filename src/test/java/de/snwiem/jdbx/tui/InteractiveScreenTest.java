@@ -1,4 +1,4 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -20,12 +20,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import org.syracus.jdbx.Result;
-import org.syracus.jdbx.config.KeyBindings;
-import org.syracus.jdbx.config.Settings;
-import org.syracus.jdbx.session.ExecutionStatus;
-import org.syracus.jdbx.session.ExecutionStatus.ResultSummary;
-import org.syracus.jdbx.session.MessageBlock;
+import de.snwiem.jdbx.Result;
+import de.snwiem.jdbx.config.KeyBindings;
+import de.snwiem.jdbx.config.Settings;
+import de.snwiem.jdbx.session.ExecutionStatus;
+import de.snwiem.jdbx.session.ExecutionStatus.ResultSummary;
+import de.snwiem.jdbx.session.MessageBlock;
 
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.buffer.DiffResult;

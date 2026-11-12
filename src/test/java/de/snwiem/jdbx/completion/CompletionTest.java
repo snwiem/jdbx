@@ -1,4 +1,4 @@
-package org.syracus.jdbx.completion;
+package de.snwiem.jdbx.completion;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -6,7 +6,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import org.syracus.jdbx.completion.Candidate.Kind;
+import de.snwiem.jdbx.completion.Candidate.Kind;
 
 class CompletionTest {
 

@@ -1,4 +1,4 @@
-package org.syracus.jdbx.profile;
+package de.snwiem.jdbx.profile;
 
 /** Profile selection logic called by the shared registry's /connect action. */
 public final class ConnectCommand {

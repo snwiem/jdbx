@@ -1,14 +1,14 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import java.util.LinkedHashMap;
 import java.util.Objects;
 import java.util.function.Function;
 
-import org.syracus.jdbx.config.ConfigException;
-import org.syracus.jdbx.config.ConnectionOptions;
-import org.syracus.jdbx.config.ConnectionParameters;
-import org.syracus.jdbx.config.Profile;
-import org.syracus.jdbx.config.Settings;
+import de.snwiem.jdbx.config.ConfigException;
+import de.snwiem.jdbx.config.ConnectionOptions;
+import de.snwiem.jdbx.config.ConnectionParameters;
+import de.snwiem.jdbx.config.Profile;
+import de.snwiem.jdbx.config.Settings;
 
 /**
  * Decides how Resume gets a connection, including a request for a masked password prompt. The password is never stored in the

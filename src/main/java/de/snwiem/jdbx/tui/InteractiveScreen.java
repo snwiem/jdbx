@@ -1,4 +1,4 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
 import java.time.Duration;
 import java.util.List;
@@ -8,15 +8,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import org.syracus.jdbx.FormatOptions;
-import org.syracus.jdbx.completion.Completion;
-import org.syracus.jdbx.completion.CompletionEngine;
-import org.syracus.jdbx.completion.SchemaModel;
-import org.syracus.jdbx.session.ExecutionStatus;
-import org.syracus.jdbx.session.MessageBlock;
-import org.syracus.jdbx.session.SessionInteraction;
-import org.syracus.jdbx.config.KeyBindings;
-import org.syracus.jdbx.config.Settings;
+import de.snwiem.jdbx.FormatOptions;
+import de.snwiem.jdbx.completion.Completion;
+import de.snwiem.jdbx.completion.CompletionEngine;
+import de.snwiem.jdbx.completion.SchemaModel;
+import de.snwiem.jdbx.session.ExecutionStatus;
+import de.snwiem.jdbx.session.MessageBlock;
+import de.snwiem.jdbx.session.SessionInteraction;
+import de.snwiem.jdbx.config.KeyBindings;
+import de.snwiem.jdbx.config.Settings;
 
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.buffer.Cell;

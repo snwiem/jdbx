@@ -1,4 +1,4 @@
-package org.syracus.jdbx.completion;
+package de.snwiem.jdbx.completion;
 
 /**
  * One suggestion. {@code insert} is the exact text that replaces the typed word (quoted when the name needs it);

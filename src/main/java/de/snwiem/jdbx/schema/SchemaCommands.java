@@ -1,4 +1,4 @@
-package org.syracus.jdbx.schema;
+package de.snwiem.jdbx.schema;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -6,8 +6,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import org.syracus.jdbx.Result;
-import org.syracus.jdbx.session.MessageBlock;
+import de.snwiem.jdbx.Result;
+import de.snwiem.jdbx.session.MessageBlock;
 
 /** Runs the schema Slash commands and turns their output into Message blocks. */
 public final class SchemaCommands {

@@ -1,7 +1,7 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
-import org.syracus.jdbx.config.KeyBinding;
-import org.syracus.jdbx.config.KeyBindings;
+import de.snwiem.jdbx.config.KeyBinding;
+import de.snwiem.jdbx.config.KeyBindings;
 
 import dev.tamboui.tui.bindings.KeyTrigger;
 import dev.tamboui.tui.event.KeyCode;

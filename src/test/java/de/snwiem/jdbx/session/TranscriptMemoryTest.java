@@ -1,13 +1,13 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.stream.IntStream;
 
-import org.syracus.jdbx.Result;
-import org.syracus.jdbx.config.Settings;
-import org.syracus.jdbx.tui.MessageBlockRenderer;
+import de.snwiem.jdbx.Result;
+import de.snwiem.jdbx.config.Settings;
+import de.snwiem.jdbx.tui.MessageBlockRenderer;
 import org.junit.jupiter.api.Test;
 
 class TranscriptMemoryTest {

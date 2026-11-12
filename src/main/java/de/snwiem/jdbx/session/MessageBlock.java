@@ -1,6 +1,6 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
-import org.syracus.jdbx.Result;
+import de.snwiem.jdbx.Result;
 
 /** A terminal-independent entry in a Session's Transcript. */
 public record MessageBlock(Kind kind, String text, Result result) {
@@ -17,9 +17,9 @@ public record MessageBlock(Kind kind, String text, Result result) {
 	}
 
 	/** Freeze the rendered text when the Result enters the Transcript; later setting changes do not rewrite it. */
-	public static MessageBlock result(Result result, org.syracus.jdbx.config.Settings settings) {
-		String text = org.syracus.jdbx.Format.parse(settings.format())
-			.formatter(org.syracus.jdbx.FormatOptions.from(settings), org.syracus.jdbx.Orientation.parse(settings.orientation()))
+	public static MessageBlock result(Result result, de.snwiem.jdbx.config.Settings settings) {
+		String text = de.snwiem.jdbx.Format.parse(settings.format())
+			.formatter(de.snwiem.jdbx.FormatOptions.from(settings), de.snwiem.jdbx.Orientation.parse(settings.orientation()))
 			.format(result);
 		return new MessageBlock(Kind.RESULT, text, result);
 	}

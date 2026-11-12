@@ -1,4 +1,4 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;

@@ -1,4 +1,4 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -10,9 +10,9 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import org.syracus.jdbx.Orientation;
-import org.syracus.jdbx.config.KeyBindings;
-import org.syracus.jdbx.config.Settings;
+import de.snwiem.jdbx.Orientation;
+import de.snwiem.jdbx.config.KeyBindings;
+import de.snwiem.jdbx.config.Settings;
 
 class SlashCommandRegistryTest {
 

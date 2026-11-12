@@ -1,10 +1,10 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.syracus.jdbx.config.ProfileDialogModel;
-import org.syracus.jdbx.config.ProfileDialogModel.Field;
+import de.snwiem.jdbx.config.ProfileDialogModel;
+import de.snwiem.jdbx.config.ProfileDialogModel.Field;
 
 /** Rows, groups and focus order of the Profile dialog: first the fields, then the buttons. No terminal. */
 final class DialogForm {

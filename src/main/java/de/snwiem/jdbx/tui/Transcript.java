@@ -1,8 +1,8 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
 import java.util.List;
 
-import org.syracus.jdbx.session.MessageBlock;
+import de.snwiem.jdbx.session.MessageBlock;
 
 /** Retains Message blocks, their wrapped rows, and the distance from the newest row. */
 final class Transcript {

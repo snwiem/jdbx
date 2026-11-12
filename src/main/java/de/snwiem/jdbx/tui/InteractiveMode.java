@@ -1,4 +1,4 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -9,9 +9,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.syracus.jdbx.config.*;
-import org.syracus.jdbx.profile.ProfileCommands;
-import org.syracus.jdbx.session.*;
+import de.snwiem.jdbx.config.*;
+import de.snwiem.jdbx.profile.ProfileCommands;
+import de.snwiem.jdbx.session.*;
 
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.terminal.KeyboardProtocol;

@@ -1,4 +1,4 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -18,9 +18,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
-import org.syracus.jdbx.config.ConnectionParameters;
-import org.syracus.jdbx.config.Profile;
-import org.syracus.jdbx.config.Settings;
+import de.snwiem.jdbx.config.ConnectionParameters;
+import de.snwiem.jdbx.config.Profile;
+import de.snwiem.jdbx.config.Settings;
 
 /** Session seam: read-only is enforced by the server, and /readonly changes it for the Session. */
 @Testcontainers

@@ -1,9 +1,9 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.syracus.jdbx.Result;
+import de.snwiem.jdbx.Result;
 
 /** Retains frozen Transcript text, but row data only for the newest Result. */
 public final class TranscriptMemory {
@@ -19,7 +19,7 @@ public final class TranscriptMemory {
 				var earlier = blocks.get(i);
 				if (earlier.result() != null) {
 					String text = earlier.text() == null
-						? MessageBlock.result(earlier.result(), org.syracus.jdbx.config.Settings.defaults()).text() : earlier.text();
+						? MessageBlock.result(earlier.result(), de.snwiem.jdbx.config.Settings.defaults()).text() : earlier.text();
 					blocks.set(i, new MessageBlock(earlier.kind(), text, null));
 				}
 			}

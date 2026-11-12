@@ -1,4 +1,4 @@
-package org.syracus.jdbx.schema;
+package de.snwiem.jdbx.schema;
 
 import java.util.ArrayList;
 import java.util.List;

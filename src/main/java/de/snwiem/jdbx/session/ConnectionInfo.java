@@ -1,10 +1,10 @@
-package org.syracus.jdbx.session;
+package de.snwiem.jdbx.session;
 
 import java.util.Arrays;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.syracus.jdbx.config.ConnectionParameters;
+import de.snwiem.jdbx.config.ConnectionParameters;
 
 /**
  * The non-secret part of a connection, as stored in {@code session.yaml}. {@code url} has no credentials.

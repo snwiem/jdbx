@@ -1,17 +1,17 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
-import static org.syracus.jdbx.config.ProfileDialogModel.Field.*;
+import static de.snwiem.jdbx.config.ProfileDialogModel.Field.*;
 import static org.assertj.core.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.syracus.jdbx.config.Profile;
-import org.syracus.jdbx.config.ProfileDialogModel;
-import org.syracus.jdbx.config.ProfileDialogModel.Field;
-import org.syracus.jdbx.tui.DialogForm.Button;
-import org.syracus.jdbx.tui.DialogForm.Kind;
+import de.snwiem.jdbx.config.Profile;
+import de.snwiem.jdbx.config.ProfileDialogModel;
+import de.snwiem.jdbx.config.ProfileDialogModel.Field;
+import de.snwiem.jdbx.tui.DialogForm.Button;
+import de.snwiem.jdbx.tui.DialogForm.Kind;
 
 class DialogFormTest {
 	private static ProfileDialogModel model(String url, String host) {

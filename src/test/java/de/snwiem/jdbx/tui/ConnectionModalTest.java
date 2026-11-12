@@ -1,4 +1,4 @@
-package org.syracus.jdbx.tui;
+package de.snwiem.jdbx.tui;
 
 import static org.assertj.core.api.Assertions.*;
 import java.util.ArrayList;
@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
-import org.syracus.jdbx.config.*;
-import org.syracus.jdbx.session.SessionInteraction;
+import de.snwiem.jdbx.config.*;
+import de.snwiem.jdbx.session.SessionInteraction;
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.layout.Size;
@@ -31,9 +31,9 @@ class ConnectionModalTest {
 		var screen = new InteractiveScreen("connection", inputs::add, () -> { }, Settings.defaults(), cycles::incrementAndGet);
 		screen.completion((text, cursor) -> {
 			requests.incrementAndGet();
-			return java.util.concurrent.CompletableFuture.completedFuture(new org.syracus.jdbx.completion.Completion(0, 0,
-				List.of(new org.syracus.jdbx.completion.Candidate("alpha", "alpha", org.syracus.jdbx.completion.Candidate.Kind.TABLE),
-					new org.syracus.jdbx.completion.Candidate("beta", "beta", org.syracus.jdbx.completion.Candidate.Kind.TABLE))));
+			return java.util.concurrent.CompletableFuture.completedFuture(new de.snwiem.jdbx.completion.Completion(0, 0,
+				List.of(new de.snwiem.jdbx.completion.Candidate("alpha", "alpha", de.snwiem.jdbx.completion.Candidate.Kind.TABLE),
+					new de.snwiem.jdbx.completion.Candidate("beta", "beta", de.snwiem.jdbx.completion.Candidate.Kind.TABLE))));
 		});
 		screen.handle(KeyEvent.ofKey(KeyCode.TAB));
 		var model = new ProfileDialogModel(new Profile(null, null, "localhost", null, "db", "alice", null, null, null, Map.of()), null);
@@ -75,7 +75,7 @@ class ConnectionModalTest {
 		screen.handle(KeyEvent.ofKey(KeyCode.ENTER));
 		assertThat(passwords).containsExactly("super-secret");
 		assertThat(inputs).isEmpty();
-		screen.update(List.of(org.syracus.jdbx.session.MessageBlock.info("earlier"), org.syracus.jdbx.session.MessageBlock.error("Password authentication failed.")));
+		screen.update(List.of(de.snwiem.jdbx.session.MessageBlock.info("earlier"), de.snwiem.jdbx.session.MessageBlock.error("Password authentication failed.")));
 		assertThat(draw(screen, 90, 8)).contains("Password authentication failed.");
 		screen.handle(KeyEvent.ofKey(KeyCode.ESCAPE));
 		assertThat(cancelled.get()).isEqualTo(1);
@@ -105,9 +105,9 @@ class ConnectionModalTest {
 			terminal.pilot().pause();
 			assertThat(saved).containsExactly(true, false);
 			assertThat(draw(screen, 100, 24)).contains("Connect", "Password", "Ctrl-G");
-			var blocks = new ArrayList<org.syracus.jdbx.session.MessageBlock>();
-			for (int i = 0; i < 10; i++) blocks.add(org.syracus.jdbx.session.MessageBlock.info("earlier event"));
-			blocks.add(org.syracus.jdbx.session.MessageBlock.error("Name is required to save a Profile."));
+			var blocks = new ArrayList<de.snwiem.jdbx.session.MessageBlock>();
+			for (int i = 0; i < 10; i++) blocks.add(de.snwiem.jdbx.session.MessageBlock.info("earlier event"));
+			blocks.add(de.snwiem.jdbx.session.MessageBlock.error("Name is required to save a Profile."));
 			screen.update(blocks);
 			assertThat(draw(screen, 100, 24)).contains("Name is required to save a Profile.");
 			terminal.pilot().press(KeyCode.ESCAPE);

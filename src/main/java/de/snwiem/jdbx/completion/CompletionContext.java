@@ -1,13 +1,13 @@
-package org.syracus.jdbx.completion;
+package de.snwiem.jdbx.completion;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-import org.syracus.jdbx.SqlTokens;
-import org.syracus.jdbx.SqlTokens.Token;
-import org.syracus.jdbx.SqlTokens.Type;
+import de.snwiem.jdbx.SqlTokens;
+import de.snwiem.jdbx.SqlTokens.Token;
+import de.snwiem.jdbx.SqlTokens.Type;
 
 /**
  * What a {@link CandidateSource} needs to know about the request: the word being completed, where the cursor
