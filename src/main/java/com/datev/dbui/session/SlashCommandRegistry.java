@@ -87,56 +87,24 @@ public final class SlashCommandRegistry {
 		return help(KeyBindings.defaults());
 	}
 
+	/** The whole help: all commands, then all keys. */
 	public String help(KeyBindings keys) {
-		var text = new StringBuilder("Slash commands\n");
+		return catalog(keys).full();
+	}
+
+	/** {@code topic} is the text after {@code /help}: empty for the overview, {@code commands}, {@code keys} or a word. */
+	public String help(KeyBindings keys, String topic) {
+		return catalog(keys).topic(topic);
+	}
+
+	private HelpCatalog catalog(KeyBindings keys) {
+		var list = new ArrayList<HelpCatalog.Command>();
 		for (var command : commands) {
 			var subcommand = line.getSubcommands().get("/" + command.name());
 			String synopsis = usage(subcommand).lines().findFirst().orElseThrow().substring("Usage: ".length());
-			text.append(synopsis).append(" — ").append(subcommand.getCommandSpec().usageMessage().description()[0]).append('\n');
+			list.add(new HelpCatalog.Command(command.name(), synopsis, subcommand.getCommandSpec().usageMessage().description()[0],
+				command.group()));
 		}
-		text.append('\n').append("""
-			Key bindings
-			Enter                     Send input; accept a Ctrl-R match without sending
-			%-26sInsert a newline; some modified keys need Kitty keyboard support
-			Up / Down                 History at the first / last editor line; otherwise move the cursor
-			Ctrl-R                    Search history; press again for an older match
-			Esc                       Cancel history search and restore the draft
-			Ctrl-C                    Cancel a running Statement, cancel search, or clear idle input; never exit
-			Ctrl-D                    Ignore; never exit (use /quit)
-			%-26sCycle Orientation (primary / fallback)
-			%-26sRequest Completion (primary / fallback)
-			Completion Up / Down      Select a candidate
-			Completion Tab / Enter    Accept a candidate without sending input
-			Completion Esc            Close Completion
-			Dialog Tab / Shift-Tab    Move between fields and Save (not Orientation)
-			Dialog Enter              Next field or Save; never send editor input
-			Dialog Ctrl-S             Save the Profile
-			Dialog Ctrl-G / Ctrl-Enter Connect without saving (connection dialogs only)
-			Dialog Esc / Ctrl-C       Cancel the dialog or masked prompt
-			Password Enter            Connect with the masked password; never store it in history
-			Confirmation y / other    Confirm Profile removal / cancel it
-			Page Up / Page Down       Scroll the Transcript
-			Mouse wheel               Scroll the Transcript
-			Left / Right              Move the cursor; Ctrl-Left / Ctrl-Right move by word
-			Home / End                Move to the start / end of a line
-			Backspace / Delete        Delete before / after the cursor
-			Ctrl-W / Ctrl-Backspace   Delete the previous word
-			Ctrl-Delete               Delete the next word
-			Keypad navigation keys    Same cursor actions as the main navigation keys
-			""".formatted(keys.newline().display(),
-				keys.orientationCycle().display() + " / " + keys.orientationFallback().display(),
-				keys.complete().display() + " / " + keys.completeAlternate().display()));
-		if (Stream.of(keys.newline(), keys.orientationCycle(), keys.orientationFallback(), keys.complete(), keys.completeAlternate())
-				.noneMatch(key -> key.name().equals("shift-enter"))) {
-			text.append("Shift-Enter               Insert a newline when the terminal distinguishes it from Enter\n");
-		}
-		text.append("""
-
-			Legacy terminals: Ctrl-H = Backspace, Ctrl-I = Tab, Ctrl-J = LF, Ctrl-M = Enter.
-			Without Kitty these are not distinct keys; dbui preserves bare LF as Ctrl-J.
-			If the terminal sends Enter instead, Ctrl-J / Ctrl-M can send input. Use a distinct key
-			or bracketed paste for multi-line input on legacy terminals.
-			""");
-		return text.toString().stripTrailing();
+		return new HelpCatalog(list, keys);
 	}
 }

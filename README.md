@@ -134,6 +134,10 @@ Configured Ctrl-H, Ctrl-I and Ctrl-M cannot be distinguished from those fixed ke
 If the terminal sends Enter instead, Ctrl-J or Ctrl-M can send input rather than run the configured action.
 Use a distinct key, Kitty keyboard support, or bracketed paste for multi-line input on legacy terminals. Bracketed paste never sends input by itself.
 
+## Help
+
+`/help` shows a short overview: every Slash command name under its group, and five essential keys (as configured). `/help commands` lists all commands with their descriptions, under group headings. `/help keys` lists all key bindings under group headings, then notes about legacy terminals. `/help <word>` shows the commands and key rows whose name or description contains the word, for example `/help history` or `/help ctrl-r`. The word is plain text and ignores case; a leading `/` is allowed. Tab after `/help ` completes `commands`, `keys` and the command names.
+
 ## Cell width
 
 In the `table` Format, a cell that is longer than `max-width` characters is cut and ends with `…`. The default is 60. Set `max-width` in `config.yaml`; `0` means no cut. Other Formats do not cut.

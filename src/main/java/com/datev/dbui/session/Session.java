@@ -477,9 +477,29 @@ public final class Session implements AutoCloseable {
 				dumpResults(argument);
 				return List.of();
 			}));
-		commands.add(new SlashCommand("help", "List Slash commands and key bindings.", null, false,
-			argument -> List.of(MessageBlock.info(slashCommands.help(settings().keyBindings())))));
-		return commands;
+		commands.add(new SlashCommand("help", "Show an overview, all commands or keys, or the commands and keys that match a word.",
+			SlashCommand.argument("commands|keys|<word>", "0..1", () -> helpTopics().iterator()), false,
+			argument -> List.of(MessageBlock.info(slashCommands.help(settings().keyBindings(), argument)))));
+		return commands.stream().map(c -> c.inGroup(COMMAND_GROUPS.getOrDefault(c.name(), SlashCommand.OTHER))).toList();
+	}
+
+	/** The heading of each command in /help. A command that is missing here appears under "Other". */
+	private static final java.util.Map<String, String> COMMAND_GROUPS = java.util.Map.ofEntries(
+		java.util.Map.entry("format", "Query and results"), java.util.Map.entry("orientation", "Query and results"),
+		java.util.Map.entry("width", "Query and results"), java.util.Map.entry("limit", "Query and results"),
+		java.util.Map.entry("timeout", "Query and results"), java.util.Map.entry("save", "Query and results"),
+		java.util.Map.entry("copy", "Query and results"), java.util.Map.entry("dump", "Query and results"),
+		java.util.Map.entry("describe", "Schema"), java.util.Map.entry("refresh", "Schema"),
+		java.util.Map.entry("connect", "Connection"), java.util.Map.entry("profile", "Connection"),
+		java.util.Map.entry("readonly", "Connection"),
+		java.util.Map.entry("history", "History and Sessions"), java.util.Map.entry("resume", "History and Sessions"),
+		java.util.Map.entry("help", "General"), java.util.Map.entry("quit", "General"));
+
+	/** Candidates for /help: the topics and the command names, not the key names. */
+	private List<String> helpTopics() {
+		var topics = new java.util.ArrayList<>(List.of("commands", "keys"));
+		slashCommands.commands().forEach(c -> topics.add(c.name()));
+		return topics;
 	}
 
 	private SlashCommand schemaCommand(String name, String help, String label, String arity, List<String> candidates) {

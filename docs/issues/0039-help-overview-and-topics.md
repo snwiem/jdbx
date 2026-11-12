@@ -4,7 +4,7 @@
 
 **Blocked by:** none
 
-**Status:** open
+**Status:** in review (manual check open)
 
 **Parent:** `docs/prd/mvp-1.0.md` (`/help`, issue 0012)
 
@@ -65,13 +65,22 @@ Ctrl-C      Cancel a running Statement, or clear the input
 
 ## Acceptance criteria
 
-- [ ] Unit test: `/help` shows the overview with every command name under its group and the 5 essential keys
-- [ ] Unit test: `/help commands` lists all commands under group headings with description
-- [ ] Unit test: `/help keys` lists all key rows under group headings, then the legacy notes
-- [ ] Unit test: `/help <word>` matches name and description, ignores case, accepts a leading `/`, and leaves out empty headings
-- [ ] Unit test: no match gives the Info text
-- [ ] Unit test: a command with no group appears under `Other`; configured keys appear in the text
-- [ ] Session test: `/help`, `/help keys` and `/help history` through `submit`
-- [ ] Completion test: `/help <Tab>` offers `commands`, `keys` and the command names, not key names
-- [ ] `README.md` documents `/help`
+- [x] Unit test: `/help` shows the overview with every command name under its group and the 5 essential keys
+- [x] Unit test: `/help commands` lists all commands under group headings with description
+- [x] Unit test: `/help keys` lists all key rows under group headings, then the legacy notes
+- [x] Unit test: `/help <word>` matches name and description, ignores case, accepts a leading `/`, and leaves out empty headings
+- [x] Unit test: no match gives the Info text
+- [x] Unit test: a command with no group appears under `Other`; configured keys appear in the text
+- [x] Session test: `/help`, `/help keys` and `/help history` through `submit`
+- [x] Completion test: `/help <Tab>` offers `commands`, `keys` and the command names, not key names
+- [x] `README.md` documents `/help`
 - [ ] Manual check in a real terminal
+
+## Findings
+
+- New plain class `HelpCatalog` builds all texts. `SlashCommandRegistry.help(keys)` still returns the whole help (`HelpCatalog.full`), so older callers keep working.
+- `SlashCommand` got a `group` field. The five-argument constructor puts a command in `Other`. `Session` assigns the groups in one map (`COMMAND_GROUPS`). A test checks that no Session command is in `Other`.
+- Tests: `HelpCatalogTest` (unit), `HelpCommandSessionTest` (Session without a database, including Completion). Several older tests asked plain `/help` for synopsis lines or key rows. They now ask `/help commands` or `/help keys`, because the overview shows only names and five keys.
+- A filter with a very common word matches many rows. `/help history` also finds the `Password Enter` row ("never store it in history"), because the filter matches descriptions.
+- The overview draft showed `Alt-N`; the default newline key is `Ctrl-J`. The overview uses the configured key.
+- The group width in the overview is the longest group name plus two spaces.
