@@ -228,6 +228,21 @@ class FeatureIntegrationIT {
 	}
 
 	@Test
+	void schemaCommandArgumentsCompleteTablesAndSchemasFromTheSession() throws Exception {
+		try (var admin = parameters().open(); var sql = admin.createStatement()) {
+			sql.execute("create schema describe_sch; create table describe_sch.dc_target(id int); create table dc_public(id int)");
+		}
+		try (Session current = session()) {
+			assertThat(current.complete("/describe dc_p", 14).get(10, TimeUnit.SECONDS).candidates())
+				.extracting(Candidate::insert).containsExactly("dc_public");
+			assertThat(current.complete("/describe describe_sch.dc", 25).get(10, TimeUnit.SECONDS).candidates())
+				.extracting(Candidate::insert).containsExactly("dc_target");
+			assertThat(current.complete("/tables describe_", 17).get(10, TimeUnit.SECONDS).candidates())
+				.extracting(Candidate::insert).containsExactly("describe_sch");
+		}
+	}
+
+	@Test
 	void connectWithoutAProfileModeKeepsCurrentReadOnlyAndRebindsSchemaCompletion() throws Exception {
 		try (var admin = parameters().open(); var sql = admin.createStatement()) {
 			sql.execute("create schema switched; create table switched.connection_target(id int)");
