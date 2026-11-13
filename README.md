@@ -269,6 +269,10 @@ Use `--config-dir <directory>` to select a temporary config directory for testin
 Writes merge one Profile into fresh content under a file lock, then atomically replace the file with mode `600`.
 A yellow info Message block warns about wider existing permissions. YAML comments do not survive a save.
 
+## Contributing
+
+Contributions and reviews are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). Report security problems as described in [SECURITY.md](SECURITY.md).
+
 ## Licence
 
 jdbx is licensed under the [Apache License, Version 2.0](LICENSE).

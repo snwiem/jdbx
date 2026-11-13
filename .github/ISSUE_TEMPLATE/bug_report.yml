@@ -1,0 +1,50 @@
+name: Bug report
+description: Something does not work as expected.
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the report. **Do not paste passwords, tokens or customer data.** This repository is public.
+        For security problems, use the link on the previous page. Do not open a public issue.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the problem. Name the mode (Interactive mode or Batch mode).
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: jdbx version
+      description: The output of `jdbx --version`.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Java version, operating system and terminal
+      placeholder: Java 25, Ubuntu 24.04, Windows Terminal
+    validations:
+      required: true
+  - type: input
+    id: database
+    attributes:
+      label: Database and JDBC driver
+      placeholder: PostgreSQL 17
