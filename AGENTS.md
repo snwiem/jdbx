@@ -44,7 +44,10 @@ Others may work on branches in parallel. Never assume that your local copy is cu
 ### Merge through pull requests
 
 - **Merges to `main` always happen through a GitHub pull request.** Never run `git merge` into `main` locally, and never push to `main`.
-- Open the pull request with `gh pr create` from the pushed branch. Show the user the full title and text first and wait for approval (see Issues). Use the skill `to-pr` for the body.
+- **Every push of a branch has a pull request.** Before you ask the user to approve a push, check: `gh pr list --head <branch> --state open`.
+  - **No pull request yet:** prepare the full title and text (skill `to-pr`) and show them in the same message as the push request. One approval covers the push **and** the creation of the pull request. After the approval, push the branch and run `gh pr create`. Do not ask a second time. If the user approves only the push, ask about the text again.
+  - **A pull request exists:** the push updates it. Say so in the push request. Show a new text only if the summary changes. Apply it with `gh pr edit` after the approval.
+  - A push of a release tag (see Releases) has no pull request.
 - Merge with `gh pr merge` only when the check `verify` is green and the user approves. Always **squash** (`--squash`): `main` gets one commit per pull request. The pull request title becomes the commit subject, so write it as a conventional commit (for example `feat: add /history command`). Put `Closes #N` in the pull request body. Delete the branch after the merge, then `git switch main && git pull --ff-only`.
 - Do not push, merge or remove worktrees without the user's approval.
 
