@@ -1,0 +1,7 @@
+# Demo database for jdbx: PostgreSQL with the fictional bookshop. See demo/README.md.
+# The scripts are copied into the image. This works with a remote container engine too,
+# where a bind mount of a host directory does not.
+FROM docker.io/library/postgres:17
+
+# The image runs these scripts, in name order, on the first start.
+COPY *.sql /docker-entrypoint-initdb.d/

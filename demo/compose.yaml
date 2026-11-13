@@ -1,0 +1,23 @@
+# Demo database for jdbx: a fictional online bookshop. See demo/README.md.
+# Start:  podman compose -f demo/compose.yaml up -d --build --wait      (or: docker compose ...)
+# Reset:  podman compose -f demo/compose.yaml down -v
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: jdbx-demo-postgres:local
+    container_name: jdbx-demo
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: demo
+    ports:
+      # Host port 5433: the compose.yaml in the project root uses 5432.
+      - "5433:5432"
+    healthcheck:
+      # TCP check: while the init scripts run, the temporary server listens on the socket only.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U demo -d demo"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
