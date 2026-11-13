@@ -48,6 +48,13 @@ Others may work on branches in parallel. Never assume that your local copy is cu
 - Merge with `gh pr merge` only when the check `verify` is green and the user approves. Always **squash** (`--squash`): `main` gets one commit per pull request. The pull request title becomes the commit subject, so write it as a conventional commit (for example `feat: add /history command`). Put `Closes #N` in the pull request body. Delete the branch after the merge, then `git switch main && git pull --ff-only`.
 - Do not push, merge or remove worktrees without the user's approval.
 
+### Releases
+
+- A release is a tag `vMAJOR.MINOR.PATCH`, or `vMAJOR.MINOR.PATCH-suffix` for a pre-release (for example `v0.1.0-rc.1`). The tag is the source of truth for the version. The pom on `main` stays at `-SNAPSHOT`.
+- Cut a release from an up-to-date `main` with a green build: `git tag -a v0.1.0 -m "jdbx 0.1.0" && git push origin v0.1.0`. Pushing a tag needs the approval of the user.
+- The workflow `.github/workflows/release.yml` checks the tag, sets the version in the pom at build time, runs the build workflow, and creates the GitHub release with both archives, `SHA256SUMS` and generated notes. It publishes only when all jobs are green.
+- Do not move or reuse a published tag. Fix a bad release with a new version.
+
 ### Worktrees
 
 - Use a git worktree per branch when work is delegated or runs in parallel. Create it through the `subagent` tool (`worktree: { branch }`). A single sequential branch may use a plain checkout.
