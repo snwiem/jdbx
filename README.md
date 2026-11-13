@@ -24,7 +24,7 @@ Check first: `java -version` must print version 25 or higher. If not, install a 
 
 ### 2. Install jdbx
 
-1. Download `jdbx-<version>.tar.gz` (Linux, macOS) or `jdbx-<version>.zip` (Windows) from the [latest release](https://github.com/snwiem/jdbx/releases/latest). The release also has a `SHA256SUMS` file.
+1. Download `jdbx-<version>-dist.tar.gz` (Linux, macOS) or `jdbx-<version>-dist.zip` (Windows) from the [latest release](https://github.com/snwiem/jdbx/releases/latest). The release also has a `SHA256SUMS` file. Check the download with `sha256sum --check --ignore-missing SHA256SUMS`.
 2. Extract it. The archive has this layout:
 
    ```text

@@ -1,0 +1,68 @@
+name: release
+
+# A tag vMAJOR.MINOR.PATCH[-suffix] builds, tests and publishes a GitHub release.
+# The tag is the source of truth for the version. The pom on main stays at -SNAPSHOT.
+# Cut a release: git tag -a v0.1.0 -m "jdbx 0.1.0" && git push origin v0.1.0
+on:
+  push:
+    tags: ['v*']
+
+# Jobs read the repository only. The job publish asks for more.
+permissions:
+  contents: read
+
+# Never cancel a release run.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      prerelease: ${{ steps.tag.outputs.prerelease }}
+    steps:
+      - name: Check out the sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read the version from the tag
+        id: tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: sh .github/scripts/release-version.sh "$TAG" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: validate
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ needs.validate.outputs.version }}
+
+  publish:
+    needs: [validate, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download the archives
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: archives
+
+      - name: Write the checksums
+        run: sha256sum jdbx-*-dist.tar.gz jdbx-*-dist.zip > SHA256SUMS
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          PRERELEASE: ${{ needs.validate.outputs.prerelease }}
+        run: |
+          flag=
+          if [ "$PRERELEASE" = true ]; then flag=--prerelease; fi
+          gh release create "$TAG" jdbx-*-dist.tar.gz jdbx-*-dist.zip SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --title "jdbx ${TAG#v}" --generate-notes $flag

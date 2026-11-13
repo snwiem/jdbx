@@ -8,6 +8,13 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  # The release workflow calls this workflow with the version from the tag.
+  workflow_call:
+    inputs:
+      version:
+        description: Set this version in the pom before the build. Empty keeps the pom version.
+        type: string
+        default: ''
 
 # The workflow only reads the repository.
 permissions:
@@ -35,8 +42,21 @@ jobs:
           java-version: '25'
           cache: maven
 
+      - name: Set the release version
+        if: inputs.version != ''
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        # The pom change must not mark the build as dirty in "jdbx --version".
+        run: |
+          ./mvnw --batch-mode --no-transfer-progress versions:set -DnewVersion="$VERSION" -DgenerateBackupPoms=false
+          git update-index --assume-unchanged pom.xml
+
       - name: Test the wrapper script
         run: sh bin/test-jdbx.sh
+
+      - name: Test the release scripts
+        run: sh .github/scripts/test-release-version.sh
 
       # Integration tests (*IT) start PostgreSQL with Testcontainers.
       # The ubuntu runner provides Docker.
@@ -52,6 +72,17 @@ jobs:
           out=$(cd / && "$GITHUB_WORKSPACE/smoke/jdbx" --version)
           echo "$out"
           case "$out" in "jdbx "*) ;; *) echo "unexpected output"; exit 1 ;; esac
+
+      # The release workflow publishes these archives.
+      - name: Upload the archives
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: archives
+          path: |
+            target/jdbx-*-dist.tar.gz
+            target/jdbx-*-dist.zip
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Upload test reports
         if: failure()
@@ -85,6 +116,16 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
+
+      - name: Set the release version
+        if: inputs.version != ''
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        # The pom change must not mark the build as dirty in "jdbx --version".
+        run: |
+          ./mvnw --batch-mode --no-transfer-progress versions:set -DnewVersion="$VERSION" -DgenerateBackupPoms=false
+          git update-index --assume-unchanged pom.xml
 
       - name: Build the archives
         shell: bash
