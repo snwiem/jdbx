@@ -35,3 +35,6 @@ build/
 ### mise (personal settings) ###
 mise.local.toml
 .mise.local.toml
+
+### local temporary files are never committed ###
+temp/
