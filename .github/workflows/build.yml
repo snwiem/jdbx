@@ -1,26 +1,25 @@
 name: build
 
-# Build and test every branch on push. Pull requests from forks run too,
-# because a push to a fork does not start a run in this repository.
+# Build and test pull requests into main (on the merge result with main, also from forks)
+# and every push to main. A branch without a pull request is not built; start it by hand.
 on:
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 # The workflow only reads the repository.
 permissions:
   contents: read
 
-# A newer push to the same branch cancels the older run.
+# A newer push to a pull request cancels the older run. A run on main is never cancelled.
 concurrency:
   group: build-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:
-    # Skip a pull request from this repository: its push already ran.
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -68,7 +67,6 @@ jobs:
   # macOS and Windows: build the archive and start it. Unit and integration tests run on Linux only:
   # the integration tests need Linux containers, and some tests check POSIX file modes.
   package:
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     strategy:
       fail-fast: false
       matrix:
