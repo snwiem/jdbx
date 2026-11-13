@@ -2,6 +2,11 @@
 
 A java based terminal ui tool to query databases over jdbc.
 
+> [!WARNING]
+> **This project is mostly written by AI ("vibe coded").** A human has reviewed the code only in part. It may contain bugs, security flaws or data-loss risks. You use jdbx **at your own risk**: the author gives no warranty (see the [licence](#licence)). Do not run it against a production database without your own checks.
+>
+> Reviews are welcome. Open an [issue](https://github.com/snwiem/jdbx/issues) or a pull request.
+
 ## Install
 
 jdbx runs on Linux, macOS and Windows. It needs **Java 25 or newer** (a JDK or a JRE).
