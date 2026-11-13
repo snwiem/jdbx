@@ -73,6 +73,8 @@ jdbx --host localhost --db jdbx --user jdbx --password jdbx -c 'select 1'
 jdbx --host localhost --db jdbx --user jdbx --password jdbx
 ```
 
+For a larger database to try all features, use the [demo database](demo/README.md): a fictional online bookshop with several schemas, views, JSON and more than 1000 rows.
+
 Test the wrapper script with `sh bin/test-jdbx.sh`. It is not part of `./mvnw verify`.
 
 ## Version
