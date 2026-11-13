@@ -38,7 +38,8 @@ Others may work on branches in parallel. Never assume that your local copy is cu
 ### Verify before every push
 
 - `./mvnw verify` must succeed before **every** push, to a branch as well as to `main`. Run it on the exact commit that you push, and after any rebase or merge. Do not push on a red or an unknown result.
-- The workflow `.github/workflows/build.yml` runs `./mvnw verify` on every push and on pull requests from forks. It does not replace the local run. A red check blocks the merge.
+- The workflow `.github/workflows/build.yml` runs `./mvnw verify` on pull requests into `main` (on the merge result with `main`, also from forks) and on every push to `main`. It can also start by hand (`workflow_dispatch`). A branch without a pull request is **not** built. The workflow does not replace the local run. A red check blocks the merge.
+- Before a merge, check that `origin/main` is an ancestor of the branch: `git fetch origin --prune && git merge-base --is-ancestor origin/main HEAD`. If not, merge `origin/main` into the branch, run `./mvnw verify` and push again. Without a branch protection rule, GitHub does not block the merge of an out-of-date branch.
 
 ### Merge through pull requests
 
