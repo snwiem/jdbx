@@ -30,6 +30,20 @@ Check first: `java -version` must print version 25 or higher. If not, install a 
 
 ### 2. Install jdbx
 
+#### With mise
+
+Add Java and jdbx to `mise.toml`, then run `mise install`:
+
+```toml
+[tools]
+java = "temurin-25"
+"github:snwiem/jdbx" = { version = "latest", strip_components = 1 }
+```
+
+Or install jdbx globally: `mise use -g "github:snwiem/jdbx[strip_components=1]"`. Check: `jdbx --version`. The option `strip_components = 1` removes the top directory `jdbx-<version>/` of the archive. Without it, mise does not find `bin/jdbx`.
+
+#### By hand
+
 1. Download `jdbx-<version>-dist.tar.gz` (Linux, macOS) or `jdbx-<version>-dist.zip` (Windows) from the [latest release](https://github.com/snwiem/jdbx/releases/latest). The release also has a `SHA256SUMS` file. Check the download with `sha256sum --check --ignore-missing SHA256SUMS`.
 2. Extract it. The archive has this layout:
 
